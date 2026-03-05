@@ -1,0 +1,13 @@
+services:
+  mini-networks:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./runs:/app/runs
+      - ./data:/tmp/mini_networks_data
+    environment:
+      DEVICE: cpu
+      MINI_NETWORKS_RUNS: /app/runs
+      MINI_TEST_DATA_ROOT: /tmp/mini_networks_data
+    restart: unless-stopped

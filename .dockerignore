@@ -1,0 +1,16 @@
+runs/
+.venv/
+tests/
+*.pyc
+__pycache__/
+.git/
+legacy/
+colab/notebooks/
+*.ipynb
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+*.log
+data/
