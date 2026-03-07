@@ -16,6 +16,7 @@ from mini_networks.core.runtime import BaseTrainer
 from mini_networks.models.diffusion.config import DiffusionConfig
 from mini_networks.models.diffusion.model import UNet
 from mini_networks.models.diffusion.scheduler import NoiseScheduler
+from mini_networks.core.diffusion.sampling import sample_loop
 
 
 # ---------------------------------------------------------------------------
@@ -190,13 +191,15 @@ class DDPMTrainer(BaseTrainer):
         model.eval()
         n_samples = inputs.get("n_samples", 4) if isinstance(inputs, dict) else 4
         shape = (n_samples, config.in_channels, config.image_size, config.image_size)
-        x = torch.randn(shape, device=config.device)
         with torch.no_grad():
-            for t in reversed(range(config.timesteps)):
-                t_batch = torch.full((n_samples,), t, device=config.device, dtype=torch.long)
-                noise_pred = model(x, t_batch)
-                x = scheduler.step(noise_pred, t, x)
-        samples = (x.clamp(-1, 1) + 1) / 2  # [0, 1]
+            x = sample_loop(
+                scheduler=scheduler,
+                predict_noise=lambda x, t_batch, t, _: model(x, t_batch),
+                shape=shape,
+                device=config.device,
+                timesteps=config.timesteps,
+            )
+        samples = (x.clamp(-1, 1) + 1) / 2
         return {"samples": samples.cpu()}
 
 

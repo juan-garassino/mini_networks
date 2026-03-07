@@ -21,23 +21,19 @@ Educational value
 """
 from __future__ import annotations
 
-import tempfile
-import os
-from typing import Optional
 
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 
-from mini_networks.core.data.registry import TextFileDataset, get_dataloader
+from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
-from mini_networks.models.clip.data import MNISTImageTextDataset, label_to_all_tokens
+from mini_networks.models.clip.data import label_to_all_tokens
 from mini_networks.models.clip.model import CLIPModel
 from mini_networks.models.diffusion.model import ConditionedUNet
 from mini_networks.models.diffusion.scheduler import NoiseScheduler
+from mini_networks.core.diffusion.sampling import sample_loop
 from mini_networks.models.transformer.model import TransformerLM
 from mini_networks.models.transformer.tokenizer import CharTokenizer
-from mini_networks.models.transformer.trainer import _get_shakespeare
 from mini_networks.core.config import BaseConfig
 
 
@@ -151,9 +147,16 @@ class TransformerCLIPDiffusion:
         import torch.nn.functional as F
         import torch.optim as optim
 
-        text_file = config.text_file or _get_shakespeare(config.data_root)
-        ds = TextFileDataset(file_path=text_file, seq_len=config.lm_seq_len, fast_demo=config.fast_demo)
-        dl = DataLoader(ds, batch_size=config.effective_batch_size, shuffle=True, num_workers=0)
+        dl = get_dataloader(
+            name="text_file",
+            data_root=config.data_root,
+            split="train",
+            batch_size=config.effective_batch_size,
+            fast_demo=config.fast_demo,
+            file_path=config.text_file,
+            seq_len=config.lm_seq_len,
+        )
+        ds = dl.dataset
 
         self.tokenizer = ds.tokenizer
         vocab_size = ds.vocab_size
@@ -191,14 +194,16 @@ class TransformerCLIPDiffusion:
 
         clip = self._build_clip(config)
         opt = optim.AdamW(clip.parameters(), lr=config.learning_rate)
-        ds = MNISTImageTextDataset(
+        dl = get_dataloader(
+            name="mnist",
             data_root=config.data_root,
-            train=True,
+            split="train",
+            task="clip",
+            batch_size=config.effective_batch_size,
+            fast_demo=config.fast_demo,
             seq_len=config.text_seq_len,
             vocab_size=config.vocab_size,
-            fast_demo=config.fast_demo,
         )
-        dl = DataLoader(ds, batch_size=config.effective_batch_size, shuffle=True, num_workers=0)
 
         epochs = 1 if config.fast_demo else config.clip_epochs
         for epoch in range(epochs):
@@ -365,16 +370,19 @@ class TransformerCLIPDiffusion:
         unet, scheduler = self.unet, self.scheduler
         unet.eval()
         dev = config.device
-        x = torch.randn(n_samples, 1, 28, 28, device=dev)
         labels = torch.full((n_samples,), class_id, dtype=torch.long, device=dev)
         cond = torch.zeros(n_samples, dtype=torch.long, device=dev)
         uncond = torch.ones(n_samples, dtype=torch.long, device=dev)
-        for t in reversed(range(config.timesteps)):
-            t_b = torch.full((n_samples,), t, device=dev, dtype=torch.long)
-            eps_c = unet(x, t_b, labels, cond)
-            eps_u = unet(x, t_b, labels, uncond)
-            eps = (1 + config.guide_weight) * eps_c - config.guide_weight * eps_u
-            x = scheduler.step(eps, t, x)
+        x = sample_loop(
+            scheduler=scheduler,
+            predict_noise=lambda x, t_b, t, _: (
+                (1 + config.guide_weight) * unet(x, t_b, labels, cond)
+                - config.guide_weight * unet(x, t_b, labels, uncond)
+            ),
+            shape=(n_samples, 1, 28, 28),
+            device=dev,
+            timesteps=config.timesteps,
+        )
         return ((x.clamp(-1, 1) + 1) / 2).cpu()
 
     def generate_image(

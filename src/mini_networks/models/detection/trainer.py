@@ -4,50 +4,43 @@ from __future__ import annotations
 from typing import Any
 
 import torch
-import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from mini_networks.core.config import BaseConfig
 from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
-from mini_networks.core.runtime import BaseTrainer
+from mini_networks.core.runtime import DetectionTrainerBase
 from mini_networks.models.detection.config import DetectionConfig
 from mini_networks.models.detection.model import DigitDetector, detection_loss
 
 
-class DetectionTrainer(BaseTrainer):
+class DetectionTrainer(DetectionTrainerBase):
     def __init__(self):
         self.model: DigitDetector | None = None
 
     def _build(self, config: DetectionConfig) -> DigitDetector:
         return DigitDetector(num_classes=config.num_classes).to(config.device)
 
-    def train(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> None:
+    def _forward(self, model: DigitDetector, batch, config: DetectionConfig):
+        canvases, labels, bboxes = batch
+        canvases = canvases.to(config.device)
+        labels = labels.to(config.device)
+        bboxes = bboxes.to(config.device)
+        cls_logits, bbox_pred = model(canvases)
+        return cls_logits, bbox_pred, labels, bboxes
+
+    def _loss(
+        self,
+        class_logits: torch.Tensor,
+        bbox_pred: torch.Tensor,
+        labels: torch.Tensor,
+        target_bbox: torch.Tensor,
+        config: BaseConfig,
+    ) -> torch.Tensor:
         assert isinstance(config, DetectionConfig)
-        model = self._build(config)
-        self.model = model
-        optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
-        logger.log_config(config.model_dump())
-
-        for epoch in range(config.effective_epochs):
-            model.train()
-            total_loss = 0.0
-            for canvases, labels, bboxes in dataloader:
-                canvases = canvases.to(config.device)
-                labels = labels.to(config.device)
-                bboxes = bboxes.to(config.device)
-                cls_logits, bbox_pred = model(canvases)
-                loss = detection_loss(
-                    cls_logits, bbox_pred, labels, bboxes, config.bbox_loss_weight
-                )
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-            avg = total_loss / max(1, len(dataloader))
-            logger.log_metrics(epoch, {"loss": avg, "epoch": epoch})
-
-        torch.save(model.state_dict(), logger.artifact_path("model.pt"))
+        return detection_loss(
+            class_logits, bbox_pred, labels, target_bbox, config.bbox_loss_weight
+        )
 
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         assert isinstance(config, DetectionConfig)

@@ -1,0 +1,1 @@
+"""Vision embedding model package."""

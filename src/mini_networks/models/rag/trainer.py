@@ -1,8 +1,6 @@
 """RAG trainer — trains a TransformerLM on the corpus, builds TF-IDF index."""
 from __future__ import annotations
 
-import os
-import urllib.request
 from typing import Any
 
 import torch
@@ -11,16 +9,13 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from mini_networks.core.config import BaseConfig
-from mini_networks.core.data.registry import TextFileDataset
+from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
 from mini_networks.core.runtime import BaseTrainer
 from mini_networks.models.rag.config import RAGConfig
 from mini_networks.models.rag.model import NanoRAG
 from mini_networks.models.transformer.model import TransformerLM
 from mini_networks.models.transformer.tokenizer import CharTokenizer
-from mini_networks.models.transformer.trainer import _get_shakespeare
-
-SHAKESPEARE_URL = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 
 
 class RAGTrainer(BaseTrainer):
@@ -78,11 +73,9 @@ class RAGTrainer(BaseTrainer):
             self.tokenizer.save(str(logger.artifact_path("tokenizer.json")))
 
         # Build RAG index from the corpus
-        text_file = config.text_file or _get_shakespeare(config.data_root)
-        with open(text_file, "r", encoding="utf-8") as f:
-            corpus = f.read()
-        if config.fast_demo:
-            corpus = corpus[:8192]
+        corpus = getattr(ds, "text", "")
+        if not corpus:
+            raise RuntimeError("RAG dataset did not expose raw text for indexing.")
 
         self.rag = NanoRAG(top_k=config.top_k, chunk_size=config.chunk_size)
         self.rag.add_documents([corpus])
@@ -143,15 +136,12 @@ class RAGTrainer(BaseTrainer):
 
 
 def make_rag_dataloader(config: RAGConfig, split: str = "train") -> DataLoader:
-    text_file = config.text_file or _get_shakespeare(config.data_root)
-    ds = TextFileDataset(
-        file_path=text_file,
-        seq_len=config.seq_len,
-        fast_demo=config.fast_demo,
-    )
-    return DataLoader(
-        ds,
+    return get_dataloader(
+        name=config.dataset,
+        data_root=config.data_root,
+        split=split,
         batch_size=config.effective_batch_size,
-        shuffle=(split == "train"),
-        num_workers=0,
+        fast_demo=config.fast_demo,
+        file_path=config.text_file,
+        seq_len=config.seq_len,
     )

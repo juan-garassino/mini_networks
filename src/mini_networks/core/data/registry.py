@@ -1,8 +1,10 @@
-"""Dataset registry with MNIST in 4 task modes + text loader."""
+"""Dataset registry with MNIST task modes + text loaders."""
 from __future__ import annotations
 
 import os
-from typing import Literal, Optional
+import urllib.request
+import wave
+from typing import Literal
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -16,7 +18,18 @@ from mini_networks.core.data.transforms import (
     place_on_canvas,
 )
 
-TaskMode = Literal["classification", "binary_segmentation", "multiclass_segmentation", "detection"]
+TaskMode = Literal[
+    "classification",
+    "binary_segmentation",
+    "multiclass_segmentation",
+    "detection",
+    "clip",
+    "contrastive",
+]
+
+SHAKESPEARE_URL = (
+    "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+)
 
 
 class MNISTClassification(Dataset):
@@ -37,11 +50,17 @@ class MNISTClassification(Dataset):
         return self._data[idx]
 
 
-class MNISTBinarySegmentation(Dataset):
-    """MNIST where target is a binary pixel mask (foreground vs background)."""
+class BinarySegmentationFromDigits(Dataset):
+    """Digit dataset where target is a binary pixel mask (foreground vs background)."""
 
-    def __init__(self, data_root: str, train: bool = True, fast_demo: bool = False):
-        ds = torchvision.datasets.MNIST(
+    def __init__(
+        self,
+        dataset_cls,
+        data_root: str,
+        train: bool = True,
+        fast_demo: bool = False,
+    ):
+        ds = dataset_cls(
             root=data_root, train=train, download=True,
             transform=T.ToTensor(),
         )
@@ -57,14 +76,20 @@ class MNISTBinarySegmentation(Dataset):
         return image, mask
 
 
-class MNISTMulticlassSegmentation(Dataset):
+class MulticlassSegmentationFromDigits(Dataset):
     """
-    Two MNIST digits overlaid; target is 12-class segmentation mask.
+    Two digit images overlaid; target is 12-class segmentation mask.
     Classes 0-9: digit pixels (exclusive), 10: background, 11: intersection.
     """
 
-    def __init__(self, data_root: str, train: bool = True, fast_demo: bool = False):
-        ds = torchvision.datasets.MNIST(
+    def __init__(
+        self,
+        dataset_cls,
+        data_root: str,
+        train: bool = True,
+        fast_demo: bool = False,
+    ):
+        ds = dataset_cls(
             root=data_root, train=train, download=True,
             transform=T.ToTensor(),
         )
@@ -83,7 +108,7 @@ class MNISTMulticlassSegmentation(Dataset):
         return composite, mask
 
 
-class MNISTDetection(Dataset):
+class DigitDetection(Dataset):
     """
     MNIST digit placed randomly on a 56x56 canvas.
     Target: (label int, bbox [x1, y1, x2, y2] normalized to [0,1]).
@@ -96,7 +121,7 @@ class MNISTDetection(Dataset):
         canvas_size: int = 56,
         fast_demo: bool = False,
     ):
-        ds = torchvision.datasets.MNIST(
+        ds = dataset_cls(
             root=data_root, train=train, download=True,
             transform=T.ToTensor(),
         )
@@ -114,6 +139,243 @@ class MNISTDetection(Dataset):
         return canvas, int(label), torch.tensor(bbox_norm, dtype=torch.float32)
 
 
+# ---------------------------------------------------------------------------
+# Contrastive pair dataset (SimCLR-style)
+# ---------------------------------------------------------------------------
+
+class ContrastivePairFromDigits(Dataset):
+    """Return two augmented views of the same digit image."""
+
+    def __init__(
+        self,
+        dataset_cls,
+        data_root: str,
+        train: bool = True,
+        fast_demo: bool = False,
+        image_size: int = 28,
+    ):
+        ds = dataset_cls(
+            root=data_root, train=train, download=True,
+            transform=T.ToTensor(),
+        )
+        self._data = ds
+        self._limit = 256 if fast_demo else len(ds)
+        self._aug = T.Compose(
+            [
+                T.ToPILImage(),
+                T.RandomResizedCrop(image_size, scale=(0.8, 1.0)),
+                T.RandomRotation(20),
+                T.ToTensor(),
+            ]
+        )
+
+    def __len__(self) -> int:
+        return self._limit
+
+    def __getitem__(self, idx: int):
+        image, label = self._data[idx]
+        v1 = self._aug(image)
+        v2 = self._aug(image)
+        return v1, v2, int(label)
+
+
+# ---------------------------------------------------------------------------
+# Synthetic audio + tabular datasets
+# ---------------------------------------------------------------------------
+
+class SyntheticAudioDigits(Dataset):
+    """Synthetic sine waves for 10 classes (0-9). Returns (waveform, label)."""
+
+    def __init__(
+        self,
+        n_samples: int = 1000,
+        sample_len: int = 256,
+        n_classes: int = 10,
+        fast_demo: bool = False,
+        seed: int = 123,
+    ):
+        self.n_classes = n_classes
+        self.sample_len = sample_len
+        self._limit = 256 if fast_demo else n_samples
+        g = torch.Generator().manual_seed(seed)
+        self._labels = torch.randint(0, n_classes, (self._limit,), generator=g)
+
+    def __len__(self) -> int:
+        return self._limit
+
+    def __getitem__(self, idx: int):
+        label = int(self._labels[idx])
+        freq = 1.0 + label * 0.2
+        t = torch.linspace(0, 1, self.sample_len)
+        wave = torch.sin(2 * torch.pi * freq * t)
+        wave = wave + 0.05 * torch.randn_like(wave)
+        return wave.unsqueeze(0), label  # [1, T]
+
+
+class SyntheticTabular(Dataset):
+    """Simple Gaussian blobs. Returns (features, label)."""
+
+    def __init__(
+        self,
+        n_samples: int = 1000,
+        n_features: int = 8,
+        n_classes: int = 3,
+        fast_demo: bool = False,
+        seed: int = 123,
+    ):
+        self.n_features = n_features
+        self.n_classes = n_classes
+        self._limit = 256 if fast_demo else n_samples
+        g = torch.Generator().manual_seed(seed)
+        centers = torch.randn(n_classes, n_features, generator=g) * 2.0
+        labels = torch.randint(0, n_classes, (self._limit,), generator=g)
+        data = centers[labels] + 0.5 * torch.randn(self._limit, n_features, generator=g)
+        self._data = data
+        self._labels = labels
+
+    def __len__(self) -> int:
+        return self._limit
+
+    def __getitem__(self, idx: int):
+        return self._data[idx], int(self._labels[idx])
+
+
+class SpeechDigitsDataset(Dataset):
+    """Free Spoken Digit Dataset (FSDD): 0-9 spoken digits (wav)."""
+
+    FSDD_URL = "https://github.com/Jakobovski/free-spoken-digit-dataset/archive/refs/heads/master.zip"
+
+    def __init__(
+        self,
+        data_root: str,
+        fast_demo: bool = False,
+        sample_len: int = 4000,
+        require_downloads: bool = True,
+    ):
+        self.data_root = data_root
+        self.sample_len = sample_len
+        self._files = _ensure_fsdd(data_root, require_downloads=require_downloads)
+        if fast_demo:
+            self._files = self._files[: min(50, len(self._files))]
+
+    def __len__(self) -> int:
+        return len(self._files)
+
+    def __getitem__(self, idx: int):
+        path = self._files[idx]
+        label = int(os.path.basename(path).split("_")[0])
+        wave_tensor = _read_wav_mono(path, self.sample_len)
+        return wave_tensor, label
+
+
+class IrisDataset(Dataset):
+    """Iris dataset (4 features, 3 classes)."""
+
+    IRIS_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
+
+    def __init__(self, data_root: str, fast_demo: bool = False, require_downloads: bool = True):
+        self.data_root = data_root
+        X, y = _ensure_iris(data_root, require_downloads=require_downloads)
+        if fast_demo:
+            X = X[:50]
+            y = y[:50]
+        self._X = torch.tensor(X, dtype=torch.float32)
+        self._y = torch.tensor(y, dtype=torch.long)
+
+    def __len__(self) -> int:
+        return len(self._y)
+
+    def __getitem__(self, idx: int):
+        return self._X[idx], int(self._y[idx])
+
+# ---------------------------------------------------------------------------
+# CLIP-style MNIST image-text dataset
+# ---------------------------------------------------------------------------
+
+_DIGIT_NAMES = [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+]
+
+
+def _build_captions(label: int) -> list[str]:
+    name = _DIGIT_NAMES[label]
+    n = str(label)
+    return [
+        name,
+        f"digit {name}",
+        f"number {name}",
+        f"numeral {n}",
+        f"a handwritten {name}",
+        f"the number {n}",
+        f"a photo of the digit {name}",
+        f"written {name}",
+        f"a clear {name}",
+        f"handwritten number {n}",
+        f"the digit {n}",
+        f"a bold {name}",
+    ]
+
+
+DIGIT_CAPTIONS: dict[int, list[str]] = {i: _build_captions(i) for i in range(10)}
+
+
+def _text_to_ids(text: str, seq_len: int, vocab_size: int) -> list[int]:
+    ids = [ord(c) % vocab_size for c in text]
+    if len(ids) < seq_len:
+        ids = ids + [0] * (seq_len - len(ids))
+    return ids[:seq_len]
+
+
+def label_to_tokens(label: int, seq_len: int = 32, vocab_size: int = 256) -> torch.Tensor:
+    """Sample a random caption for *label* and return its token tensor [seq_len]."""
+    import random
+
+    text = random.choice(DIGIT_CAPTIONS[label])
+    return torch.tensor(_text_to_ids(text, seq_len, vocab_size), dtype=torch.long)
+
+
+def label_to_all_tokens(label: int, seq_len: int = 32, vocab_size: int = 256) -> torch.Tensor:
+    """Return all caption token tensors for *label* as [N, seq_len] batch."""
+    rows = [_text_to_ids(cap, seq_len, vocab_size) for cap in DIGIT_CAPTIONS[label]]
+    return torch.tensor(rows, dtype=torch.long)
+
+
+class MNISTImageTextDataset(Dataset):
+    """Each item is (image [1,28,28], tokens [seq_len], label int)."""
+
+    def __init__(
+        self,
+        data_root: str,
+        train: bool = True,
+        seq_len: int = 32,
+        vocab_size: int = 256,
+        fast_demo: bool = False,
+    ):
+        self._ds = torchvision.datasets.MNIST(
+            root=data_root, train=train, download=True, transform=T.ToTensor()
+        )
+        self._seq_len = seq_len
+        self._vocab_size = vocab_size
+        self._limit = 256 if fast_demo else len(self._ds)
+
+    def __len__(self) -> int:
+        return self._limit
+
+    def __getitem__(self, idx: int):
+        image, label = self._ds[idx]
+        tokens = label_to_tokens(int(label), self._seq_len, self._vocab_size)
+        return image, tokens, int(label)
+
+
 class TextFileDataset(Dataset):
     """Simple character-level text dataset from a single file."""
 
@@ -122,6 +384,8 @@ class TextFileDataset(Dataset):
             text = f.read()
         if fast_demo:
             text = text[:4096]
+        self.file_path = file_path
+        self.text = text
         chars = sorted(set(text))
         self.stoi = {c: i for i, c in enumerate(chars)}
         self.itos = {i: c for c, i in self.stoi.items()}
@@ -163,6 +427,8 @@ class BPETextFileDataset(Dataset):
             text = f.read()
         if fast_demo:
             text = text[:8192]
+        self.file_path = file_path
+        self.text = text
 
         tok = BPETokenizer()
         tok.train(text, vocab_size=bpe_vocab_size, min_frequency=2)
@@ -200,7 +466,8 @@ def get_dataset(
     """
     Factory returning a Dataset for the given name and task mode.
 
-    Supported names: "mnist", "fashion_mnist", "text_file"
+    Supported names: "mnist", "fashion_mnist", "text_file", "tiny_shakespeare",
+    "synthetic_audio_digits", "synthetic_tabular", "speech_digits", "iris"
     """
     train = split == "train"
     os.makedirs(data_root, exist_ok=True)
@@ -213,19 +480,93 @@ def get_dataset(
                 # Wrap to limit size
                 return _Subset(ds, 256)
             return ds
+        elif task == "clip":
+            if name != "mnist":
+                raise ValueError("CLIP dataset only supported for MNIST digits.")
+            return MNISTImageTextDataset(
+                data_root=data_root,
+                train=train,
+                seq_len=kwargs.get("seq_len", 32),
+                vocab_size=kwargs.get("vocab_size", 256),
+                fast_demo=fast_demo,
+            )
         elif task == "binary_segmentation":
-            return MNISTBinarySegmentation(data_root, train=train, fast_demo=fast_demo)
+            return BinarySegmentationFromDigits(
+                cls,
+                data_root=data_root,
+                train=train,
+                fast_demo=fast_demo,
+            )
         elif task == "multiclass_segmentation":
-            return MNISTMulticlassSegmentation(data_root, train=train, fast_demo=fast_demo)
+            return MulticlassSegmentationFromDigits(
+                cls,
+                data_root=data_root,
+                train=train,
+                fast_demo=fast_demo,
+            )
         elif task == "detection":
             canvas_size = kwargs.get("canvas_size", 56)
-            return MNISTDetection(data_root, train=train, canvas_size=canvas_size, fast_demo=fast_demo)
+            return DigitDetection(
+                cls,
+                data_root=data_root,
+                train=train,
+                canvas_size=canvas_size,
+                fast_demo=fast_demo,
+            )
+        elif task == "contrastive":
+            return ContrastivePairFromDigits(
+                cls,
+                data_root=data_root,
+                train=train,
+                fast_demo=fast_demo,
+                image_size=kwargs.get("image_size", 28),
+            )
         else:
             raise ValueError(f"Unknown task: {task}")
-    elif name == "text_file":
-        file_path = kwargs.get("file_path") or kwargs.get("data_root", data_root)
+    elif name in ("text_file", "tiny_shakespeare"):
+        file_path = kwargs.get("file_path") or kwargs.get("text_file")
+        if name == "tiny_shakespeare" or not file_path:
+            file_path = _ensure_tiny_shakespeare(data_root)
         seq_len = kwargs.get("seq_len", 128)
+        tokenizer_type = kwargs.get("tokenizer_type", "char")
+        bpe_vocab_size = kwargs.get("bpe_vocab_size", 512)
+        if tokenizer_type == "bpe":
+            return BPETextFileDataset(
+                file_path=file_path,
+                seq_len=seq_len,
+                bpe_vocab_size=bpe_vocab_size,
+                fast_demo=fast_demo,
+            )
         return TextFileDataset(file_path=file_path, seq_len=seq_len, fast_demo=fast_demo)
+    elif name == "synthetic_audio_digits":
+        return SyntheticAudioDigits(
+            n_samples=kwargs.get("n_samples", 1000),
+            sample_len=kwargs.get("sample_len", 256),
+            n_classes=kwargs.get("n_classes", 10),
+            fast_demo=fast_demo,
+            seed=kwargs.get("seed", 123),
+        )
+    elif name == "synthetic_tabular":
+        return SyntheticTabular(
+            n_samples=kwargs.get("n_samples", 1000),
+            n_features=kwargs.get("n_features", 8),
+            n_classes=kwargs.get("n_classes", 3),
+            fast_demo=fast_demo,
+            seed=kwargs.get("seed", 123),
+        )
+    elif name == "speech_digits":
+        return SpeechDigitsDataset(
+            data_root=data_root,
+            fast_demo=fast_demo,
+            sample_len=kwargs.get("sample_len", 4000),
+            require_downloads=kwargs.get("require_downloads", True),
+        )
+    elif name == "iris":
+        return IrisDataset(
+            data_root=data_root,
+            fast_demo=fast_demo,
+            require_downloads=kwargs.get("require_downloads", True),
+        )
     else:
         raise ValueError(f"Unknown dataset: {name}")
 
@@ -242,6 +583,98 @@ def get_dataloader(
     ds = get_dataset(name, data_root, split=split, task=task, fast_demo=fast_demo, **kwargs)
     shuffle = split == "train"
     return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, num_workers=0, drop_last=False)
+
+
+def _ensure_tiny_shakespeare(data_root: str) -> str:
+    """Download Tiny Shakespeare into data_root if missing. Returns file path."""
+    os.makedirs(data_root, exist_ok=True)
+    path = os.path.join(data_root, "shakespeare.txt")
+    if not os.path.exists(path):
+        print(f"Downloading Tiny Shakespeare → {path}")
+        urllib.request.urlretrieve(SHAKESPEARE_URL, path)
+    return path
+
+
+def _ensure_fsdd(data_root: str, require_downloads: bool = True) -> list[str]:
+    import zipfile
+
+    os.makedirs(data_root, exist_ok=True)
+    zip_path = os.path.join(data_root, "fsdd.zip")
+    extract_dir = os.path.join(data_root, "fsdd")
+    wav_dir = os.path.join(extract_dir, "free-spoken-digit-dataset-master", "recordings")
+
+    if not os.path.exists(wav_dir):
+        if not os.path.exists(zip_path):
+            if not require_downloads:
+                raise RuntimeError("FSDD not found and downloads disabled.")
+            print(f"Downloading FSDD → {zip_path}")
+            urllib.request.urlretrieve(SpeechDigitsDataset.FSDD_URL, zip_path)
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(extract_dir)
+
+    files = [
+        os.path.join(wav_dir, f)
+        for f in os.listdir(wav_dir)
+        if f.endswith(".wav")
+    ]
+    files.sort()
+    if not files:
+        raise RuntimeError("FSDD download failed or no wav files found.")
+    return files
+
+
+def _read_wav_mono(path: str, sample_len: int) -> torch.Tensor:
+    with wave.open(path, "rb") as wf:
+        n = wf.getnframes()
+        raw = wf.readframes(n)
+        # 16-bit PCM little endian
+        import numpy as np
+
+        audio = np.frombuffer(raw, dtype=np.int16).astype("float32") / 32768.0
+        if wf.getnchannels() > 1:
+            audio = audio.reshape(-1, wf.getnchannels()).mean(axis=1)
+        # Pad or crop
+        if len(audio) < sample_len:
+            pad = sample_len - len(audio)
+            audio = np.pad(audio, (0, pad))
+        else:
+            audio = audio[:sample_len]
+        return torch.tensor(audio, dtype=torch.float32).unsqueeze(0)
+
+
+def _ensure_iris(data_root: str, require_downloads: bool = True):
+    os.makedirs(data_root, exist_ok=True)
+    path = os.path.join(data_root, "iris.data")
+    if not os.path.exists(path):
+        if not require_downloads:
+            raise RuntimeError("Iris not found and downloads disabled.")
+        print(f"Downloading Iris → {path}")
+        urllib.request.urlretrieve(IrisDataset.IRIS_URL, path)
+
+    X = []
+    y = []
+    mapping = {
+        "Iris-setosa": 0,
+        "Iris-versicolor": 1,
+        "Iris-virginica": 2,
+    }
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split(",")
+            if len(parts) != 5:
+                continue
+            feats = list(map(float, parts[:4]))
+            label = mapping.get(parts[4], None)
+            if label is None:
+                continue
+            X.append(feats)
+            y.append(label)
+    if not X:
+        raise RuntimeError("Iris download failed or dataset is empty.")
+    return X, y
 
 
 class _Subset(Dataset):

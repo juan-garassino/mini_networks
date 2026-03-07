@@ -5,6 +5,7 @@ Sub-commands
 ------------
   python main.py serve    [--host 0.0.0.0] [--port 8000] [--reload]
   python main.py train    --model <name> [--fast_demo] [--epochs N] [--device cpu]
+  python main.py compose  --composition <name> [--fast_demo] [--device cpu]
   python main.py evaluate --model <name> --checkpoint <dir>
   python main.py menu     # interactive rich TUI
   python main.py list     # list all models and compositions
@@ -71,6 +72,18 @@ def cmd_train(args: argparse.Namespace) -> None:
     logger = run_model(args.model, fast_demo=args.fast_demo, **extra)
     console.print(f"[green]Done.[/green] Artifacts: {logger.artifacts_dir}")
 
+
+def cmd_compose(args: argparse.Namespace) -> None:
+    """Run a multi-model composition."""
+    from mini_networks.colab.launcher import run_composition
+    from rich.console import Console
+
+    console = Console()
+    console.print(f"[bold]Composition:[/bold] {args.composition}  fast_demo={args.fast_demo}")
+    device = args.device or "cpu"
+    result = run_composition(args.composition, fast_demo=args.fast_demo, device=device)
+    if isinstance(result, dict) and "config" in result:
+        console.print("[green]Done.[/green]")
 
 def cmd_evaluate(args: argparse.Namespace) -> None:
     """Evaluate a model from a checkpoint directory."""
@@ -156,6 +169,12 @@ def build_parser() -> argparse.ArgumentParser:
     # menu
     sub.add_parser("menu", help="Interactive TUI menu")
 
+    # compose
+    p_comp = sub.add_parser("compose", help="Run a composition")
+    p_comp.add_argument("--composition", required=True)
+    p_comp.add_argument("--fast_demo", action="store_true", default=False)
+    p_comp.add_argument("--device", default=None)
+
     # list
     sub.add_parser("list", help="List all models and compositions")
 
@@ -181,6 +200,7 @@ def main() -> None:
     dispatch = {
         "serve":    cmd_serve,
         "train":    cmd_train,
+        "compose":  cmd_compose,
         "evaluate": cmd_evaluate,
         "menu":     cmd_menu,
         "list":     cmd_list,

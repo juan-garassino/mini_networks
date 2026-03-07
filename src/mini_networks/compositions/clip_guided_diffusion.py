@@ -30,22 +30,19 @@ The rotation trick (dual_oscillation):
 """
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass, field
-from typing import Optional
 
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 
 from mini_networks.core.config import BaseConfig
 from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
-from mini_networks.models.clip.data import MNISTImageTextDataset, label_to_tokens, label_to_all_tokens
+from mini_networks.models.clip.data import label_to_tokens, label_to_all_tokens
 from mini_networks.models.clip.model import CLIPModel
 from mini_networks.models.diffusion.model import ConditionedUNet
 from mini_networks.models.diffusion.scheduler import NoiseScheduler
 from mini_networks.models.diffusion.vae import VAE, vae_loss
+from mini_networks.core.diffusion.sampling import sample_loop
 
 
 # ---------------------------------------------------------------------------
@@ -149,14 +146,16 @@ class CLIPGuidedDiffusion:
         """Train CLIP on MNIST image-text pairs, then cache class embeddings."""
         clip = self._build_clip(config)
         opt = torch.optim.AdamW(clip.parameters(), lr=config.learning_rate)
-        ds = MNISTImageTextDataset(
+        dl = get_dataloader(
+            name="mnist",
             data_root=config.data_root,
-            train=True,
+            split="train",
+            task="clip",
+            batch_size=config.effective_batch_size,
+            fast_demo=config.fast_demo,
             seq_len=config.text_seq_len,
             vocab_size=config.vocab_size,
-            fast_demo=config.fast_demo,
         )
-        dl = DataLoader(ds, batch_size=config.effective_batch_size, shuffle=True, num_workers=0)
 
         for epoch in range(config.effective_epochs):
             clip.train()
@@ -347,17 +346,19 @@ class CLIPGuidedDiffusion:
         else:
             shape = (n_samples, 1, 28, 28)
 
-        x = torch.randn(shape, device=dev)
         labels = torch.full((n_samples,), class_id, dtype=torch.long, device=dev)
         uncond_mask = torch.ones(n_samples, dtype=torch.long, device=dev)   # all unconditional
         cond_mask = torch.zeros(n_samples, dtype=torch.long, device=dev)    # all conditional
-
-        for t in reversed(range(config.timesteps)):
-            t_batch = torch.full((n_samples,), t, device=dev, dtype=torch.long)
-            eps_cond = unet(x, t_batch, labels, cond_mask)
-            eps_uncond = unet(x, t_batch, labels, uncond_mask)
-            eps = (1 + config.guide_weight) * eps_cond - config.guide_weight * eps_uncond
-            x = scheduler.step(eps, t, x)
+        x = sample_loop(
+            scheduler=scheduler,
+            predict_noise=lambda x, t_batch, t, _: (
+                (1 + config.guide_weight) * unet(x, t_batch, labels, cond_mask)
+                - config.guide_weight * unet(x, t_batch, labels, uncond_mask)
+            ),
+            shape=shape,
+            device=dev,
+            timesteps=config.timesteps,
+        )
 
         if config.use_vae and self.vae is not None:
             x = self.vae.decode(x)
@@ -422,24 +423,32 @@ class CLIPGuidedDiffusion:
         cond_mask = torch.zeros(1, dtype=torch.long, device=dev)
 
         T = config.timesteps
-        for step, t in enumerate(reversed(range(T))):
-            label = torch.tensor([current_class], dtype=torch.long, device=dev)
-            t_batch = torch.full((1,), t, device=dev, dtype=torch.long)
+        state = {"current_class": current_class}
 
+        def predict_noise(x, t_batch, t, state):
+            label = torch.tensor([state["current_class"]], dtype=torch.long, device=dev)
             eps_cond = unet(x, t_batch, label, cond_mask)
             eps_uncond = unet(x, t_batch, label, uncond_mask)
-            eps = (1 + config.guide_weight) * eps_cond - config.guide_weight * eps_uncond
-            x = scheduler.step(eps, t, x)
+            return (1 + config.guide_weight) * eps_cond - config.guide_weight * eps_uncond
 
-            # ── Rotation trick ──────────────────────────────────────────
+        def step_cb(x, t, step, state):
             if every > 0 and step > 0 and step % every == 0:
-                x = torch.rot90(x, k=2, dims=(-2, -1))   # 180° spatial rotation
-                current_class = class_b if current_class == class_a else class_a
-            # ────────────────────────────────────────────────────────────
-
+                x = torch.rot90(x, k=2, dims=(-2, -1))
+                state["current_class"] = class_b if state["current_class"] == class_a else class_a
             if return_frames and (step % max(1, T // 16) == 0):
                 decoded = self.vae.decode(x) if (config.use_vae and self.vae) else x
                 frames.append(((decoded.clamp(-1, 1) + 1) / 2).cpu())
+            return x
+
+        x = sample_loop(
+            scheduler=scheduler,
+            predict_noise=predict_noise,
+            shape=shape,
+            device=dev,
+            timesteps=config.timesteps,
+            step_callback=step_cb,
+            state=state,
+        )
 
         if config.use_vae and self.vae is not None:
             x = self.vae.decode(x)

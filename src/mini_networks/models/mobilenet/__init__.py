@@ -1,0 +1,1 @@
+"""MobileNet-like model package."""

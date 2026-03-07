@@ -1,8 +1,6 @@
 """TransformerLM trainer."""
 from __future__ import annotations
 
-import os
-import urllib.request
 from typing import Any
 
 import torch
@@ -11,24 +9,12 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from mini_networks.core.config import BaseConfig
-from mini_networks.core.data.registry import BPETextFileDataset, TextFileDataset
+from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
 from mini_networks.core.runtime import BaseTrainer
 from mini_networks.models.transformer.config import TransformerConfig
 from mini_networks.models.transformer.model import TransformerLM
 from mini_networks.models.transformer.tokenizer import CharTokenizer
-
-SHAKESPEARE_URL = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
-
-
-def _get_shakespeare(data_root: str) -> str:
-    """Download Tiny Shakespeare to data_root if not already present. Returns path."""
-    os.makedirs(data_root, exist_ok=True)
-    path = os.path.join(data_root, "shakespeare.txt")
-    if not os.path.exists(path):
-        print(f"Downloading Tiny Shakespeare → {path}")
-        urllib.request.urlretrieve(SHAKESPEARE_URL, path)
-    return path
 
 
 class TransformerTrainer(BaseTrainer):
@@ -171,23 +157,14 @@ class TransformerTrainer(BaseTrainer):
 def make_transformer_dataloader(
     config: TransformerConfig, split: str = "train"
 ) -> DataLoader:
-    text_file = config.text_file or _get_shakespeare(config.data_root)
-    if config.tokenizer_type == "bpe":
-        ds = BPETextFileDataset(
-            file_path=text_file,
-            seq_len=config.seq_len,
-            bpe_vocab_size=config.bpe_vocab_size,
-            fast_demo=config.fast_demo,
-        )
-    else:
-        ds = TextFileDataset(
-            file_path=text_file,
-            seq_len=config.seq_len,
-            fast_demo=config.fast_demo,
-        )
-    return DataLoader(
-        ds,
+    return get_dataloader(
+        name=config.dataset,
+        data_root=config.data_root,
+        split=split,
         batch_size=config.effective_batch_size,
-        shuffle=(split == "train"),
-        num_workers=0,
+        fast_demo=config.fast_demo,
+        file_path=config.text_file,
+        seq_len=config.seq_len,
+        tokenizer_type=config.tokenizer_type,
+        bpe_vocab_size=config.bpe_vocab_size,
     )

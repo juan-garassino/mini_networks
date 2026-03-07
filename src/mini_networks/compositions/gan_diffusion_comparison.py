@@ -41,6 +41,7 @@ from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
 from mini_networks.models.diffusion.model import UNet
 from mini_networks.models.diffusion.scheduler import NoiseScheduler
+from mini_networks.core.diffusion.sampling import sample_loop
 from mini_networks.models.gan.model import Generator, Discriminator, gan_d_loss, gan_g_loss
 
 
@@ -243,13 +244,14 @@ class GANDiffusionComparison:
         assert self.unet is not None and self.scheduler is not None, "Train diffusion first."
         unet, scheduler = self.unet, self.scheduler
         unet.eval()
-        if seed is not None:
-            torch.manual_seed(seed)
-        x = torch.randn(n_samples, config.in_channels, config.image_size, config.image_size,
-                        device=config.device)
-        for t in reversed(range(config.timesteps)):
-            t_b = torch.full((n_samples,), t, device=config.device, dtype=torch.long)
-            x = scheduler.step(unet(x, t_b), t, x)
+        x = sample_loop(
+            scheduler=scheduler,
+            predict_noise=lambda x, t_b, t, _: unet(x, t_b),
+            shape=(n_samples, config.in_channels, config.image_size, config.image_size),
+            device=config.device,
+            timesteps=config.timesteps,
+            seed=seed,
+        )
         return ((x.clamp(-1, 1) + 1) / 2).cpu()
 
     def compare(

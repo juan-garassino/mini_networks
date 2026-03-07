@@ -33,14 +33,13 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from mini_networks.core.config import BaseConfig
-from mini_networks.core.data.registry import TextFileDataset
+from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
 from mini_networks.core.runtime import BaseTrainer
 from mini_networks.models.rlhf.config import RLHFConfig
 from mini_networks.models.rlhf.model import RewardModel, shakespearean_score
 from mini_networks.models.transformer.model import TransformerLM
 from mini_networks.models.transformer.tokenizer import CharTokenizer
-from mini_networks.models.transformer.trainer import _get_shakespeare
 
 
 # ---------------------------------------------------------------------------
@@ -220,12 +219,10 @@ class RLHFTrainer(BaseTrainer):
             p.requires_grad_(False)
         self.ref_model = ref
 
-        # Build prompt bank from dataset tokens
-        text_file = config.text_file or _get_shakespeare(config.data_root)
-        with open(text_file, "r", encoding="utf-8") as f:
-            corpus = f.read()
-        if config.fast_demo:
-            corpus = corpus[:4096]
+        # Build prompt bank from dataset text
+        corpus = getattr(ds, "text", "")
+        if not corpus:
+            raise RuntimeError("RLHF dataset did not expose raw text for prompts.")
 
         if self.tokenizer:
             all_ids = self.tokenizer.encode(corpus)
@@ -312,15 +309,12 @@ class RLHFTrainer(BaseTrainer):
 
 
 def make_rlhf_dataloader(config: RLHFConfig, split: str = "train") -> DataLoader:
-    text_file = config.text_file or _get_shakespeare(config.data_root)
-    ds = TextFileDataset(
-        file_path=text_file,
-        seq_len=config.seq_len,
-        fast_demo=config.fast_demo,
-    )
-    return DataLoader(
-        ds,
+    return get_dataloader(
+        name=config.dataset,
+        data_root=config.data_root,
+        split=split,
         batch_size=config.effective_batch_size,
-        shuffle=(split == "train"),
-        num_workers=0,
+        fast_demo=config.fast_demo,
+        file_path=config.text_file,
+        seq_len=config.seq_len,
     )

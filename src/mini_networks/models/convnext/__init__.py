@@ -1,0 +1,1 @@
+"""ConvNeXt-mini model package."""

@@ -5,19 +5,18 @@ from typing import Any
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from mini_networks.core.config import BaseConfig
 from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
-from mini_networks.core.runtime import BaseTrainer
+from mini_networks.core.runtime import SegmentationTrainerBase
 from mini_networks.models.segmentation.config import SegmentationConfig
 from mini_networks.models.segmentation.unet import SegUNet, dice_loss, multiclass_dice_loss
 
 
-class SegmentationTrainer(BaseTrainer):
+class SegmentationTrainer(SegmentationTrainerBase):
     def __init__(self):
         self.model: SegUNet | None = None
 
@@ -28,38 +27,22 @@ class SegmentationTrainer(BaseTrainer):
             base_channels=config.base_channels,
         ).to(config.device)
 
-    def train(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> None:
+    def _forward(self, model: SegUNet, batch, config: SegmentationConfig):
+        images, masks = batch
+        images = images.to(config.device)
+        masks = masks.to(config.device)
+        preds = model(images)
+        return preds, masks
+
+    def _loss(self, preds: torch.Tensor, targets: torch.Tensor, config: BaseConfig) -> torch.Tensor:
         assert isinstance(config, SegmentationConfig)
-        model = self._build(config)
-        self.model = model
-        optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
-        logger.log_config(config.model_dump())
-
-        for epoch in range(config.effective_epochs):
-            model.train()
-            total_loss = 0.0
-            for images, masks in dataloader:
-                images = images.to(config.device)
-                masks = masks.to(config.device)
-                preds = model(images)
-                if config.task_mode == "binary":
-                    loss = (
-                        nn.BCELoss()(preds.squeeze(1), masks.float())
-                        + dice_loss(preds.squeeze(1), masks)
-                    )
-                else:
-                    loss = (
-                        F.cross_entropy(preds, masks)
-                        + multiclass_dice_loss(preds, masks, config.num_classes)
-                    )
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-            avg = total_loss / max(1, len(dataloader))
-            logger.log_metrics(epoch, {"loss": avg, "epoch": epoch})
-
-        torch.save(model.state_dict(), logger.artifact_path("model.pt"))
+        if config.task_mode == "binary":
+            return nn.BCELoss()(preds.squeeze(1), targets.float()) + dice_loss(
+                preds.squeeze(1), targets
+            )
+        return F.cross_entropy(preds, targets) + multiclass_dice_loss(
+            preds, targets, config.num_classes
+        )
 
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         assert isinstance(config, SegmentationConfig)
