@@ -84,5 +84,6 @@ def make_segmentation_dataloader(config: SegmentationConfig, split: str = "train
         split=split,
         task=task,
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
     )

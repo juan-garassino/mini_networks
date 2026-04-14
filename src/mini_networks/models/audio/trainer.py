@@ -52,7 +52,8 @@ def make_audio_dataloader(config: AudioClassifierConfig, split: str = "train") -
         data_root=config.data_root,
         split=split,
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         sample_len=config.sample_len,
         require_downloads=config.require_downloads,
     )
@@ -97,7 +98,8 @@ def make_audio_spec_dataloader(config: AudioSpecClassifierConfig, split: str = "
         data_root=config.data_root,
         split=split,
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         sample_len=config.sample_len,
         require_downloads=config.require_downloads,
     )
@@ -147,7 +149,8 @@ def make_audio_transformer_dataloader(config: AudioTransformerConfig, split: str
         data_root=config.data_root,
         split=split,
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         sample_len=config.sample_len,
         require_downloads=config.require_downloads,
     )
@@ -195,7 +198,8 @@ def make_audio_melspec_dataloader(config: AudioMelSpecClassifierConfig, split: s
         data_root=config.data_root,
         split=split,
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         sample_len=config.sample_len,
         require_downloads=config.require_downloads,
     )

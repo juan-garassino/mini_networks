@@ -81,6 +81,7 @@ def make_detection_dataloader(config: DetectionConfig, split: str = "train") -> 
         split=split,
         task="detection",
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         canvas_size=config.canvas_size,
     )

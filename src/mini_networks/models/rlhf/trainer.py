@@ -92,7 +92,7 @@ class RLHFTrainer(BaseTrainer):
     ) -> TransformerLM:
         model = self._build_lm(config, vocab_size)
         optimizer = optim.AdamW(model.parameters(), lr=config.learning_rate)
-        epochs = 1 if config.fast_demo else config.pretrain_epochs
+        epochs = config.tier_epochs(config.pretrain_epochs, medium_cap=2)
 
         for epoch in range(epochs):
             model.train()
@@ -236,8 +236,8 @@ class RLHFTrainer(BaseTrainer):
         ]
 
         # --- Stage 2: PPO ---
-        n_iters = 2 if config.fast_demo else config.n_ppo_iters
-        offset = config.pretrain_epochs if not config.fast_demo else 1
+        n_iters = 2 if config.effective_tier == "S" else (min(config.n_ppo_iters, 4) if config.effective_tier == "M" else config.n_ppo_iters)
+        offset = config.tier_epochs(config.pretrain_epochs, medium_cap=2)
         print("  [RLHF] Stage 2: PPO fine-tuning")
         for it in range(n_iters):
             rollouts = self._collect_rollouts(model, effective_config, prompts)

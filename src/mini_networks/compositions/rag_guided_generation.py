@@ -49,7 +49,8 @@ class RAGGuidedGeneration:
             data_root=config.data_root,
             split="train",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
             file_path=config.text_file,
             seq_len=config.seq_len,
         )

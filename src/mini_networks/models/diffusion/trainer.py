@@ -226,5 +226,6 @@ def make_diffusion_dataloader(config: DiffusionConfig, split: str = "train") -> 
         split=split,
         task="classification",
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
     )

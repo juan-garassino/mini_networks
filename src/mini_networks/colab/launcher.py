@@ -200,6 +200,10 @@ def _ts() -> str:
     return datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
 
+def _run_base(checkpoint_root: str, name: str) -> str:
+    return os.path.join(checkpoint_root, name)
+
+
 def _make_models_table(items: list[str], title: str) -> Table:
     tbl = Table(title=title, box=box.SIMPLE_HEAD, show_lines=False, highlight=True)
     tbl.add_column("#", style="bold cyan", justify="right", width=4)
@@ -228,12 +232,15 @@ def run_model(
     epochs: int = 2,
     batch_size: int = 32,
     fast_demo: bool = True,
+    training_tier: str = "M",
     data_root: str = "/tmp/mini_networks_data",
     device: str = "cpu",
-    output_base: str = "runs",
+    checkpoint_root: str = "runs",
+    resume: bool = True,
 ) -> "Logger":  # noqa: F821
     """Train a single model and return the Logger instance."""
     from mini_networks.api.dependencies import get_model_registry
+    from mini_networks.core.checkpoints import find_resumable_run
     from mini_networks.core.logging.logger import Logger
 
     registry = get_model_registry()
@@ -245,19 +252,31 @@ def run_model(
         epochs=epochs,
         batch_size=batch_size,
         fast_demo=fast_demo,
+        training_tier=training_tier,
         data_root=data_root,
         device=device,
+        checkpoint_root=checkpoint_root,
+        resume=resume,
     )
-    ts = _ts()
-    output_dir = os.path.join(output_base, model, ts)
-    logger = Logger(output_dir=output_dir, run_name=ts)
+    model_root = _run_base(checkpoint_root, model)
+    resumable_run = find_resumable_run(model_root) if resume else None
+    if resumable_run is not None:
+        config = config.model_copy(update={"run_name": resumable_run.name, "output_dir": str(resumable_run)})
+        logger = Logger(output_dir=str(resumable_run), run_name=resumable_run.name)
+        output_dir = str(resumable_run)
+    else:
+        ts = _ts()
+        output_dir = os.path.join(model_root, ts)
+        config = config.model_copy(update={"run_name": ts, "output_dir": output_dir})
+        logger = Logger(output_dir=output_dir, run_name=ts)
 
     dataloader = dataloader_fn(config, split="train")
     trainer = TrainerClass()
 
     console.print(Panel(
         f"[bold]{_DESCRIPTIONS.get(model, model)}[/bold]\n"
-        f"[dim]fast_demo={fast_demo}  epochs={epochs}  device={device}[/dim]\n"
+        f"[dim]tier={config.effective_tier}  epochs={config.effective_epochs}  device={device}[/dim]\n"
+        f"[dim]checkpoint_root={checkpoint_root}  resume={resume}[/dim]\n"
         f"[dim]output → {output_dir}[/dim]",
         title=f"[bold cyan]Training: {model}[/bold cyan]",
         border_style="cyan",
@@ -303,9 +322,10 @@ def _print_metrics_summary(metrics: list[dict]) -> None:
 def run_composition(
     composition: str,
     fast_demo: bool = True,
+    training_tier: str = "M",
     data_root: str = "/tmp/mini_networks_data",
     device: str = "cpu",
-    output_base: str = "runs",
+    checkpoint_root: str = "runs",
 ) -> dict:
     """Run a cross-model composition pipeline."""
     if composition not in COMPOSITIONS:
@@ -313,7 +333,7 @@ def run_composition(
 
     console.print(Panel(
         f"[bold]{_DESCRIPTIONS.get(composition, composition)}[/bold]\n"
-        f"[dim]fast_demo={fast_demo}  device={device}[/dim]",
+        f"[dim]tier={'S' if fast_demo else training_tier}  device={device}[/dim]",
         title=f"[bold magenta]Composition: {composition}[/bold magenta]",
         border_style="magenta",
     ))
@@ -327,43 +347,43 @@ def run_composition(
     ) as progress:
         progress.add_task(f"Running {composition}…", total=None)
         if composition == "clip_guided_diffusion":
-            result = _run_clip_guided_diffusion(fast_demo, data_root, device)
+            result = _run_clip_guided_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "transformer_clip_diffusion":
-            result = _run_transformer_clip_diffusion(fast_demo, data_root, device)
+            result = _run_transformer_clip_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "gan_diffusion_comparison":
-            result = _run_gan_diffusion_comparison(fast_demo, data_root, device)
+            result = _run_gan_diffusion_comparison(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "clip_guided_gan":
-            result = _run_clip_guided_gan(fast_demo, data_root, device)
+            result = _run_clip_guided_gan(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "classifier_guided_diffusion":
-            result = _run_classifier_guided_diffusion(fast_demo, data_root, device)
+            result = _run_classifier_guided_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "rag_guided_generation":
-            result = _run_rag_guided_generation(fast_demo, data_root, device)
+            result = _run_rag_guided_generation(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "lora_lm":
-            result = _run_lora_lm(fast_demo, data_root, device)
+            result = _run_lora_lm(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "segment_then_detect":
-            result = _run_segment_then_detect(fast_demo, data_root, device)
+            result = _run_segment_then_detect(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "multitask_vision":
-            result = _run_multitask_vision(fast_demo, data_root, device)
+            result = _run_multitask_vision(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "diffusion_distillation":
-            result = _run_diffusion_distillation(fast_demo, data_root, device)
+            result = _run_diffusion_distillation(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "audio_text_contrastive":
-            result = _run_audio_text_contrastive(fast_demo, data_root, device)
+            result = _run_audio_text_contrastive(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "tabular_text_cross_attention":
-            result = _run_tabular_text_cross_attention(fast_demo, data_root, device)
+            result = _run_tabular_text_cross_attention(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "audio_text_dual_encoder":
-            result = _run_audio_text_dual_encoder(fast_demo, data_root, device)
+            result = _run_audio_text_dual_encoder(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "tabular_text_dual_encoder":
-            result = _run_tabular_text_dual_encoder(fast_demo, data_root, device)
+            result = _run_tabular_text_dual_encoder(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "classifier_guided_gan":
-            result = _run_classifier_guided_gan(fast_demo, data_root, device)
+            result = _run_classifier_guided_gan(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "rag_conditioned_diffusion":
-            result = _run_rag_conditioned_diffusion(fast_demo, data_root, device)
+            result = _run_rag_conditioned_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "image_captioning":
-            result = _run_image_captioning(fast_demo, data_root, device)
+            result = _run_image_captioning(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "multimodal_fusion_baseline":
-            result = _run_multimodal_fusion_baseline(fast_demo, data_root, device)
+            result = _run_multimodal_fusion_baseline(fast_demo, training_tier, data_root, device, checkpoint_root)
         elif composition == "latent_diffusion":
-            result = _run_latent_diffusion(fast_demo, data_root, device)
+            result = _run_latent_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root)
         else:
             raise RuntimeError(f"No runner implemented for {composition!r}")
 
@@ -371,324 +391,369 @@ def run_composition(
     return result
 
 
-def _run_clip_guided_diffusion(fast_demo, data_root, device) -> dict:
+def _make_composition_logger(composition: str, checkpoint_root: str):
+    from mini_networks.core.logging.logger import Logger
+
+    ts = _ts()
+    output_dir = os.path.join(checkpoint_root, composition, ts)
+    return Logger(output_dir=output_dir, run_name=ts)
+
+
+def _run_clip_guided_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.clip_guided_diffusion import (
         CLIPGuidedDiffusion,
         CLIPGuidedDiffusionConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
+    cfg = CLIPGuidedDiffusionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("clip_guided_diffusion", checkpoint_root)
+    pipeline = CLIPGuidedDiffusion()
+    pipeline.train(cfg, logger)
+    images = pipeline.text_to_image("digit zero", cfg)
+    console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
+    return {"images": images, "config": cfg, "run_dir": str(logger.run_dir)}
 
-    cfg = CLIPGuidedDiffusionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="clip_guided")
-        pipeline = CLIPGuidedDiffusion()
-        pipeline.train(cfg, logger)
-        images = pipeline.text_to_image("digit zero", cfg)
-        console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
-        return {"images": images, "config": cfg}
-
-
-def _run_transformer_clip_diffusion(fast_demo, data_root, device) -> dict:
+def _run_transformer_clip_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.transformer_clip_diffusion import (
         TransformerCLIPDiffusion,
         TransformerCLIPDiffusionConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
+    cfg = TransformerCLIPDiffusionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("transformer_clip_diffusion", checkpoint_root)
+    pipeline = TransformerCLIPDiffusion()
+    pipeline.train(cfg, logger)
+    images, class_id, prompts = pipeline.generate_image("KING", cfg)
+    console.print(f"  Best class: [cyan]{class_id}[/cyan]  Generated shape: [cyan]{images.shape}[/cyan]")
+    return {"images": images, "class_id": class_id, "prompts": prompts, "run_dir": str(logger.run_dir)}
 
-    cfg = TransformerCLIPDiffusionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="tcd")
-        pipeline = TransformerCLIPDiffusion()
-        pipeline.train(cfg, logger)
-        images, class_id, prompts = pipeline.generate_image("KING", cfg)
-        console.print(f"  Best class: [cyan]{class_id}[/cyan]  Generated shape: [cyan]{images.shape}[/cyan]")
-        return {"images": images, "class_id": class_id, "prompts": prompts}
 
-
-def _run_gan_diffusion_comparison(fast_demo, data_root, device) -> dict:
+def _run_gan_diffusion_comparison(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.gan_diffusion_comparison import (
         GANDiffusionComparison,
         GANDiffusionConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = GANDiffusionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="gdc")
-        cmp = GANDiffusionComparison()
-        cmp.train(cfg, logger)
-        results = cmp.compare(cfg, n_samples=4)
-        console.print(
-            f"  GAN diversity: [cyan]{results['gan_diversity']:.4f}[/cyan]  "
-            f"Diffusion diversity: [cyan]{results['diffusion_diversity']:.4f}[/cyan]"
-        )
-        return results
+    cfg = GANDiffusionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("gan_diffusion_comparison", checkpoint_root)
+    cmp = GANDiffusionComparison()
+    cmp.train(cfg, logger)
+    results = cmp.compare(cfg, n_samples=4)
+    console.print(
+        f"  GAN diversity: [cyan]{results['gan_diversity']:.4f}[/cyan]  "
+        f"Diffusion diversity: [cyan]{results['diffusion_diversity']:.4f}[/cyan]"
+    )
+    results["run_dir"] = str(logger.run_dir)
+    return results
 
 
-def _run_clip_guided_gan(fast_demo, data_root, device) -> dict:
+def _run_clip_guided_gan(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.clip_guided_gan import CLIPGuidedGAN, CLIPGuidedGANConfig
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = CLIPGuidedGANConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="clip_guided_gan")
-        pipeline = CLIPGuidedGAN()
-        pipeline.train(cfg, logger)
-        images = pipeline.sample(cfg, n=4)
-        console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
-        return {"images": images, "config": cfg}
+    cfg = CLIPGuidedGANConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("clip_guided_gan", checkpoint_root)
+    pipeline = CLIPGuidedGAN()
+    pipeline.train(cfg, logger)
+    images = pipeline.sample(cfg, n=4)
+    console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
+    return {"images": images, "config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_classifier_guided_diffusion(fast_demo, data_root, device) -> dict:
+def _run_classifier_guided_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.classifier_guided_diffusion import (
         ClassifierGuidedDiffusion,
         ClassifierGuidedDiffusionConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = ClassifierGuidedDiffusionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="cls_guided_diff")
-        pipeline = ClassifierGuidedDiffusion()
-        pipeline.run(cfg, logger)
-        images = pipeline.sample(cfg, n=4)
-        console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
-        return {"images": images, "config": cfg}
+    cfg = ClassifierGuidedDiffusionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("classifier_guided_diffusion", checkpoint_root)
+    pipeline = ClassifierGuidedDiffusion()
+    pipeline.run(cfg, logger)
+    images = pipeline.sample(cfg, n=4)
+    console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
+    return {"images": images, "config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_rag_guided_generation(fast_demo, data_root, device) -> dict:
+def _run_rag_guided_generation(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.rag_guided_generation import (
         RAGGuidedGeneration,
         RAGGuidedGenerationConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = RAGGuidedGenerationConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="rag_guided")
-        pipeline = RAGGuidedGeneration()
-        pipeline.train(cfg, logger)
-        text = pipeline.generate(cfg, "To be or not to be", max_new_tokens=24)
-        console.print(f"  Sample: [cyan]{text[:120]}[/cyan]")
-        return {"text": text, "config": cfg}
+    cfg = RAGGuidedGenerationConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("rag_guided_generation", checkpoint_root)
+    pipeline = RAGGuidedGeneration()
+    pipeline.train(cfg, logger)
+    text = pipeline.generate(cfg, "To be or not to be", max_new_tokens=24)
+    console.print(f"  Sample: [cyan]{text[:120]}[/cyan]")
+    return {"text": text, "config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_lora_lm(fast_demo, data_root, device) -> dict:
+def _run_lora_lm(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.lora_lm import LoRALM, LoRALMConfig
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = LoRALMConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="lora_lm")
-        pipeline = LoRALM()
-        pipeline.train(cfg, logger)
-        text = pipeline.generate(cfg, "Hello", max_new_tokens=16)
-        console.print(f"  Sample: [cyan]{text[:120]}[/cyan]")
-        return {"text": text, "config": cfg}
+    cfg = LoRALMConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("lora_lm", checkpoint_root)
+    pipeline = LoRALM()
+    pipeline.train(cfg, logger)
+    text = pipeline.generate(cfg, "Hello", max_new_tokens=16)
+    console.print(f"  Sample: [cyan]{text[:120]}[/cyan]")
+    return {"text": text, "config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_segment_then_detect(fast_demo, data_root, device) -> dict:
+def _run_segment_then_detect(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.segment_then_detect import SegmentThenDetect, SegmentThenDetectConfig
     from mini_networks.core.data.registry import get_dataloader
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = SegmentThenDetectConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="seg_then_det")
-        pipeline = SegmentThenDetect()
-        pipeline.train(cfg, logger)
-        dl = get_dataloader(
-            name=cfg.dataset,
-            data_root=cfg.data_root,
-            split="train",
-            task="classification",
-            batch_size=4,
-            fast_demo=True,
-        )
-        images, _ = next(iter(dl))
-        bboxes = pipeline.infer_bbox(cfg, images)
-        console.print(f"  BBoxes shape: [cyan]{bboxes.shape}[/cyan]")
-        return {"bboxes": bboxes, "config": cfg}
+    cfg = SegmentThenDetectConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("segment_then_detect", checkpoint_root)
+    pipeline = SegmentThenDetect()
+    pipeline.train(cfg, logger)
+    dl = get_dataloader(
+        name=cfg.dataset,
+        data_root=cfg.data_root,
+        split="train",
+        task="classification",
+        batch_size=4,
+        fast_demo=cfg.effective_fast_demo,
+        sample_limit=cfg.dataset_sample_limit,
+    )
+    images, _ = next(iter(dl))
+    bboxes = pipeline.infer_bbox(cfg, images)
+    console.print(f"  BBoxes shape: [cyan]{bboxes.shape}[/cyan]")
+    return {"bboxes": bboxes, "config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_multitask_vision(fast_demo, data_root, device) -> dict:
+def _run_multitask_vision(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.multitask_vision import MultiTaskVision, MultiTaskVisionConfig
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = MultiTaskVisionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="multitask_vision")
-        pipeline = MultiTaskVision()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = MultiTaskVisionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("multitask_vision", checkpoint_root)
+    pipeline = MultiTaskVision()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_diffusion_distillation(fast_demo, data_root, device) -> dict:
+def _run_diffusion_distillation(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.diffusion_distillation import (
         DiffusionDistillation,
         DiffusionDistillationConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = DiffusionDistillationConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="diff_distill")
-        pipeline = DiffusionDistillation()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = DiffusionDistillationConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("diffusion_distillation", checkpoint_root)
+    pipeline = DiffusionDistillation()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_audio_text_contrastive(fast_demo, data_root, device) -> dict:
+def _run_audio_text_contrastive(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.audio_text_contrastive import (
         AudioTextContrastive,
         AudioTextContrastiveConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = AudioTextContrastiveConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="audio_text_contrastive")
-        pipeline = AudioTextContrastive()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = AudioTextContrastiveConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("audio_text_contrastive", checkpoint_root)
+    pipeline = AudioTextContrastive()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_tabular_text_cross_attention(fast_demo, data_root, device) -> dict:
+def _run_tabular_text_cross_attention(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.tabular_text_cross_attention import (
         TabularTextCrossAttention,
         TabularTextCrossAttentionConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = TabularTextCrossAttentionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="tabular_text_cross_attention")
-        pipeline = TabularTextCrossAttention()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = TabularTextCrossAttentionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("tabular_text_cross_attention", checkpoint_root)
+    pipeline = TabularTextCrossAttention()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_audio_text_dual_encoder(fast_demo, data_root, device) -> dict:
+def _run_audio_text_dual_encoder(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.audio_text_dual_encoder import (
         AudioTextDualEncoder,
         AudioTextDualEncoderConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = AudioTextDualEncoderConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="audio_text_dual")
-        pipeline = AudioTextDualEncoder()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = AudioTextDualEncoderConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("audio_text_dual_encoder", checkpoint_root)
+    pipeline = AudioTextDualEncoder()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_tabular_text_dual_encoder(fast_demo, data_root, device) -> dict:
+def _run_tabular_text_dual_encoder(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.tabular_text_dual_encoder import (
         TabularTextDualEncoder,
         TabularTextDualEncoderConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = TabularTextDualEncoderConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="tabular_text_dual")
-        pipeline = TabularTextDualEncoder()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = TabularTextDualEncoderConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("tabular_text_dual_encoder", checkpoint_root)
+    pipeline = TabularTextDualEncoder()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_classifier_guided_gan(fast_demo, data_root, device) -> dict:
+def _run_classifier_guided_gan(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.classifier_guided_gan import (
         ClassifierGuidedGAN,
         ClassifierGuidedGANConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = ClassifierGuidedGANConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="classifier_guided_gan")
-        pipeline = ClassifierGuidedGAN()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = ClassifierGuidedGANConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("classifier_guided_gan", checkpoint_root)
+    pipeline = ClassifierGuidedGAN()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_rag_conditioned_diffusion(fast_demo, data_root, device) -> dict:
+def _run_rag_conditioned_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.rag_conditioned_diffusion import (
         RAGConditionedDiffusion,
         RAGConditionedDiffusionConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = RAGConditionedDiffusionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="rag_conditioned_diffusion")
-        pipeline = RAGConditionedDiffusion()
-        pipeline.train(cfg, logger)
-        images, prompt = pipeline.sample(cfg)
-        console.print(f"  Prompt: [cyan]{prompt[:80]}[/cyan]")
-        console.print(f"  Images: [cyan]{images.shape}[/cyan]")
-        return {"images": images, "prompt": prompt, "config": cfg}
+    cfg = RAGConditionedDiffusionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("rag_conditioned_diffusion", checkpoint_root)
+    pipeline = RAGConditionedDiffusion()
+    pipeline.train(cfg, logger)
+    images, prompt = pipeline.sample(cfg)
+    console.print(f"  Prompt: [cyan]{prompt[:80]}[/cyan]")
+    console.print(f"  Images: [cyan]{images.shape}[/cyan]")
+    return {"images": images, "prompt": prompt, "config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_image_captioning(fast_demo, data_root, device) -> dict:
+def _run_image_captioning(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.image_captioning import ImageCaptioning, ImageCaptioningConfig
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = ImageCaptioningConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="image_captioning")
-        pipeline = ImageCaptioning()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = ImageCaptioningConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("image_captioning", checkpoint_root)
+    pipeline = ImageCaptioning()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_multimodal_fusion_baseline(fast_demo, data_root, device) -> dict:
+def _run_multimodal_fusion_baseline(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.multimodal_fusion_baseline import (
         MultimodalFusionBaseline,
         MultimodalFusionConfig,
     )
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = MultimodalFusionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="multimodal_fusion")
-        pipeline = MultimodalFusionBaseline()
-        pipeline.train(cfg, logger)
-        return {"config": cfg}
+    cfg = MultimodalFusionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("multimodal_fusion_baseline", checkpoint_root)
+    pipeline = MultimodalFusionBaseline()
+    pipeline.train(cfg, logger)
+    return {"config": cfg, "run_dir": str(logger.run_dir)}
 
 
-def _run_latent_diffusion(fast_demo, data_root, device) -> dict:
+def _run_latent_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.latent_diffusion import LatentDiffusion, LatentDiffusionConfig
-    import tempfile
-    from mini_networks.core.logging.logger import Logger
 
-    cfg = LatentDiffusionConfig(fast_demo=fast_demo, data_root=data_root, device=device)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        logger = Logger(output_dir=tmpdir, run_name="latent_diffusion")
-        pipeline = LatentDiffusion()
-        pipeline.train(cfg, logger)
-        images = pipeline.sample(cfg, n=4)
-        console.print(f"  Images: [cyan]{images.shape}[/cyan]")
-        return {"images": images, "config": cfg}
+    cfg = LatentDiffusionConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("latent_diffusion", checkpoint_root)
+    pipeline = LatentDiffusion()
+    pipeline.train(cfg, logger)
+    images = pipeline.sample(cfg, n=4)
+    console.print(f"  Images: [cyan]{images.shape}[/cyan]")
+    return {"images": images, "config": cfg, "run_dir": str(logger.run_dir)}
 
 
 # ---------------------------------------------------------------------------
@@ -740,14 +805,17 @@ def interactive_menu() -> None:
             console.print(f"[red]Unknown composition: {comp!r}[/red]")
             return
 
-    fast_raw = console.input("[bold]Fast demo?[/bold] (Y/n): ").strip().lower()
-    fast_demo = fast_raw not in ("n", "no")
+    tier = (console.input("[bold]Training tier[/bold] [S/M/L] (default: M): ").strip().upper() or "M")
+    if tier not in {"S", "M", "L"}:
+        console.print("[red]Invalid tier.[/red]")
+        return
+    fast_demo = tier == "S"
     device = console.input("[bold]Device[/bold] [cpu/cuda/mps] (default: cpu): ").strip() or "cpu"
 
     if choice == "1":
-        run_model(model, fast_demo=fast_demo, device=device)
+        run_model(model, fast_demo=fast_demo, training_tier=tier, device=device)
     else:
-        run_composition(comp, fast_demo=fast_demo, device=device)
+        run_composition(comp, fast_demo=fast_demo, training_tier=tier, device=device)
 
 
 # ---------------------------------------------------------------------------
@@ -773,8 +841,11 @@ if __name__ == "__main__":
     parser.add_argument("--epochs",    type=int,   default=2)
     parser.add_argument("--fast_demo", action="store_true", default=True)
     parser.add_argument("--no_fast",   action="store_true", help="Disable fast_demo")
+    parser.add_argument("--training_tier", choices=["S", "M", "L"], default="M")
     parser.add_argument("--device",    default="cpu")
     parser.add_argument("--data_root", default="/tmp/mini_networks_data")
+    parser.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
+    parser.add_argument("--no_resume", action="store_true", help="Disable auto-resume for single-model runs")
 
     args = parser.parse_args()
 
@@ -788,13 +859,18 @@ if __name__ == "__main__":
             args.model,
             epochs=args.epochs,
             fast_demo=not args.no_fast,
+            training_tier="S" if not args.no_fast else args.training_tier,
             data_root=args.data_root,
             device=args.device,
+            checkpoint_root=args.checkpoint_root,
+            resume=not args.no_resume,
         )
     else:
         run_composition(
             args.composition,
             fast_demo=not args.no_fast,
+            training_tier="S" if not args.no_fast else args.training_tier,
             data_root=args.data_root,
             device=args.device,
+            checkpoint_root=args.checkpoint_root,
         )

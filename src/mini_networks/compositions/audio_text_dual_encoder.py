@@ -39,7 +39,8 @@ class AudioTextDualEncoder(ContrastiveCompositionBase):
             data_root=config.data_root,
             split="train",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
             sample_len=config.sample_len,
             require_downloads=config.require_downloads,
         )

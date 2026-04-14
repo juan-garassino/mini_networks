@@ -65,7 +65,8 @@ def make_clip_dataloader(config: CLIPConfig, split: str = "train") -> DataLoader
         split=split,
         task="clip",
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         seq_len=config.text_seq_len,
         vocab_size=config.vocab_size,
     )

@@ -152,7 +152,8 @@ class CLIPGuidedDiffusion:
             split="train",
             task="clip",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
             seq_len=config.text_seq_len,
             vocab_size=config.vocab_size,
         )
@@ -204,9 +205,10 @@ class CLIPGuidedDiffusion:
             config.dataset, config.data_root, split="train",
             task="classification",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
-        epochs = 1 if config.fast_demo else config.vae_pretrain_epochs
+        epochs = config.tier_epochs(config.vae_pretrain_epochs, medium_cap=2)
         for epoch in range(epochs):
             vae.train()
             total = 0.0
@@ -242,7 +244,8 @@ class CLIPGuidedDiffusion:
             config.dataset, config.data_root, split="train",
             task="classification",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
 
         T = config.timesteps

@@ -152,7 +152,8 @@ class TransformerCLIPDiffusion:
             data_root=config.data_root,
             split="train",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
             file_path=config.text_file,
             seq_len=config.lm_seq_len,
         )
@@ -165,7 +166,7 @@ class TransformerCLIPDiffusion:
         self.lm = model
         optimizer = optim.AdamW(model.parameters(), lr=config.learning_rate)
 
-        epochs = 1 if config.fast_demo else config.lm_epochs
+        epochs = config.tier_epochs(config.lm_epochs, medium_cap=2)
         for epoch in range(epochs):
             model.train()
             total = 0.0
@@ -200,12 +201,13 @@ class TransformerCLIPDiffusion:
             split="train",
             task="clip",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
             seq_len=config.text_seq_len,
             vocab_size=config.vocab_size,
         )
 
-        epochs = 1 if config.fast_demo else config.clip_epochs
+        epochs = config.tier_epochs(config.clip_epochs, medium_cap=2)
         for epoch in range(epochs):
             clip.train()
             total = 0.0
@@ -255,11 +257,12 @@ class TransformerCLIPDiffusion:
             config.dataset, config.data_root, split="train",
             task="classification",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
 
         T = config.timesteps
-        epochs = 1 if config.fast_demo else config.diff_epochs
+        epochs = config.tier_epochs(config.diff_epochs, medium_cap=2)
         for epoch in range(epochs):
             unet.train()
             total = 0.0

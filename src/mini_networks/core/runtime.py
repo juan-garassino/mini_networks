@@ -44,6 +44,10 @@ class BaseTrainer(ABC):
         self.model.load_state_dict(state)
         self.model.eval()
 
+    def load_training_state(self, config: BaseConfig, logger: Logger) -> dict[str, Any] | None:
+        """Load resumable training state when available."""
+        return logger.load_training_state()
+
 
 class SupervisedTrainer(BaseTrainer):
     """Base class with common supervised loops (classification/regression)."""
@@ -64,8 +68,16 @@ class SupervisedTrainer(BaseTrainer):
         self.model = model
         optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
         logger.log_config(config.model_dump())
+        start_epoch = 0
 
-        for epoch in range(config.effective_epochs):
+        if config.resume:
+            state = self.load_training_state(config, logger)
+            if state and not state.get("completed", False):
+                model.load_state_dict(state["model_state"])
+                optimizer.load_state_dict(state["optimizer_state"])
+                start_epoch = int(state.get("epoch", -1)) + 1
+
+        for epoch in range(start_epoch, config.effective_epochs):
             model.train()
             total_loss = 0.0
             correct = 0
@@ -86,9 +98,22 @@ class SupervisedTrainer(BaseTrainer):
                 "accuracy": correct / max(1, total),
                 "epoch": epoch,
             })
+            logger.save_training_state({
+                "epoch": epoch,
+                "completed": False,
+                "model_state": model.state_dict(),
+                "optimizer_state": optimizer.state_dict(),
+            })
 
         import torch
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
+        logger.save_training_state({
+            "epoch": config.effective_epochs - 1,
+            "completed": True,
+            "model_state": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+        })
+        logger.log_summary({"status": "completed", "epochs": config.effective_epochs})
 
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         if self.model is None:
@@ -135,8 +160,16 @@ class ContrastiveTrainer(BaseTrainer):
         self.model = model
         optimizer = self._optimizer(model, config)
         logger.log_config(config.model_dump())
+        start_epoch = 0
 
-        for epoch in range(config.effective_epochs):
+        if config.resume:
+            state = self.load_training_state(config, logger)
+            if state and not state.get("completed", False):
+                model.load_state_dict(state["model_state"])
+                optimizer.load_state_dict(state["optimizer_state"])
+                start_epoch = int(state.get("epoch", -1)) + 1
+
+        for epoch in range(start_epoch, config.effective_epochs):
             model.train()
             total = 0.0
             for batch in dataloader:
@@ -147,8 +180,21 @@ class ContrastiveTrainer(BaseTrainer):
                 optimizer.step()
                 total += loss.item()
             logger.log_metrics(epoch, {"loss": total / max(1, len(dataloader)), "epoch": epoch})
+            logger.save_training_state({
+                "epoch": epoch,
+                "completed": False,
+                "model_state": model.state_dict(),
+                "optimizer_state": optimizer.state_dict(),
+            })
 
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
+        logger.save_training_state({
+            "epoch": config.effective_epochs - 1,
+            "completed": True,
+            "model_state": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+        })
+        logger.log_summary({"status": "completed", "epochs": config.effective_epochs})
 
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         if self.model is None:
@@ -181,8 +227,16 @@ class SegmentationTrainerBase(BaseTrainer):
         self.model = model
         optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
         logger.log_config(config.model_dump())
+        start_epoch = 0
 
-        for epoch in range(config.effective_epochs):
+        if config.resume:
+            state = self.load_training_state(config, logger)
+            if state and not state.get("completed", False):
+                model.load_state_dict(state["model_state"])
+                optimizer.load_state_dict(state["optimizer_state"])
+                start_epoch = int(state.get("epoch", -1)) + 1
+
+        for epoch in range(start_epoch, config.effective_epochs):
             model.train()
             total = 0.0
             for batch in dataloader:
@@ -193,8 +247,21 @@ class SegmentationTrainerBase(BaseTrainer):
                 optimizer.step()
                 total += loss.item()
             logger.log_metrics(epoch, {"loss": total / max(1, len(dataloader)), "epoch": epoch})
+            logger.save_training_state({
+                "epoch": epoch,
+                "completed": False,
+                "model_state": model.state_dict(),
+                "optimizer_state": optimizer.state_dict(),
+            })
 
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
+        logger.save_training_state({
+            "epoch": config.effective_epochs - 1,
+            "completed": True,
+            "model_state": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+        })
+        logger.log_summary({"status": "completed", "epochs": config.effective_epochs})
 
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         if self.model is None:
@@ -236,8 +303,16 @@ class DetectionTrainerBase(BaseTrainer):
         self.model = model
         optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
         logger.log_config(config.model_dump())
+        start_epoch = 0
 
-        for epoch in range(config.effective_epochs):
+        if config.resume:
+            state = self.load_training_state(config, logger)
+            if state and not state.get("completed", False):
+                model.load_state_dict(state["model_state"])
+                optimizer.load_state_dict(state["optimizer_state"])
+                start_epoch = int(state.get("epoch", -1)) + 1
+
+        for epoch in range(start_epoch, config.effective_epochs):
             model.train()
             total = 0.0
             for batch in dataloader:
@@ -248,8 +323,21 @@ class DetectionTrainerBase(BaseTrainer):
                 optimizer.step()
                 total += loss.item()
             logger.log_metrics(epoch, {"loss": total / max(1, len(dataloader)), "epoch": epoch})
+            logger.save_training_state({
+                "epoch": epoch,
+                "completed": False,
+                "model_state": model.state_dict(),
+                "optimizer_state": optimizer.state_dict(),
+            })
 
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
+        logger.save_training_state({
+            "epoch": config.effective_epochs - 1,
+            "completed": True,
+            "model_state": model.state_dict(),
+            "optimizer_state": optimizer.state_dict(),
+        })
+        logger.log_summary({"status": "completed", "epochs": config.effective_epochs})
 
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         if self.model is None:

@@ -50,6 +50,7 @@ def make_simclr_dataloader(config: SimCLRConfig, split: str = "train") -> DataLo
         split=split,
         task="contrastive",
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         image_size=28,
     )

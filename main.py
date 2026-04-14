@@ -68,6 +68,10 @@ def cmd_train(args: argparse.Namespace) -> None:
         extra["device"] = args.device
     if args.data_root:
         extra["data_root"] = args.data_root
+    if args.checkpoint_root:
+        extra["checkpoint_root"] = args.checkpoint_root
+    extra["training_tier"] = "S" if args.fast_demo else args.training_tier
+    extra["resume"] = args.resume
 
     logger = run_model(args.model, fast_demo=args.fast_demo, **extra)
     console.print(f"[green]Done.[/green] Artifacts: {logger.artifacts_dir}")
@@ -81,7 +85,14 @@ def cmd_compose(args: argparse.Namespace) -> None:
     console = Console()
     console.print(f"[bold]Composition:[/bold] {args.composition}  fast_demo={args.fast_demo}")
     device = args.device or "cpu"
-    result = run_composition(args.composition, fast_demo=args.fast_demo, device=device)
+    result = run_composition(
+        args.composition,
+        fast_demo=args.fast_demo,
+        training_tier="S" if args.fast_demo else args.training_tier,
+        device=device,
+        data_root=args.data_root,
+        checkpoint_root=args.checkpoint_root,
+    )
     if isinstance(result, dict) and "config" in result:
         console.print("[green]Done.[/green]")
 
@@ -133,6 +144,89 @@ def cmd_list(args: argparse.Namespace) -> None:
     list_compositions()
 
 
+def _parse_targets(raw: str, available: list[str]) -> list[str]:
+    if raw == "all":
+        return available
+    selected = [item.strip() for item in raw.split(",") if item.strip()]
+    unknown = [item for item in selected if item not in available]
+    if unknown:
+        raise ValueError(f"Unknown targets: {', '.join(unknown)}")
+    return selected
+
+
+def cmd_sweep(args: argparse.Namespace) -> None:
+    """Run a sweep across models and/or compositions."""
+    from rich.console import Console
+    from rich.table import Table
+    from mini_networks.colab.launcher import MODELS, COMPOSITIONS, run_model, run_composition
+
+    console = Console()
+    training_tier = "S" if args.fast_demo else args.training_tier
+
+    models = _parse_targets(args.models, MODELS) if args.include_models else []
+    compositions = _parse_targets(args.compositions, COMPOSITIONS) if args.include_compositions else []
+
+    if not models and not compositions:
+        console.print("[red]Sweep has nothing to run. Enable models and/or compositions.[/red]")
+        sys.exit(1)
+
+    total = len(models) + len(compositions)
+    console.print(
+        f"[bold]Sweep:[/bold] tier={training_tier} items={total} "
+        f"checkpoint_root={args.checkpoint_root}"
+    )
+
+    results: list[tuple[str, str, str]] = []
+
+    for model in models:
+        try:
+            run_model(
+                model,
+                epochs=args.epochs,
+                batch_size=args.batch_size,
+                fast_demo=args.fast_demo,
+                training_tier=training_tier,
+                data_root=args.data_root,
+                device=args.device,
+                checkpoint_root=args.checkpoint_root,
+                resume=args.resume,
+            )
+            results.append(("model", model, "ok"))
+        except Exception as exc:
+            results.append(("model", model, f"failed: {exc}"))
+            if args.fail_fast:
+                raise
+
+    for composition in compositions:
+        try:
+            run_composition(
+                composition,
+                fast_demo=args.fast_demo,
+                training_tier=training_tier,
+                data_root=args.data_root,
+                device=args.device,
+                checkpoint_root=args.checkpoint_root,
+            )
+            results.append(("composition", composition, "ok"))
+        except Exception as exc:
+            results.append(("composition", composition, f"failed: {exc}"))
+            if args.fail_fast:
+                raise
+
+    table = Table(title="Sweep Summary")
+    table.add_column("Type", style="cyan")
+    table.add_column("Name", style="bold")
+    table.add_column("Status")
+    for item_type, name, status in results:
+        style = "green" if status == "ok" else "red"
+        table.add_row(item_type, name, f"[{style}]{status}[/{style}]")
+    console.print(table)
+
+    failures = [row for row in results if row[2] != "ok"]
+    if failures:
+        sys.exit(1)
+
+
 # ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
@@ -158,6 +252,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_train.add_argument("--epochs", type=int, default=None)
     p_train.add_argument("--device", default=None)
     p_train.add_argument("--data_root", default=None)
+    p_train.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
+    p_train.add_argument("--training_tier", choices=["S", "M", "L"], default="M")
+    p_train.add_argument("--no-resume", dest="resume", action="store_false")
+    p_train.set_defaults(resume=True)
 
     # evaluate
     p_eval = sub.add_parser("evaluate", help="Evaluate from checkpoint")
@@ -174,6 +272,26 @@ def build_parser() -> argparse.ArgumentParser:
     p_comp.add_argument("--composition", required=True)
     p_comp.add_argument("--fast_demo", action="store_true", default=False)
     p_comp.add_argument("--device", default=None)
+    p_comp.add_argument("--data_root", default=os.path.join(os.getcwd(), "data"))
+    p_comp.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
+    p_comp.add_argument("--training_tier", choices=["S", "M", "L"], default="M")
+
+    # sweep
+    p_sweep = sub.add_parser("sweep", help="Run many models/compositions in sequence")
+    p_sweep.add_argument("--fast_demo", action="store_true", default=False)
+    p_sweep.add_argument("--training_tier", choices=["S", "M", "L"], default="S")
+    p_sweep.add_argument("--epochs", type=int, default=2)
+    p_sweep.add_argument("--batch_size", type=int, default=32)
+    p_sweep.add_argument("--device", default="cpu")
+    p_sweep.add_argument("--data_root", default=os.path.join(os.getcwd(), "data"))
+    p_sweep.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
+    p_sweep.add_argument("--models", default="all", help="Comma-separated model names or 'all'")
+    p_sweep.add_argument("--compositions", default="all", help="Comma-separated composition names or 'all'")
+    p_sweep.add_argument("--skip-models", dest="include_models", action="store_false")
+    p_sweep.add_argument("--skip-compositions", dest="include_compositions", action="store_false")
+    p_sweep.add_argument("--fail-fast", action="store_true")
+    p_sweep.add_argument("--no-resume", dest="resume", action="store_false")
+    p_sweep.set_defaults(include_models=True, include_compositions=True, resume=True)
 
     # list
     sub.add_parser("list", help="List all models and compositions")
@@ -201,6 +319,7 @@ def main() -> None:
         "serve":    cmd_serve,
         "train":    cmd_train,
         "compose":  cmd_compose,
+        "sweep":    cmd_sweep,
         "evaluate": cmd_evaluate,
         "menu":     cmd_menu,
         "list":     cmd_list,

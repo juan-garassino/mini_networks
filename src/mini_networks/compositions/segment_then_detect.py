@@ -45,7 +45,8 @@ class SegmentThenDetect:
             split="train",
             task="binary_segmentation",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
         model = self._build(config)
         self.model = model

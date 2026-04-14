@@ -35,7 +35,8 @@ class LatentDiffusion:
             split="train",
             task="classification",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
         vae = VAE(latent_channels=config.latent_channels).to(config.device)
         unet = UNet(in_channels=config.latent_channels, base_channels=32).to(config.device)

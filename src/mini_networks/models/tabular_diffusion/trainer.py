@@ -110,7 +110,8 @@ def make_tabular_diffusion_dataloader(config: TabularDiffusionConfig, split: str
         data_root=config.data_root,
         split=split,
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         n_features=config.n_features,
         require_downloads=config.require_downloads,
     )

@@ -578,9 +578,12 @@ def get_dataloader(
     task: TaskMode = "classification",
     batch_size: int = 32,
     fast_demo: bool = False,
+    sample_limit: int | None = None,
     **kwargs,
 ) -> DataLoader:
     ds = get_dataset(name, data_root, split=split, task=task, fast_demo=fast_demo, **kwargs)
+    if sample_limit is not None:
+        ds = _Subset(ds, sample_limit)
     shuffle = split == "train"
     return DataLoader(ds, batch_size=batch_size, shuffle=shuffle, num_workers=0, drop_last=False)
 

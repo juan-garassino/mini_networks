@@ -56,11 +56,12 @@ class ClassifierGuidedDiffusion:
             split="train",
             task="classification",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
         clf = self._build_classifier(config)
         opt = torch.optim.Adam(clf.parameters(), lr=config.learning_rate)
-        epochs = 1 if config.fast_demo else config.classifier_epochs
+        epochs = config.tier_epochs(config.classifier_epochs, medium_cap=2)
         for epoch in range(epochs):
             clf.train()
             total = 0.0
@@ -83,7 +84,8 @@ class ClassifierGuidedDiffusion:
             split="train",
             task="classification",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
         unet = self._build_unet(config)
         scheduler = NoiseScheduler(

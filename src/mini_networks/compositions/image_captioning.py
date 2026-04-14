@@ -58,7 +58,8 @@ class ImageCaptioning:
             split="train",
             task="classification",
             batch_size=min(config.batch_size, 16) if config.fast_demo else config.batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
         model = Captioner(
             d_model=config.d_model,

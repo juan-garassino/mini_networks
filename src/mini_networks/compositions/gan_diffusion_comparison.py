@@ -120,7 +120,8 @@ class GANDiffusionComparison:
             config.dataset, config.data_root, split="train",
             task="classification",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
         epochs = 1 if config.fast_demo else config.gan_epochs
         for epoch in range(epochs):
@@ -181,7 +182,8 @@ class GANDiffusionComparison:
             config.dataset, config.data_root, split="train",
             task="classification",
             batch_size=config.effective_batch_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
+            sample_limit=config.dataset_sample_limit,
         )
         epochs = 1 if config.fast_demo else config.diff_epochs
         for epoch in range(epochs):
