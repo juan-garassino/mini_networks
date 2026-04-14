@@ -72,7 +72,7 @@ class LatentDiffusion:
                 images = images.to(config.device) * 2.0 - 1.0
                 with torch.no_grad():
                     mu, logvar = vae.encode(images)
-                    z = vae.reparameterize(mu, logvar)
+                    z = vae.reparameterise(mu, logvar)
                 B = z.size(0)
                 t = torch.randint(0, config.timesteps, (B,), device=config.device)
                 noise = torch.randn_like(z)

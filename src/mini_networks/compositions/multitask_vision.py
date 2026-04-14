@@ -7,10 +7,12 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
 from mini_networks.core.config import BaseConfig
-from mini_networks.core.data.registry import place_on_canvas, make_binary_mask
+from mini_networks.core.data.registry import (
+    _load_torchvision_dataset,
+    make_binary_mask,
+    place_on_canvas,
+)
 from mini_networks.core.logging.logger import Logger
-import torchvision
-import torchvision.transforms as T
 
 
 class MultiTaskVisionConfig(BaseConfig):
@@ -24,12 +26,31 @@ class MultiTaskVisionConfig(BaseConfig):
 class MultiTaskDataset(Dataset):
     """Returns (canvas_image, class_label, seg_mask, bbox)."""
 
-    def __init__(self, data_root: str, train: bool, canvas_size: int, fast_demo: bool, dataset: str):
+    def __init__(
+        self,
+        data_root: str,
+        train: bool,
+        canvas_size: int,
+        fast_demo: bool,
+        dataset: str,
+        sample_limit: int | None = None,
+    ):
+        import torchvision
+        import torchvision.transforms as T
+
         ds_cls = torchvision.datasets.MNIST if dataset == "mnist" else torchvision.datasets.FashionMNIST
-        ds = ds_cls(root=data_root, train=train, download=True, transform=T.ToTensor())
+        dataset_name = "MNIST" if dataset == "mnist" else "FashionMNIST"
+        ds = _load_torchvision_dataset(
+            ds_cls,
+            data_root=data_root,
+            train=train,
+            transform=T.ToTensor(),
+            name=dataset_name,
+        )
         self._data = ds
         self.canvas_size = canvas_size
-        self._limit = 256 if fast_demo else len(ds)
+        base_limit = 256 if fast_demo else len(ds)
+        self._limit = min(base_limit, sample_limit) if sample_limit is not None else base_limit
 
     def __len__(self) -> int:
         return self._limit
@@ -92,8 +113,9 @@ class MultiTaskVision:
             data_root=config.data_root,
             train=True,
             canvas_size=config.canvas_size,
-            fast_demo=config.fast_demo,
+            fast_demo=config.effective_fast_demo,
             dataset=config.dataset,
+            sample_limit=config.dataset_sample_limit,
         )
         dl = DataLoader(ds, batch_size=config.effective_batch_size, shuffle=True, num_workers=0)
         model = self._build(config)
@@ -109,6 +131,12 @@ class MultiTaskVision:
                 masks = masks.to(config.device)
                 bboxes = bboxes.to(config.device)
                 logits, seg, bbox = model(images)
+                seg = F.interpolate(
+                    seg,
+                    size=masks.shape[-2:],
+                    mode="bilinear",
+                    align_corners=False,
+                )
                 cls_loss = F.cross_entropy(logits, labels)
                 seg_loss = F.binary_cross_entropy(seg.squeeze(1), masks.float())
                 det_loss = F.mse_loss(bbox, bboxes)

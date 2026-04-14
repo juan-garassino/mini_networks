@@ -23,7 +23,7 @@ import datetime
 import os
 import subprocess
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from rich.console import Console
 from rich.panel import Panel
@@ -215,6 +215,115 @@ def _make_models_table(items: list[str], title: str) -> Table:
     return tbl
 
 
+def _probe_preview(value: Any) -> str:
+    import torch
+
+    if isinstance(value, torch.Tensor):
+        return f"tensor{tuple(value.shape)}"
+    if isinstance(value, str):
+        return value[:48] + ("..." if len(value) > 48 else "")
+    if isinstance(value, (list, tuple)):
+        return f"{type(value).__name__}[{len(value)}]"
+    if isinstance(value, dict):
+        return f"dict[{', '.join(value.keys())}]"
+    return type(value).__name__
+
+
+def _validate_probe_output(output: Any) -> str:
+    import torch
+
+    if output is None:
+        raise RuntimeError("Inference probe returned no output.")
+    if isinstance(output, dict):
+        payload = {k: v for k, v in output.items() if k not in {"config", "run_dir"}}
+        if not payload:
+            raise RuntimeError("Inference probe returned only metadata.")
+        parts = []
+        for key, value in payload.items():
+            if isinstance(value, torch.Tensor) and value.numel() == 0:
+                raise RuntimeError(f"Inference probe returned empty tensor for {key}.")
+            if isinstance(value, (list, tuple)) and len(value) == 0:
+                raise RuntimeError(f"Inference probe returned empty collection for {key}.")
+            if isinstance(value, str) and not value.strip():
+                raise RuntimeError(f"Inference probe returned empty text for {key}.")
+            parts.append(f"{key}={_probe_preview(value)}")
+        return ", ".join(parts)
+    if isinstance(output, torch.Tensor):
+        if output.numel() == 0:
+            raise RuntimeError("Inference probe returned an empty tensor.")
+        return _probe_preview(output)
+    if isinstance(output, str):
+        if not output.strip():
+            raise RuntimeError("Inference probe returned empty text.")
+        return _probe_preview(output)
+    if isinstance(output, (list, tuple)) and len(output) == 0:
+        raise RuntimeError("Inference probe returned an empty collection.")
+    return _probe_preview(output)
+
+
+def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader: Any) -> str:
+    batch = None
+    batch_models = {
+        "clip",
+        "segmentation",
+        "detection",
+        "classifier",
+        "resnet",
+        "vit",
+        "vae",
+        "unet_ae",
+        "simclr",
+        "lora",
+        "audio_classifier",
+        "audio_spectrogram",
+        "audio_transformer",
+        "audio_melspectrogram",
+        "tabular_classifier",
+        "mobilenet",
+        "convnext",
+        "vision_embed",
+        "text_seq2seq",
+        "text_token_classifier",
+    }
+    if model in batch_models:
+        batch = next(iter(dataloader))
+
+    if model in {"classifier", "resnet", "vit", "mobilenet", "convnext"}:
+        output = trainer.infer(config, batch[0][:1])
+    elif model == "clip":
+        output = trainer.infer(config, {"images": batch[0][:1]})
+    elif model == "segmentation":
+        output = trainer.infer(config, {"images": batch[0][:1]})
+    elif model == "detection":
+        output = trainer.infer(config, {"images": batch[0][:1]})
+    elif model in {"vae"}:
+        output = trainer.infer(config, {"sample": 1})
+    elif model in {"unet_ae", "audio_classifier", "audio_spectrogram", "audio_transformer", "audio_melspectrogram"}:
+        output = trainer.infer(config, batch[0][:1])
+    elif model in {"simclr", "vision_embed"}:
+        output = trainer.infer(config, {"images": batch[0][:1]})
+    elif model in {"diffusion", "gan", "pixelcnn", "tabular_diffusion"}:
+        output = trainer.infer(config, {"n_samples": 1})
+    elif model in {"transformer", "mamba", "rnn", "rlhf"}:
+        output = trainer.infer(config, {"prompt": "To be", "max_new_tokens": 8})
+    elif model == "rag":
+        output = trainer.infer(config, {"query": "To be", "max_new_tokens": 8})
+    elif model in {"rl_maze", "reinforce"}:
+        output = trainer.infer(config, {})
+    elif model == "lora":
+        output = trainer.infer(config, {"images": batch[0][:1]})
+    elif model == "tabular_classifier":
+        output = trainer.infer(config, {"features": batch[0][:1]})
+    elif model == "text_seq2seq":
+        output = trainer.infer(config, {"src": batch[0][0]})
+    elif model == "text_token_classifier":
+        output = trainer.infer(config, {"tokens": batch[0][0]})
+    else:
+        raise RuntimeError(f"No inference probe implemented for model {model}.")
+
+    return _validate_probe_output(output)
+
+
 def list_models() -> None:
     console.print(_make_models_table(MODELS, "Available Models"))
 
@@ -237,6 +346,7 @@ def run_model(
     device: str = "cpu",
     checkpoint_root: str = "runs",
     resume: bool = True,
+    validate_inference: bool = False,
 ) -> "Logger":  # noqa: F821
     """Train a single model and return the Logger instance."""
     from mini_networks.api.dependencies import get_model_registry
@@ -295,6 +405,9 @@ def run_model(
 
     metrics = logger.read_metrics()
     _print_metrics_summary(metrics)
+    if validate_inference:
+        summary = _run_model_inference_probe(model, trainer, config, dataloader)
+        console.print(f"[green]Inference:[/green] {summary}")
     console.print(f"[green]Artifacts:[/green] {logger.artifacts_dir}")
     return logger
 
@@ -326,6 +439,7 @@ def run_composition(
     data_root: str = "/tmp/mini_networks_data",
     device: str = "cpu",
     checkpoint_root: str = "runs",
+    validate_inference: bool = False,
 ) -> dict:
     """Run a cross-model composition pipeline."""
     if composition not in COMPOSITIONS:
@@ -387,6 +501,9 @@ def run_composition(
         else:
             raise RuntimeError(f"No runner implemented for {composition!r}")
 
+    if validate_inference:
+        summary = _validate_probe_output(result)
+        console.print(f"[green]Inference:[/green] {summary}")
     console.print("[green]Composition complete.[/green]")
     return result
 
@@ -563,7 +680,13 @@ def _run_segment_then_detect(fast_demo, training_tier, data_root, device, checkp
 
 
 def _run_multitask_vision(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
-    from mini_networks.compositions.multitask_vision import MultiTaskVision, MultiTaskVisionConfig
+    from mini_networks.compositions.multitask_vision import (
+        MultiTaskDataset,
+        MultiTaskVision,
+        MultiTaskVisionConfig,
+    )
+    import torch
+    from torch.utils.data import DataLoader
 
     cfg = MultiTaskVisionConfig(
         fast_demo=fast_demo,
@@ -574,7 +697,24 @@ def _run_multitask_vision(fast_demo, training_tier, data_root, device, checkpoin
     logger = _make_composition_logger("multitask_vision", checkpoint_root)
     pipeline = MultiTaskVision()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    probe_ds = MultiTaskDataset(
+        data_root=cfg.data_root,
+        train=True,
+        canvas_size=cfg.canvas_size,
+        fast_demo=cfg.effective_fast_demo,
+        dataset=cfg.dataset,
+        sample_limit=cfg.dataset_sample_limit,
+    )
+    images, _, _, _ = next(iter(DataLoader(probe_ds, batch_size=1, shuffle=False, num_workers=0)))
+    with torch.no_grad():
+        logits, seg, bbox = pipeline.model(images.to(cfg.device))
+    return {
+        "logits": logits.cpu(),
+        "segmentation": seg.cpu(),
+        "bboxes": bbox.cpu(),
+        "config": cfg,
+        "run_dir": str(logger.run_dir),
+    }
 
 
 def _run_diffusion_distillation(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -592,7 +732,13 @@ def _run_diffusion_distillation(fast_demo, training_tier, data_root, device, che
     logger = _make_composition_logger("diffusion_distillation", checkpoint_root)
     pipeline = DiffusionDistillation()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    import torch
+
+    xt = torch.randn(1, 1, 28, 28, device=cfg.device)
+    t = torch.zeros(1, dtype=torch.long, device=cfg.device)
+    with torch.no_grad():
+        pred = pipeline.student(xt, t)
+    return {"student_pred": pred.cpu(), "config": cfg, "run_dir": str(logger.run_dir)}
 
 
 def _run_audio_text_contrastive(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -610,7 +756,11 @@ def _run_audio_text_contrastive(fast_demo, training_tier, data_root, device, che
     logger = _make_composition_logger("audio_text_contrastive", checkpoint_root)
     pipeline = AudioTextContrastive()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    dl = pipeline._get_dataloader(cfg)
+    waves, labels = next(iter(dl))
+    output = pipeline.infer(cfg, {"waves": waves[:1], "labels": labels[:1]})
+    output.update({"config": cfg, "run_dir": str(logger.run_dir)})
+    return output
 
 
 def _run_tabular_text_cross_attention(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -628,7 +778,11 @@ def _run_tabular_text_cross_attention(fast_demo, training_tier, data_root, devic
     logger = _make_composition_logger("tabular_text_cross_attention", checkpoint_root)
     pipeline = TabularTextCrossAttention()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    dl = pipeline._get_dataloader(cfg)
+    features, labels = next(iter(dl))
+    output = pipeline.infer(cfg, {"features": features[:1], "labels": labels[:1]})
+    output.update({"config": cfg, "run_dir": str(logger.run_dir)})
+    return output
 
 
 def _run_audio_text_dual_encoder(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -646,7 +800,11 @@ def _run_audio_text_dual_encoder(fast_demo, training_tier, data_root, device, ch
     logger = _make_composition_logger("audio_text_dual_encoder", checkpoint_root)
     pipeline = AudioTextDualEncoder()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    dl = pipeline._get_dataloader(cfg)
+    waves, labels = next(iter(dl))
+    output = pipeline.infer(cfg, {"waves": waves[:1], "labels": labels[:1]})
+    output.update({"config": cfg, "run_dir": str(logger.run_dir)})
+    return output
 
 
 def _run_tabular_text_dual_encoder(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -664,7 +822,11 @@ def _run_tabular_text_dual_encoder(fast_demo, training_tier, data_root, device, 
     logger = _make_composition_logger("tabular_text_dual_encoder", checkpoint_root)
     pipeline = TabularTextDualEncoder()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    dl = pipeline._get_dataloader(cfg)
+    features, labels = next(iter(dl))
+    output = pipeline.infer(cfg, {"features": features[:1], "labels": labels[:1]})
+    output.update({"config": cfg, "run_dir": str(logger.run_dir)})
+    return output
 
 
 def _run_classifier_guided_gan(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -682,7 +844,18 @@ def _run_classifier_guided_gan(fast_demo, training_tier, data_root, device, chec
     logger = _make_composition_logger("classifier_guided_gan", checkpoint_root)
     pipeline = ClassifierGuidedGAN()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    import torch
+
+    with torch.no_grad():
+        z = torch.randn(1, cfg.latent_dim, device=cfg.device)
+        images = pipeline.G(z)
+        logits = pipeline.C((images + 1.0) / 2.0)
+    return {
+        "images": images.cpu(),
+        "logits": logits.cpu(),
+        "config": cfg,
+        "run_dir": str(logger.run_dir),
+    }
 
 
 def _run_rag_conditioned_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -708,6 +881,9 @@ def _run_rag_conditioned_diffusion(fast_demo, training_tier, data_root, device, 
 
 def _run_image_captioning(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.image_captioning import ImageCaptioning, ImageCaptioningConfig
+    from mini_networks.core.data.registry import get_dataloader
+    from mini_networks.models.clip.data import label_to_tokens
+    import torch
 
     cfg = ImageCaptioningConfig(
         fast_demo=fast_demo,
@@ -718,7 +894,27 @@ def _run_image_captioning(fast_demo, training_tier, data_root, device, checkpoin
     logger = _make_composition_logger("image_captioning", checkpoint_root)
     pipeline = ImageCaptioning()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    dl = get_dataloader(
+        name=cfg.dataset,
+        data_root=cfg.data_root,
+        split="train",
+        task="classification",
+        batch_size=1,
+        fast_demo=cfg.effective_fast_demo,
+        sample_limit=cfg.dataset_sample_limit,
+    )
+    images, labels = next(iter(dl))
+    tokens = torch.stack(
+        [label_to_tokens(int(labels[0]), cfg.text_seq_len, cfg.vocab_size)],
+        dim=0,
+    ).to(cfg.device)
+    with torch.no_grad():
+        logits = pipeline.model(images.to(cfg.device), tokens)
+    return {
+        "caption_logits": logits.cpu(),
+        "config": cfg,
+        "run_dir": str(logger.run_dir),
+    }
 
 
 def _run_multimodal_fusion_baseline(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -736,7 +932,27 @@ def _run_multimodal_fusion_baseline(fast_demo, training_tier, data_root, device,
     logger = _make_composition_logger("multimodal_fusion_baseline", checkpoint_root)
     pipeline = MultimodalFusionBaseline()
     pipeline.train(cfg, logger)
-    return {"config": cfg, "run_dir": str(logger.run_dir)}
+    from mini_networks.core.data.registry import get_dataloader
+    from mini_networks.models.clip.data import label_to_tokens
+    import torch
+
+    dl = get_dataloader(
+        name=cfg.dataset,
+        data_root=cfg.data_root,
+        split="train",
+        task="classification",
+        batch_size=1,
+        fast_demo=cfg.effective_fast_demo,
+        sample_limit=cfg.dataset_sample_limit,
+    )
+    images, labels = next(iter(dl))
+    tokens = torch.stack(
+        [label_to_tokens(int(labels[0]), cfg.text_seq_len, cfg.vocab_size)],
+        dim=0,
+    ).to(cfg.device)
+    with torch.no_grad():
+        logits = pipeline.model(images.to(cfg.device), tokens)
+    return {"logits": logits.cpu(), "config": cfg, "run_dir": str(logger.run_dir)}
 
 
 def _run_latent_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:

@@ -195,6 +195,7 @@ def cmd_sweep(args: argparse.Namespace) -> None:
                 device=args.device,
                 checkpoint_root=args.checkpoint_root,
                 resume=args.resume,
+                validate_inference=True,
             )
             results.append(("model", model, "ok"))
         except Exception as exc:
@@ -211,6 +212,7 @@ def cmd_sweep(args: argparse.Namespace) -> None:
                 data_root=args.data_root,
                 device=args.device,
                 checkpoint_root=args.checkpoint_root,
+                validate_inference=True,
             )
             results.append(("composition", composition, "ok"))
         except Exception as exc:

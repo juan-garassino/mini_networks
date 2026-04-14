@@ -1,6 +1,8 @@
 """Dataset registry with MNIST task modes + text loaders."""
 from __future__ import annotations
 
+import contextlib
+import io
 import os
 import urllib.request
 import wave
@@ -30,15 +32,46 @@ TaskMode = Literal[
 SHAKESPEARE_URL = (
     "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 )
+_PREPARED_DATASETS: set[tuple[str, str]] = set()
+
+
+def _prepare_dataset_once(name: str, data_root: str) -> None:
+    key = (name, os.path.abspath(data_root))
+    if key not in _PREPARED_DATASETS:
+        print(f"Preparing {name}...")
+
+
+def _mark_dataset_ready(name: str, data_root: str) -> None:
+    key = (name, os.path.abspath(data_root))
+    if key not in _PREPARED_DATASETS:
+        _PREPARED_DATASETS.add(key)
+        print(f"{name} ready")
+
+
+def _load_torchvision_dataset(dataset_cls, data_root: str, train: bool, transform, name: str | None = None):
+    dataset_name = name or dataset_cls.__name__
+    _prepare_dataset_once(dataset_name, data_root)
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        ds = dataset_cls(
+            root=data_root,
+            train=train,
+            download=True,
+            transform=transform,
+        )
+    _mark_dataset_ready(dataset_name, data_root)
+    return ds
 
 
 class MNISTClassification(Dataset):
     """Standard MNIST for classification: returns (image [1,28,28], label int)."""
 
     def __init__(self, data_root: str, train: bool = True, fast_demo: bool = False):
-        ds = torchvision.datasets.MNIST(
-            root=data_root, train=train, download=True,
+        ds = _load_torchvision_dataset(
+            torchvision.datasets.MNIST,
+            data_root=data_root,
+            train=train,
             transform=T.ToTensor(),
+            name="MNIST",
         )
         self._data = ds
         self._limit = 256 if fast_demo else len(ds)
@@ -60,8 +93,10 @@ class BinarySegmentationFromDigits(Dataset):
         train: bool = True,
         fast_demo: bool = False,
     ):
-        ds = dataset_cls(
-            root=data_root, train=train, download=True,
+        ds = _load_torchvision_dataset(
+            dataset_cls,
+            data_root=data_root,
+            train=train,
             transform=T.ToTensor(),
         )
         self._data = ds
@@ -89,8 +124,10 @@ class MulticlassSegmentationFromDigits(Dataset):
         train: bool = True,
         fast_demo: bool = False,
     ):
-        ds = dataset_cls(
-            root=data_root, train=train, download=True,
+        ds = _load_torchvision_dataset(
+            dataset_cls,
+            data_root=data_root,
+            train=train,
             transform=T.ToTensor(),
         )
         self._data = ds
@@ -122,8 +159,10 @@ class DigitDetection(Dataset):
         canvas_size: int = 56,
         fast_demo: bool = False,
     ):
-        ds = dataset_cls(
-            root=data_root, train=train, download=True,
+        ds = _load_torchvision_dataset(
+            dataset_cls,
+            data_root=data_root,
+            train=train,
             transform=T.ToTensor(),
         )
         self._data = ds
@@ -155,8 +194,10 @@ class ContrastivePairFromDigits(Dataset):
         fast_demo: bool = False,
         image_size: int = 28,
     ):
-        ds = dataset_cls(
-            root=data_root, train=train, download=True,
+        ds = _load_torchvision_dataset(
+            dataset_cls,
+            data_root=data_root,
+            train=train,
             transform=T.ToTensor(),
         )
         self._data = ds
@@ -361,8 +402,12 @@ class MNISTImageTextDataset(Dataset):
         vocab_size: int = 256,
         fast_demo: bool = False,
     ):
-        self._ds = torchvision.datasets.MNIST(
-            root=data_root, train=train, download=True, transform=T.ToTensor()
+        self._ds = _load_torchvision_dataset(
+            torchvision.datasets.MNIST,
+            data_root=data_root,
+            train=train,
+            transform=T.ToTensor(),
+            name="MNIST",
         )
         self._seq_len = seq_len
         self._vocab_size = vocab_size
@@ -475,8 +520,15 @@ def get_dataset(
 
     if name in ("mnist", "fashion_mnist"):
         cls = torchvision.datasets.MNIST if name == "mnist" else torchvision.datasets.FashionMNIST
+        dataset_name = "MNIST" if name == "mnist" else "FashionMNIST"
         if task == "classification":
-            ds = cls(root=data_root, train=train, download=True, transform=T.ToTensor())
+            ds = _load_torchvision_dataset(
+                cls,
+                data_root=data_root,
+                train=train,
+                transform=T.ToTensor(),
+                name=dataset_name,
+            )
             if fast_demo:
                 # Wrap to limit size
                 return _Subset(ds, 256)
@@ -593,9 +645,11 @@ def _ensure_tiny_shakespeare(data_root: str) -> str:
     """Download Tiny Shakespeare into data_root if missing. Returns file path."""
     os.makedirs(data_root, exist_ok=True)
     path = os.path.join(data_root, "shakespeare.txt")
+    _prepare_dataset_once("Tiny Shakespeare", data_root)
     if not os.path.exists(path):
-        print(f"Downloading Tiny Shakespeare → {path}")
+        print("Downloading Tiny Shakespeare...")
         urllib.request.urlretrieve(SHAKESPEARE_URL, path)
+    _mark_dataset_ready("Tiny Shakespeare", data_root)
     return path
 
 
@@ -606,13 +660,15 @@ def _ensure_fsdd(data_root: str, require_downloads: bool = True) -> list[str]:
     zip_path = os.path.join(data_root, "fsdd.zip")
     extract_dir = os.path.join(data_root, "fsdd")
     wav_dir = os.path.join(extract_dir, "free-spoken-digit-dataset-master", "recordings")
+    _prepare_dataset_once("FSDD", data_root)
 
     if not os.path.exists(wav_dir):
         if not os.path.exists(zip_path):
             if not require_downloads:
                 raise RuntimeError("FSDD not found and downloads disabled.")
-            print(f"Downloading FSDD → {zip_path}")
+            print("Downloading FSDD...")
             urllib.request.urlretrieve(SpeechDigitsDataset.FSDD_URL, zip_path)
+        print("Extracting FSDD...")
         with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(extract_dir)
 
@@ -624,6 +680,7 @@ def _ensure_fsdd(data_root: str, require_downloads: bool = True) -> list[str]:
     files.sort()
     if not files:
         raise RuntimeError("FSDD download failed or no wav files found.")
+    _mark_dataset_ready("FSDD", data_root)
     return files
 
 
@@ -649,10 +706,11 @@ def _read_wav_mono(path: str, sample_len: int) -> torch.Tensor:
 def _ensure_iris(data_root: str, require_downloads: bool = True):
     os.makedirs(data_root, exist_ok=True)
     path = os.path.join(data_root, "iris.data")
+    _prepare_dataset_once("Iris", data_root)
     if not os.path.exists(path):
         if not require_downloads:
             raise RuntimeError("Iris not found and downloads disabled.")
-        print(f"Downloading Iris → {path}")
+        print("Downloading Iris...")
         urllib.request.urlretrieve(IrisDataset.IRIS_URL, path)
 
     X = []
@@ -678,6 +736,7 @@ def _ensure_iris(data_root: str, require_downloads: bool = True):
             y.append(label)
     if not X:
         raise RuntimeError("Iris download failed or dataset is empty.")
+    _mark_dataset_ready("Iris", data_root)
     return X, y
 
 

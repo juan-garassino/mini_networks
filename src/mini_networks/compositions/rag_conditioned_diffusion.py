@@ -25,15 +25,21 @@ class RAGConditionedDiffusion:
     def train(self, config: RAGConditionedDiffusionConfig, logger: Logger) -> None:
         rag_cfg = RAGGuidedGenerationConfig(
             fast_demo=config.fast_demo,
+            training_tier=config.training_tier,
             data_root=config.data_root,
             device=config.device,
         )
         self.rag.train(rag_cfg, logger)
-        self.diff.train(config, logger)
+        self.diff.train_all(config, logger)
 
     def sample(self, config: RAGConditionedDiffusionConfig) -> tuple:
         prompt = self.rag.generate(
-            RAGGuidedGenerationConfig(fast_demo=True, data_root=config.data_root, device=config.device),
+            RAGGuidedGenerationConfig(
+                fast_demo=config.fast_demo,
+                training_tier=config.training_tier,
+                data_root=config.data_root,
+                device=config.device,
+            ),
             config.prompt_seed,
             max_new_tokens=16,
         )
