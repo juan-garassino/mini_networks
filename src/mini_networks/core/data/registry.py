@@ -116,6 +116,7 @@ class DigitDetection(Dataset):
 
     def __init__(
         self,
+        dataset_cls,
         data_root: str,
         train: bool = True,
         canvas_size: int = 56,
@@ -690,3 +691,6 @@ class _Subset(Dataset):
 
     def __getitem__(self, idx: int):
         return self._dataset[idx]
+
+    def __getattr__(self, name: str):
+        return getattr(self._dataset, name)

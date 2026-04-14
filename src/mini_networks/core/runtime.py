@@ -119,7 +119,6 @@ class SupervisedTrainer(BaseTrainer):
                 "optimizer_state": optimizer.state_dict(),
             })
 
-        import torch
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
         logger.save_training_state({
             "epoch": config.effective_epochs - 1,

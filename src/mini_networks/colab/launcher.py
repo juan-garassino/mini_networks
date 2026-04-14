@@ -412,7 +412,7 @@ def _run_clip_guided_diffusion(fast_demo, training_tier, data_root, device, chec
     )
     logger = _make_composition_logger("clip_guided_diffusion", checkpoint_root)
     pipeline = CLIPGuidedDiffusion()
-    pipeline.train(cfg, logger)
+    pipeline.train_all(cfg, logger)
     images = pipeline.text_to_image("digit zero", cfg)
     console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
     return {"images": images, "config": cfg, "run_dir": str(logger.run_dir)}
@@ -430,7 +430,7 @@ def _run_transformer_clip_diffusion(fast_demo, training_tier, data_root, device,
     )
     logger = _make_composition_logger("transformer_clip_diffusion", checkpoint_root)
     pipeline = TransformerCLIPDiffusion()
-    pipeline.train(cfg, logger)
+    pipeline.train_all(cfg, logger)
     images, class_id, prompts = pipeline.generate_image("KING", cfg)
     console.print(f"  Best class: [cyan]{class_id}[/cyan]  Generated shape: [cyan]{images.shape}[/cyan]")
     return {"images": images, "class_id": class_id, "prompts": prompts, "run_dir": str(logger.run_dir)}
@@ -450,7 +450,7 @@ def _run_gan_diffusion_comparison(fast_demo, training_tier, data_root, device, c
     )
     logger = _make_composition_logger("gan_diffusion_comparison", checkpoint_root)
     cmp = GANDiffusionComparison()
-    cmp.train(cfg, logger)
+    cmp.train_all(cfg, logger)
     results = cmp.compare(cfg, n_samples=4)
     console.print(
         f"  GAN diversity: [cyan]{results['gan_diversity']:.4f}[/cyan]  "
