@@ -16,9 +16,9 @@ from mini_networks.models.rl_maze.env import MazeEnv
 
 
 def _make_env(config: ReinforceConfig) -> MazeEnv:
-    w = 5 if config.fast_demo else config.maze_width
-    h = 5 if config.fast_demo else config.maze_height
-    steps = 50 if config.fast_demo else config.max_steps
+    w = 5 if config.effective_tier == "S" else config.maze_width
+    h = 5 if config.effective_tier == "S" else config.maze_height
+    steps = config.limit_steps(config.max_steps, s_cap=12, m_cap=50)
     return MazeEnv(width=w, height=h, density=config.maze_density, max_steps=steps)
 
 
@@ -40,7 +40,7 @@ class ReinforceTrainer(BaseTrainer):
         optimizer = torch.optim.Adam(policy.parameters(), lr=config.learning_rate)
         logger.log_config(config.model_dump())
 
-        n_episodes = 10 if config.fast_demo else config.n_episodes
+        n_episodes = config.limit_steps(config.n_episodes, s_cap=2, m_cap=20)
         for ep in range(n_episodes):
             state = env.reset()
             done = False
@@ -92,7 +92,7 @@ class ReinforceTrainer(BaseTrainer):
         policy = self.policy
         policy.eval()
 
-        n_eval = 5 if config.fast_demo else config.eval_episodes
+        n_eval = config.limit_steps(config.eval_episodes, s_cap=1, m_cap=5)
         total_reward = 0.0
         successes = 0
         with torch.no_grad():

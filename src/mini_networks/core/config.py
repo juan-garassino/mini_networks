@@ -49,9 +49,9 @@ class BaseConfig(BaseModel):
     @property
     def dataset_sample_limit(self) -> int | None:
         if self.effective_tier == "S":
-            return 256
+            return 32
         if self.effective_tier == "M":
-            return 2048
+            return 512
         return None
 
     def tier_epochs(self, full_epochs: int, medium_cap: int = 2) -> int:
@@ -60,3 +60,26 @@ class BaseConfig(BaseModel):
         if self.effective_tier == "M":
             return min(full_epochs, medium_cap)
         return full_epochs
+
+    @property
+    def max_train_batches(self) -> int | None:
+        if self.effective_tier == "S":
+            return 1
+        if self.effective_tier == "M":
+            return 8
+        return None
+
+    @property
+    def max_eval_batches(self) -> int | None:
+        if self.effective_tier == "S":
+            return 1
+        if self.effective_tier == "M":
+            return 4
+        return None
+
+    def limit_steps(self, full_steps: int, s_cap: int, m_cap: int) -> int:
+        if self.effective_tier == "S":
+            return min(full_steps, s_cap)
+        if self.effective_tier == "M":
+            return min(full_steps, m_cap)
+        return full_steps

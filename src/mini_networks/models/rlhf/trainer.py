@@ -124,14 +124,14 @@ class RLHFTrainer(BaseTrainer):
         """Generate responses and score them. Returns list of rollout dicts."""
         rollouts = []
         model.eval()
-        n = min(config.n_rollouts, len(prompts))
+        n = min(config.limit_steps(config.n_rollouts, s_cap=1, m_cap=4), len(prompts))
         for i in range(n):
             prompt_ids = prompts[i % len(prompts)]
             prompt = torch.tensor([prompt_ids], dtype=torch.long, device=config.device)
             with torch.no_grad():
                 full = model.generate(
                     prompt,
-                    max_new_tokens=config.rollout_max_new,
+                    max_new_tokens=config.limit_steps(config.rollout_max_new, s_cap=8, m_cap=16),
                     temperature=config.rollout_temperature,
                 )
             response_ids = full[0, len(prompt_ids):].tolist()
@@ -154,7 +154,7 @@ class RLHFTrainer(BaseTrainer):
         optimizer = optim.AdamW(model.parameters(), lr=config.rlhf_lr)
         total_loss = 0.0
 
-        for _ in range(config.ppo_epochs):
+        for _ in range(config.limit_steps(config.ppo_epochs, s_cap=1, m_cap=2)):
             for rb in rollouts:
                 tokens = rb["full_tokens"]        # [1, T]
                 reward = rb["reward"]
@@ -187,7 +187,7 @@ class RLHFTrainer(BaseTrainer):
                 optimizer.step()
                 total_loss += loss.item()
 
-        n = max(1, len(rollouts) * config.ppo_epochs)
+        n = max(1, len(rollouts) * config.limit_steps(config.ppo_epochs, s_cap=1, m_cap=2))
         return total_loss / n
 
     # ------------------------------------------------------------------
@@ -236,7 +236,7 @@ class RLHFTrainer(BaseTrainer):
         ]
 
         # --- Stage 2: PPO ---
-        n_iters = 2 if config.effective_tier == "S" else (min(config.n_ppo_iters, 4) if config.effective_tier == "M" else config.n_ppo_iters)
+        n_iters = config.limit_steps(config.n_ppo_iters, s_cap=1, m_cap=2)
         offset = config.tier_epochs(config.pretrain_epochs, medium_cap=2)
         print("  [RLHF] Stage 2: PPO fine-tuning")
         for it in range(n_iters):
@@ -314,7 +314,8 @@ def make_rlhf_dataloader(config: RLHFConfig, split: str = "train") -> DataLoader
         data_root=config.data_root,
         split=split,
         batch_size=config.effective_batch_size,
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         file_path=config.text_file,
         seq_len=config.seq_len,
     )

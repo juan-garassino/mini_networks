@@ -60,7 +60,7 @@ class LoRATrainer(BaseTrainer):
         optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
         mnist_dl = make_lora_dataloader(config, dataset="mnist", split="train")
-        for epoch in range(config.pretrain_epochs):
+        for epoch in range(config.tier_epochs(config.pretrain_epochs, medium_cap=2)):
             avg = self._run_epoch(model, mnist_dl, optimizer, config.device)
             logger.log_metrics(epoch, {"pretrain_loss": avg, "stage": 1, "epoch": epoch})
             print(f"    pretrain epoch {epoch}  loss {avg:.4f}")
@@ -71,8 +71,8 @@ class LoRATrainer(BaseTrainer):
         lora_optimizer = optim.Adam(model.trainable_params(), lr=config.learning_rate)
 
         fashion_dl = make_lora_dataloader(config, dataset="fashion_mnist", split="train")
-        offset = config.pretrain_epochs
-        for epoch in range(config.finetune_epochs):
+        offset = config.tier_epochs(config.pretrain_epochs, medium_cap=2)
+        for epoch in range(config.tier_epochs(config.finetune_epochs, medium_cap=2)):
             avg = self._run_epoch(model, fashion_dl, lora_optimizer, config.device)
             logger.log_metrics(offset + epoch, {"finetune_loss": avg, "stage": 2, "epoch": epoch})
             print(f"    finetune epoch {epoch}  loss {avg:.4f}")

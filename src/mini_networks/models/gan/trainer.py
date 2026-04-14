@@ -49,7 +49,9 @@ class GANTrainer(BaseTrainer):
             G.train(); D.train()
             total_d, total_g = 0.0, 0.0
 
-            for batch in dataloader:
+            for batch_idx, batch in enumerate(dataloader):
+                if config.max_train_batches is not None and batch_idx >= config.max_train_batches:
+                    break
                 # dataloader may return (image, label) or just image
                 real = (batch[0] if isinstance(batch, (list, tuple)) else batch).to(config.device)
                 B = real.size(0)
@@ -92,7 +94,9 @@ class GANTrainer(BaseTrainer):
         total_score = 0.0
         n = 0
         with torch.no_grad():
-            for batch in dataloader:
+            for batch_idx, batch in enumerate(dataloader):
+                if config.max_eval_batches is not None and batch_idx >= config.max_eval_batches:
+                    break
                 real = (batch[0] if isinstance(batch, (list, tuple)) else batch).to(config.device)
                 scores = D(real)
                 total_score += scores.mean().item()
@@ -138,6 +142,7 @@ def make_gan_dataloader(config: GANConfig, split: str = "train") -> DataLoader:
         data_root=config.data_root,
         split=split,
         task="classification",
-        fast_demo=config.fast_demo,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
         batch_size=config.effective_batch_size,
     )

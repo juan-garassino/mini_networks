@@ -48,6 +48,20 @@ class BaseTrainer(ABC):
         """Load resumable training state when available."""
         return logger.load_training_state()
 
+    def _iter_train_batches(self, dataloader: DataLoader, config: BaseConfig):
+        limit = config.max_train_batches
+        for batch_idx, batch in enumerate(dataloader):
+            if limit is not None and batch_idx >= limit:
+                break
+            yield batch
+
+    def _iter_eval_batches(self, dataloader: DataLoader, config: BaseConfig):
+        limit = config.max_eval_batches
+        for batch_idx, batch in enumerate(dataloader):
+            if limit is not None and batch_idx >= limit:
+                break
+            yield batch
+
 
 class SupervisedTrainer(BaseTrainer):
     """Base class with common supervised loops (classification/regression)."""
@@ -82,7 +96,7 @@ class SupervisedTrainer(BaseTrainer):
             total_loss = 0.0
             correct = 0
             total = 0
-            for batch in dataloader:
+            for batch in self._iter_train_batches(dataloader, config):
                 logits, targets = self._forward(model, batch, config)
                 logits, targets = logits.to(config.device), targets.to(config.device)
                 loss = self._loss(logits, targets)
@@ -124,7 +138,7 @@ class SupervisedTrainer(BaseTrainer):
         correct = 0
         total = 0
         with torch.no_grad():
-            for batch in dataloader:
+            for batch in self._iter_eval_batches(dataloader, config):
                 logits, targets = self._forward(model, batch, config)
                 logits, targets = logits.to(config.device), targets.to(config.device)
                 total_loss += self._loss(logits, targets).item()
@@ -172,7 +186,7 @@ class ContrastiveTrainer(BaseTrainer):
         for epoch in range(start_epoch, config.effective_epochs):
             model.train()
             total = 0.0
-            for batch in dataloader:
+            for batch in self._iter_train_batches(dataloader, config):
                 emb_a, emb_b = self._forward(model, batch, config)
                 loss = self._loss(emb_a, emb_b, temperature=getattr(config, "temperature", 0.2))
                 optimizer.zero_grad()
@@ -203,7 +217,7 @@ class ContrastiveTrainer(BaseTrainer):
         model.eval()
         total = 0.0
         with torch.no_grad():
-            for batch in dataloader:
+            for batch in self._iter_eval_batches(dataloader, config):
                 emb_a, emb_b = self._forward(model, batch, config)
                 total += self._loss(emb_a, emb_b, temperature=getattr(config, "temperature", 0.2)).item()
         return {"eval_loss": total / max(1, len(dataloader))}
@@ -239,7 +253,7 @@ class SegmentationTrainerBase(BaseTrainer):
         for epoch in range(start_epoch, config.effective_epochs):
             model.train()
             total = 0.0
-            for batch in dataloader:
+            for batch in self._iter_train_batches(dataloader, config):
                 preds, targets = self._forward(model, batch, config)
                 loss = self._loss(preds, targets, config)
                 optimizer.zero_grad()
@@ -270,7 +284,7 @@ class SegmentationTrainerBase(BaseTrainer):
         model.eval()
         total = 0.0
         with torch.no_grad():
-            for batch in dataloader:
+            for batch in self._iter_eval_batches(dataloader, config):
                 preds, targets = self._forward(model, batch, config)
                 total += self._loss(preds, targets, config).item()
         return {"eval_loss": total / max(1, len(dataloader))}
@@ -315,7 +329,7 @@ class DetectionTrainerBase(BaseTrainer):
         for epoch in range(start_epoch, config.effective_epochs):
             model.train()
             total = 0.0
-            for batch in dataloader:
+            for batch in self._iter_train_batches(dataloader, config):
                 class_logits, bbox_pred, labels, target_bbox = self._forward(model, batch, config)
                 loss = self._loss(class_logits, bbox_pred, labels, target_bbox, config)
                 optimizer.zero_grad()
@@ -346,7 +360,7 @@ class DetectionTrainerBase(BaseTrainer):
         model.eval()
         total = 0.0
         with torch.no_grad():
-            for batch in dataloader:
+            for batch in self._iter_eval_batches(dataloader, config):
                 class_logits, bbox_pred, labels, target_bbox = self._forward(model, batch, config)
                 total += self._loss(class_logits, bbox_pred, labels, target_bbox, config).item()
         return {"eval_loss": total / max(1, len(dataloader))}

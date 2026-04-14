@@ -18,9 +18,9 @@ from mini_networks.models.rl_maze.agents import QAgent, DQNAgent, PPOAgent
 
 
 def _make_env(config: RLMazeConfig) -> MazeEnv:
-    w = 5 if config.fast_demo else config.maze_width
-    h = 5 if config.fast_demo else config.maze_height
-    steps = 50 if config.fast_demo else config.max_steps
+    w = 5 if config.effective_tier == "S" else config.maze_width
+    h = 5 if config.effective_tier == "S" else config.maze_height
+    steps = config.limit_steps(config.max_steps, s_cap=12, m_cap=50)
     return MazeEnv(width=w, height=h, density=config.maze_density, max_steps=steps)
 
 
@@ -96,7 +96,7 @@ class RLMazeTrainer(BaseTrainer):
         agent = _make_agent(config, state_size=len(state))
         self.agent = agent
 
-        n_episodes = 10 if config.fast_demo else config.n_episodes
+        n_episodes = config.limit_steps(config.n_episodes, s_cap=2, m_cap=20)
         logger.log_config(config.model_dump())
 
         for ep in range(n_episodes):
@@ -139,7 +139,7 @@ class RLMazeTrainer(BaseTrainer):
         if hasattr(agent, "epsilon"):
             agent.epsilon = 0.0
 
-        n_eval = 5 if config.fast_demo else config.eval_episodes
+        n_eval = config.limit_steps(config.eval_episodes, s_cap=1, m_cap=5)
         total_reward = 0.0
         successes = 0
         for _ in range(n_eval):
