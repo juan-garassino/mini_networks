@@ -1,6 +1,7 @@
 .PHONY: help install install-dev list validate-s validate-m validate-l validate-models-s validate-compositions-s
 
-PYTHON ?= python3
+UV_RUN = uv run
+PYTHON ?= $(UV_RUN) python
 CHECKPOINT_ROOT ?= runs
 DATA_ROOT ?= data
 DEVICE ?= cpu

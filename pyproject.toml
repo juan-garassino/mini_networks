@@ -28,15 +28,15 @@ dev = [
     "pytest-asyncio>=0.23.0",
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/mini_networks"]
-
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.0.0",
     "httpx>=0.27.0",
     "pytest-asyncio>=0.23.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mini_networks"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
