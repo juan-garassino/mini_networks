@@ -20,6 +20,10 @@ from mini_networks.core.data.transforms import (
     place_on_canvas,
 )
 
+import logging
+
+log = logging.getLogger(__name__)
+
 TaskMode = Literal[
     "classification",
     "binary_segmentation",
@@ -38,14 +42,14 @@ _PREPARED_DATASETS: set[tuple[str, str]] = set()
 def _prepare_dataset_once(name: str, data_root: str) -> None:
     key = (name, os.path.abspath(data_root))
     if key not in _PREPARED_DATASETS:
-        print(f"Preparing {name}...")
+        log.info(f"Preparing {name}...")
 
 
 def _mark_dataset_ready(name: str, data_root: str) -> None:
     key = (name, os.path.abspath(data_root))
     if key not in _PREPARED_DATASETS:
         _PREPARED_DATASETS.add(key)
-        print(f"{name} ready")
+        log.info(f"{name} ready")
 
 
 def _load_torchvision_dataset(dataset_cls, data_root: str, train: bool, transform, name: str | None = None):
@@ -647,7 +651,7 @@ def _ensure_tiny_shakespeare(data_root: str) -> str:
     path = os.path.join(data_root, "shakespeare.txt")
     _prepare_dataset_once("Tiny Shakespeare", data_root)
     if not os.path.exists(path):
-        print("Downloading Tiny Shakespeare...")
+        log.info("Downloading Tiny Shakespeare...")
         urllib.request.urlretrieve(SHAKESPEARE_URL, path)
     _mark_dataset_ready("Tiny Shakespeare", data_root)
     return path
@@ -666,9 +670,9 @@ def _ensure_fsdd(data_root: str, require_downloads: bool = True) -> list[str]:
         if not os.path.exists(zip_path):
             if not require_downloads:
                 raise RuntimeError("FSDD not found and downloads disabled.")
-            print("Downloading FSDD...")
+            log.info("Downloading FSDD...")
             urllib.request.urlretrieve(SpeechDigitsDataset.FSDD_URL, zip_path)
-        print("Extracting FSDD...")
+        log.info("Extracting FSDD...")
         with zipfile.ZipFile(zip_path, "r") as zf:
             zf.extractall(extract_dir)
 
@@ -710,7 +714,7 @@ def _ensure_iris(data_root: str, require_downloads: bool = True):
     if not os.path.exists(path):
         if not require_downloads:
             raise RuntimeError("Iris not found and downloads disabled.")
-        print("Downloading Iris...")
+        log.info("Downloading Iris...")
         urllib.request.urlretrieve(IrisDataset.IRIS_URL, path)
 
     X = []

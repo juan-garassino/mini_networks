@@ -44,6 +44,10 @@ from mini_networks.models.diffusion.scheduler import NoiseScheduler
 from mini_networks.core.diffusion.sampling import sample_loop
 from mini_networks.models.gan.model import Generator, Discriminator, gan_d_loss, gan_g_loss
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -151,7 +155,7 @@ class GANDiffusionComparison:
                 "gan_d_loss": total_d / n,
                 "gan_g_loss": total_g / n,
             })
-            print(f"  [GAN]  epoch {epoch}  d={total_d/n:.4f}  g={total_g/n:.4f}")
+            log.info(f"  [GAN]  epoch {epoch}  d={total_d/n:.4f}  g={total_g/n:.4f}")
 
         torch.save(G.state_dict(), logger.artifact_path("gan_generator.pt"))
         torch.save(D.state_dict(), logger.artifact_path("gan_discriminator.pt"))
@@ -201,7 +205,7 @@ class GANDiffusionComparison:
                 total += loss.item()
             avg = total / max(1, len(dl))
             logger.log_metrics(epoch, {"diff_loss": avg})
-            print(f"  [Diff] epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [Diff] epoch {epoch}  loss {avg:.4f}")
 
         torch.save(unet.state_dict(), logger.artifact_path("diffusion.pt"))
 

@@ -16,6 +16,10 @@ from mini_networks.core.runtime import BaseTrainer
 from mini_networks.models.lora.config import LoRAConfig
 from mini_networks.models.lora.model import LoRACNN
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class LoRATrainer(BaseTrainer):
     def __init__(self):
@@ -55,7 +59,7 @@ class LoRATrainer(BaseTrainer):
         logger.log_config(config.model_dump())
 
         # --- Stage 1: pre-train on MNIST (full model, all params trainable) ---
-        print("  [LoRA] Stage 1: pre-training on MNIST")
+        log.info("  [LoRA] Stage 1: pre-training on MNIST")
         model.unfreeze_all()
         optimizer = optim.Adam(model.parameters(), lr=config.learning_rate)
 
@@ -63,10 +67,10 @@ class LoRATrainer(BaseTrainer):
         for epoch in range(config.tier_epochs(config.pretrain_epochs, medium_cap=2)):
             avg = self._run_epoch(model, mnist_dl, optimizer, config.device)
             logger.log_metrics(epoch, {"pretrain_loss": avg, "stage": 1, "epoch": epoch})
-            print(f"    pretrain epoch {epoch}  loss {avg:.4f}")
+            log.info(f"    pretrain epoch {epoch}  loss {avg:.4f}")
 
         # --- Stage 2: fine-tune on FashionMNIST (only LoRA params) ---
-        print("  [LoRA] Stage 2: fine-tuning on FashionMNIST with LoRA")
+        log.info("  [LoRA] Stage 2: fine-tuning on FashionMNIST with LoRA")
         model.freeze_for_finetune(freeze_conv=config.freeze_conv)
         lora_optimizer = optim.Adam(model.trainable_params(), lr=config.learning_rate)
 
@@ -75,7 +79,7 @@ class LoRATrainer(BaseTrainer):
         for epoch in range(config.tier_epochs(config.finetune_epochs, medium_cap=2)):
             avg = self._run_epoch(model, fashion_dl, lora_optimizer, config.device)
             logger.log_metrics(offset + epoch, {"finetune_loss": avg, "stage": 2, "epoch": epoch})
-            print(f"    finetune epoch {epoch}  loss {avg:.4f}")
+            log.info(f"    finetune epoch {epoch}  loss {avg:.4f}")
 
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
 

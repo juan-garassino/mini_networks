@@ -212,14 +212,14 @@ class RLMazeTrainer(BaseTrainer):
         elif config.agent_type == "dqn":
             ckpt = path / "agent_dqn.pt"
             if ckpt.exists():
-                agent.online.load_state_dict(torch.load(ckpt, map_location=config.device))
+                agent.online.load_state_dict(torch.load(ckpt, map_location=config.device, weights_only=True))
                 agent.target.load_state_dict(agent.online.state_dict())
                 agent.online.eval()
                 agent.target.eval()
         elif config.agent_type == "ppo":
             ckpt = path / "agent_ppo.pt"
             if ckpt.exists():
-                agent.ac.load_state_dict(torch.load(ckpt, map_location=config.device))
+                agent.ac.load_state_dict(torch.load(ckpt, map_location=config.device, weights_only=True))
                 agent.ac.eval()
 
         self.agent = agent

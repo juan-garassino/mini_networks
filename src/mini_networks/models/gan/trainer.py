@@ -15,6 +15,10 @@ from mini_networks.core.runtime import BaseTrainer
 from mini_networks.models.gan.config import GANConfig
 from mini_networks.models.gan.model import Discriminator, Generator, gan_d_loss, gan_g_loss
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class GANTrainer(BaseTrainer):
     def __init__(self):
@@ -79,7 +83,7 @@ class GANTrainer(BaseTrainer):
             avg_d = total_d / n
             avg_g = total_g / n
             logger.log_metrics(epoch, {"d_loss": avg_d, "g_loss": avg_g, "epoch": epoch})
-            print(f"  epoch {epoch}  d_loss {avg_d:.4f}  g_loss {avg_g:.4f}")
+            log.info(f"  epoch {epoch}  d_loss {avg_d:.4f}  g_loss {avg_g:.4f}")
 
         torch.save(G.state_dict(), logger.artifact_path("generator.pt"))
         torch.save(D.state_dict(), logger.artifact_path("discriminator.pt"))
@@ -128,8 +132,8 @@ class GANTrainer(BaseTrainer):
         assert isinstance(config, GANConfig)
         path = Path(artifacts_dir)
         G, D = self._build(config)
-        G.load_state_dict(torch.load(path / "generator.pt", map_location=config.device))
-        D.load_state_dict(torch.load(path / "discriminator.pt", map_location=config.device))
+        G.load_state_dict(torch.load(path / "generator.pt", map_location=config.device, weights_only=True))
+        D.load_state_dict(torch.load(path / "discriminator.pt", map_location=config.device, weights_only=True))
         G.eval()
         D.eval()
         self.generator = G

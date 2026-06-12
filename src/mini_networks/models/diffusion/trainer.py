@@ -212,7 +212,7 @@ class DDPMTrainer(BaseTrainer):
         self.scheduler = scheduler
         ema_path = path / "model_ema.pt"
         load_path = ema_path if ema_path.exists() else path / "model.pt"
-        state = torch.load(load_path, map_location=config.device)
+        state = torch.load(load_path, map_location=config.device, weights_only=True)
         model.load_state_dict(state)
         model.eval()
         self.model = model

@@ -16,6 +16,10 @@ from mini_networks.models.rnn.config import RNNConfig
 from mini_networks.models.rnn.model import RNNLanguageModel
 from mini_networks.models.transformer.tokenizer import CharTokenizer
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class RNNTrainer(BaseTrainer):
     def __init__(self):
@@ -62,7 +66,7 @@ class RNNTrainer(BaseTrainer):
                 total_loss += loss.item()
             avg = total_loss / max(1, len(dataloader))
             logger.log_metrics(epoch, {"loss": avg, "epoch": epoch})
-            print(f"  epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  epoch {epoch}  loss {avg:.4f}")
 
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
         if self.tokenizer:
@@ -112,7 +116,7 @@ class RNNTrainer(BaseTrainer):
         import json
         assert isinstance(config, RNNConfig)
         path = Path(artifacts_dir)
-        state = torch.load(path / "model.pt", map_location=config.device)
+        state = torch.load(path / "model.pt", map_location=config.device, weights_only=True)
         vocab_size = state["token_embed.weight"].shape[0]
         effective_config = config.model_copy(update={"vocab_size": vocab_size})
         self.model = self._build(effective_config)

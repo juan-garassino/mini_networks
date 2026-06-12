@@ -311,6 +311,11 @@ def build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    import logging
+    logging.basicConfig(
+        level=os.environ.get("MINI_NETWORKS_LOG_LEVEL", "INFO"),
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+    )
     parser = build_parser()
     args = parser.parse_args()
 

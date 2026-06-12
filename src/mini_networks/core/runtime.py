@@ -38,7 +38,7 @@ class BaseTrainer(ABC):
         Override for non-standard layouts (GAN, Diffusion, RL, text models).
         """
         path = Path(artifacts_dir)
-        state = torch.load(path / "model.pt", map_location=config.device)
+        state = torch.load(path / "model.pt", map_location=config.device, weights_only=True)
         if self.model is None:
             self.model = self._build(config)
         self.model.load_state_dict(state)

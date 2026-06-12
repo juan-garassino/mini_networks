@@ -53,7 +53,7 @@ class Logger:
     def load_training_state(self) -> dict[str, Any] | None:
         if not self._state_path.exists():
             return None
-        return torch.load(self._state_path, map_location="cpu")
+        return torch.load(self._state_path, map_location="cpu", weights_only=True)
 
     def read_metrics(self) -> list[dict]:
         if not self._metrics_path.exists():

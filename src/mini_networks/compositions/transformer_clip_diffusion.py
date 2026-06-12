@@ -36,6 +36,10 @@ from mini_networks.models.transformer.model import TransformerLM
 from mini_networks.models.transformer.tokenizer import CharTokenizer
 from mini_networks.core.config import BaseConfig
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -180,7 +184,7 @@ class TransformerCLIPDiffusion:
                 total += loss.item()
             avg = total / max(1, len(dl))
             logger.log_metrics(epoch, {"lm_loss": avg})
-            print(f"  [LM]   epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [LM]   epoch {epoch}  loss {avg:.4f}")
 
         torch.save(model.state_dict(), logger.artifact_path("lm.pt"))
         self.tokenizer.save(str(logger.artifact_path("tokenizer.json")))
@@ -219,7 +223,7 @@ class TransformerCLIPDiffusion:
                 total += loss.item()
             avg = total / max(1, len(dl))
             logger.log_metrics(epoch, {"clip_loss": avg})
-            print(f"  [CLIP] epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [CLIP] epoch {epoch}  loss {avg:.4f}")
 
         self.clip = clip
         torch.save(clip.state_dict(), logger.artifact_path("clip.pt"))
@@ -282,7 +286,7 @@ class TransformerCLIPDiffusion:
                 total += loss.item()
             avg = total / max(1, len(dl))
             logger.log_metrics(epoch, {"diff_loss": avg})
-            print(f"  [Diff] epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [Diff] epoch {epoch}  loss {avg:.4f}")
 
         torch.save(unet.state_dict(), logger.artifact_path("unet.pt"))
 

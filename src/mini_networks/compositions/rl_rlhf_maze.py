@@ -53,6 +53,10 @@ from mini_networks.models.rl_maze.agents import DQNAgent
 from mini_networks.models.rl_maze.env import MazeEnv
 from mini_networks.models.transformer.model import TransformerLM
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Action ↔ char encoding
@@ -249,7 +253,7 @@ class RLHFMazeComposition:
                 "epsilon": agent.epsilon,
             })
 
-        print(f"  [Phase 1] DQN done — success rate: {successes / max(1, n_ep):.2%}")
+        log.info(f"  [Phase 1] DQN done — success rate: {successes / max(1, n_ep):.2%}")
         self.dqn_agent = agent
         return agent
 
@@ -277,7 +281,7 @@ class RLHFMazeComposition:
         agent.epsilon = saved_eps
 
         corpus = "\n".join(trajectories)
-        print(f"  [Phase 2] Corpus: {len(trajectories)} trajectories, "
+        log.info(f"  [Phase 2] Corpus: {len(trajectories)} trajectories, "
               f"{len(corpus)} chars")
 
         # Build simple token sequences from corpus
@@ -313,7 +317,7 @@ class RLHFMazeComposition:
                 "phase": 2,
                 "pretrain_loss": avg,
             })
-            print(f"  [Phase 2] epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [Phase 2] epoch {epoch}  loss {avg:.4f}")
 
         self.lm = model
         return model
@@ -410,7 +414,7 @@ class RLHFMazeComposition:
                 "ppo_loss": avg_loss,
                 "avg_reward": avg_reward,
             })
-            print(f"  [Phase 3] iter {it}  loss {avg_loss:.4f}  reward {avg_reward:.3f}")
+            log.info(f"  [Phase 3] iter {it}  loss {avg_loss:.4f}  reward {avg_reward:.3f}")
 
     # ------------------------------------------------------------------
     # Public API
@@ -419,13 +423,13 @@ class RLHFMazeComposition:
     def train(self, config: RLHFMazeConfig, logger: Logger) -> None:
         """Run all three phases."""
         logger.log_config(config.model_dump())
-        print("[RLHFMaze] Phase 1: training DQN agent")
+        log.info("[RLHFMaze] Phase 1: training DQN agent")
         agent = self._phase1_train_dqn(config, logger)
-        print("[RLHFMaze] Phase 2: pretraining LM on maze trajectories")
+        log.info("[RLHFMaze] Phase 2: pretraining LM on maze trajectories")
         lm = self._phase2_pretrain_lm(config, agent, logger)
-        print("[RLHFMaze] Phase 3: RLHF PPO fine-tuning")
+        log.info("[RLHFMaze] Phase 3: RLHF PPO fine-tuning")
         self._phase3_rlhf(config, lm, logger)
-        print("[RLHFMaze] Done.")
+        log.info("[RLHFMaze] Done.")
 
     def compare(self, config: RLHFMazeConfig, n_eval: int | None = None) -> dict:
         """Evaluate DQN agent vs fine-tuned LM on the maze.

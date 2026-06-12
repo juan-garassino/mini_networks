@@ -41,6 +41,10 @@ from mini_networks.models.rlhf.model import RewardModel, shakespearean_score
 from mini_networks.models.transformer.model import TransformerLM
 from mini_networks.models.transformer.tokenizer import CharTokenizer
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Helper: token log-probabilities under a model
@@ -107,7 +111,7 @@ class RLHFTrainer(BaseTrainer):
                 total_loss += loss.item()
             avg = total_loss / max(1, len(dataloader))
             logger.log_metrics(epoch, {"pretrain_loss": avg})
-            print(f"  [Pretrain] epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [Pretrain] epoch {epoch}  loss {avg:.4f}")
 
         return model
 
@@ -208,7 +212,7 @@ class RLHFTrainer(BaseTrainer):
         logger.log_config(effective_config.model_dump())
 
         # --- Stage 1: pretrain ---
-        print("  [RLHF] Stage 1: pretraining LM")
+        log.info("  [RLHF] Stage 1: pretraining LM")
         model = self._pretrain(effective_config, dataloader, logger, vocab_size)
         self.model = model
 
@@ -238,7 +242,7 @@ class RLHFTrainer(BaseTrainer):
         # --- Stage 2: PPO ---
         n_iters = config.limit_steps(config.n_ppo_iters, s_cap=1, m_cap=2)
         offset = config.tier_epochs(config.pretrain_epochs, medium_cap=2)
-        print("  [RLHF] Stage 2: PPO fine-tuning")
+        log.info("  [RLHF] Stage 2: PPO fine-tuning")
         for it in range(n_iters):
             rollouts = self._collect_rollouts(model, effective_config, prompts)
             avg_reward = sum(r["reward"] for r in rollouts) / max(1, len(rollouts))
@@ -247,7 +251,7 @@ class RLHFTrainer(BaseTrainer):
                 "ppo_loss": loss,
                 "avg_reward": avg_reward,
             })
-            print(f"    PPO iter {it}  loss {loss:.4f}  reward {avg_reward:.4f}")
+            log.info(f"    PPO iter {it}  loss {loss:.4f}  reward {avg_reward:.4f}")
 
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
         if self.tokenizer:
@@ -298,7 +302,7 @@ class RLHFTrainer(BaseTrainer):
         from pathlib import Path
         assert isinstance(config, RLHFConfig)
         path = Path(artifacts_dir)
-        state = torch.load(path / "model.pt", map_location=config.device)
+        state = torch.load(path / "model.pt", map_location=config.device, weights_only=True)
         vocab_size = state["token_embed.weight"].shape[0]
         self.model = self._build_lm(config, vocab_size)
         self.model.load_state_dict(state)
