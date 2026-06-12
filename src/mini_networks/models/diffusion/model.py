@@ -1,4 +1,29 @@
-"""UNet backbone for DDPM with residual blocks, time embedding, and attention."""
+"""UNet noise-prediction backbones for DDPM: unconditional and class-conditioned.
+
+Key idea: DDPM does not generate images directly — it trains a network
+eps_theta(x_t, t) to predict the Gaussian noise that was mixed into a clean image,
+with loss ||eps - eps_theta(sqrt(a_bar_t) x_0 + sqrt(1 - a_bar_t) eps, t)||^2.
+Sampling then runs that predictor backwards through the scheduler, step by step.
+A UNet fits the job: the output must be the same shape as the input, and skip
+connections preserve the fine detail the bottleneck throws away.
+
+This implementation, for 28x28 MNIST. UNet (unconditional): sinusoidal embedding
+of t → 2-layer MLP; encoder c=32 → 64 → 128 channels with two stride-2 downsamples
+(28 → 14 → 7); bottleneck ResBlock + self-attention over the 7x7=49 positions +
+ResBlock; decoder mirrors up with channel-concat skips. Each ResBlock injects the
+time embedding additively per channel between its two convs. ConditionedUNet (for
+classifier-free guidance): pools the encoder to a 1x1 vector, then modulates the
+decoder as cemb * features + temb, where class one-hot and normalised t/T each
+pass through small MLPs; during training labels are zeroed with prob drop_prob=0.1
+so one network learns both conditional and unconditional scores, enabling
+eps = (1 + w) * eps_cond - w * eps_uncond at sampling time.
+
+Deliberately simplified vs Ho et al. 2020: tiny channel widths, one attention
+block at the bottleneck only, F.interpolate patches up odd spatial sizes instead
+of careful padding, and the conditioned variant feeds t as a normalised scalar
+(not sinusoidal) and crushes the bottleneck to 1x1, trading spatial detail for
+simplicity.
+"""
 from __future__ import annotations
 
 import math

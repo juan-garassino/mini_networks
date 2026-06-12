@@ -1,20 +1,27 @@
-"""Pure-Mamba language model — stacked SSM blocks, no attention.
+"""NanoMamba: a pure state-space language model — no attention anywhere.
 
-Architecture
-------------
-  token_embed  [vocab_size → d_model]
-  pos_embed    [seq_len → d_model]     (learned, like TransformerLM)
-  N × MambaBlock                       (depthwise conv + gated SSM scan + residual)
-  LayerNorm
-  lm_head      [d_model → vocab_size]
+Key idea: replace attention's all-pairs token mixing, which costs O(T^2) time and
+memory, with a recurrent state that is updated once per step — O(T) time, O(1)
+state. A depthwise causal convolution handles local mixing; a gated exponential-
+decay scan carries information across arbitrary distances.
 
-Each MambaBlock handles both local mixing (depthwise conv) and long-range
-sequence dependencies (gated exponential-decay state scan) — the role that
-self-attention plays in a Transformer. There is no attention here at all.
+This implementation (defaults): token + learned positional embeddings into
+d_model=128, then n_layers=4 MambaBlocks, LayerNorm, lm_head back to vocab.
+Each MambaBlock: LayerNorm → Linear(128→256) → depthwise Conv1d (kernel d_conv=4,
+causal via right-trim) → split into (u, gate) of 128 each → SiLU(u), sigmoid(gate)
+→ per-channel scan → gate * state → Linear(128→128) → residual.
 
-The forward() signature intentionally mirrors TransformerLM:
-  logits, aux = model(tokens)
-where aux is always 0.0 so training loops are drop-in compatible.
+Key equations: s_t = a * s_{t-1} + b * u_t with a = exp(-softplus(a_log)) in (0,1)
+and b learned, both per-channel [C]; output y_t = sigmoid(g_t) * s_t. forward()
+returns (logits [B, T, V], aux_loss=0.0), mirroring TransformerLM so trainers are
+drop-in interchangeable.
+
+Deliberately simplified vs the Mamba paper (Gu & Dao 2023): a and b are constant
+learned scalars per channel, not input-dependent functions — so there is no
+"selectivity"; the state is a single scalar per channel (d_state is accepted but
+the recurrence does not expand to a d_state-dim hidden); the scan is a sequential
+Python loop, not the hardware-aware parallel scan; and we keep learned absolute
+positions, which real Mamba omits entirely.
 """
 from __future__ import annotations
 

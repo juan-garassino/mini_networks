@@ -1,4 +1,28 @@
-"""Mini ResNet for 28x28 grayscale images."""
+"""Mini ResNet for 28x28 grayscale images.
+
+ResNet's key idea (He et al., 2015): instead of asking a block to learn a
+full mapping H(x), let it learn only the residual F(x) and add the input
+back: out = F(x) + x. The identity shortcut gives gradients a direct path
+around every block, so very deep networks stop degrading as depth grows.
+
+Each BasicBlock here is the classic two-conv residual unit:
+
+    x -> Conv3x3 -> BN -> ReLU -> Conv3x3 -> BN -> (+ shortcut) -> ReLU
+         shortcut = Identity, or 1x1 Conv + BN when stride/channels change
+
+Overall layout with base_channels=32:
+
+    [B,1,28,28] -> stem Conv3x3+BN+ReLU (32ch)
+                -> BasicBlock(32->32,  s=1)   28x28
+                -> BasicBlock(32->64,  s=2)   14x14
+                -> BasicBlock(64->128, s=2)    7x7
+                -> global avg pool -> Linear(128->10)
+
+Deliberately simplified vs the paper: 3 blocks instead of 4 stages of many
+(ResNet-18 has 8 blocks, ResNet-50 has 16 bottlenecks), tiny channel widths,
+no bottleneck (1x1-3x3-1x1) blocks, no 7x7 stem or max-pool (28x28 input is
+already small), and no weight-decay/lr-schedule tricks from the paper.
+"""
 from __future__ import annotations
 
 import torch

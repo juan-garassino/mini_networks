@@ -1,10 +1,25 @@
-"""Vanilla GAN for MNIST: MLP Generator + MLP Discriminator.
+"""Vanilla GAN for MNIST: an MLP Generator and MLP Discriminator in a minimax game.
 
-Architecture (from legacy/002-adversarial):
-  Generator:     noise [B, 100] → 256 → 512 → 1024 → 784 (Tanh) → image [B, 1, 28, 28]
-  Discriminator: image [B, 1, 28, 28] → flatten → 1024 → 512 → 256 → 1 (Sigmoid)
+Key idea: two networks trained adversarially. The discriminator D learns to tell
+real images from generated ones; the generator G learns to fool it. The original
+objective is min_G max_D  E_x[log D(x)] + E_z[log(1 - D(G(z)))] — at equilibrium
+G's distribution matches the data and D outputs 1/2 everywhere.
 
-Training uses standard GAN losses (BCELoss) with separate Adam optimizers.
+This implementation: Generator maps noise z [B, 100] through Linear layers
+100 → 256 → 512 → 1024 → 784 (LeakyReLU 0.2 between, Tanh out, so pixels live in
+[-1, 1]) and reshapes to [B, 1, 28, 28]. Discriminator flattens the image and maps
+784 → 1024 → 512 → 256 → 1 with LeakyReLU + Dropout 0.3 and a final Sigmoid
+probability. Both losses are written in BCE form: gan_d_loss = BCE(D(real), 1) +
+BCE(D(fake.detach()), 0) — note the detach so D's step does not touch G — and
+gan_g_loss = BCE(D(fake), 1), i.e. the non-saturating heuristic -log D(G(z))
+recommended in the original paper, which keeps gradients alive early when D wins.
+The trainer alternates one Adam step for D, then one for G, each batch.
+
+Deliberately simplified vs Goodfellow 2014 / DCGAN: fully-connected nets instead
+of transposed/strided convolutions, no BatchNorm, Sigmoid + BCELoss rather than
+the numerically safer BCEWithLogits, and none of the usual stabilisers (label
+smoothing, spectral norm, feature matching) — mode collapse is left observable
+on purpose.
 """
 from __future__ import annotations
 

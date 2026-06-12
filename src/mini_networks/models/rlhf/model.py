@@ -1,32 +1,27 @@
-"""RLHF components: RewardModel and heuristic Shakespearean scorer.
+"""RLHF reward components: a heuristic scorer and an optional learned RewardModel.
 
-Architecture
------------
-  RewardModel wraps a pretrained TransformerLM and adds a scalar reward head:
+Key idea: RLHF turns "which output is better" signals into a scalar reward, then
+fine-tunes a pretrained LM with PPO to maximise it — while a KL penalty to a
+frozen copy of the pretrained LM (the reference policy) stops the policy from
+drifting into degenerate, reward-hacked text.
 
-    base_lm  (TransformerLM, frozen during RLHF)
-      ↓ last hidden state [:, -1, :]       [B, d_model]
-    reward_head  Linear(d_model, hidden) → Tanh → Linear(hidden, 1)
-      ↓                                    [B, 1]
+This implementation is reward-model-free in practice: the trainer scores rollouts
+with shakespearean_score(text) — the fraction of words in a fixed archaic set
+(thou, thee, hath, ...), so no human preference data is needed. The learned
+alternative, RewardModel, wraps a frozen TransformerLM, reads its last hidden
+state [:, -1, :] of size d_model, and maps it through Linear(d_model, 32) → Tanh
+→ Linear(32, 1) to a scalar reward [B].
 
-  The reward head is trained with a Bradley-Terry ranking loss on preference
-  pairs (chosen vs rejected response), or you can substitute a heuristic.
+Key equations: Bradley-Terry preference loss = -log sigmoid(r_chosen - r_rejected),
+which maximises P(chosen > rejected) under a logistic model; the PPO stage in
+trainer.py optimises E[min(rho_t A, clip(rho_t, 1-eps, 1+eps) A)] - beta *
+KL(pi || pi_ref), with rho_t the per-token prob ratio vs the frozen reference.
 
-Heuristic reward (no human labels needed)
------------------------------------------
-  `shakespearean_score(text, tokenizer)` counts archaic vocabulary
-  (thou, thee, thy, dost, hath, etc.) as a proxy for "Shakespearean quality".
-  Score is normalised by token count to be length-independent.
-
-  This is the approach from legacy/012, adapted to our CharTokenizer.
-  It lets the model learn without any human annotation.
-
-Educational notes
------------------
-  - Bradley-Terry loss: -log(sigmoid(r_chosen - r_rejected))
-    Maximises P(chosen > rejected) under the logistic model.
-  - KL penalty: prevents the fine-tuned policy from drifting too far
-    from the reference (pretrained) policy → avoids reward hacking.
+Deliberately simplified vs InstructGPT (Ouyang et al. 2022): the reward is a word-
+counting heuristic, not a model trained on human rankings; the episode's single
+scalar reward is spread uniformly over tokens (no value network or per-token
+credit assignment); and the reward head pools only the final position rather than
+all tokens.
 """
 from __future__ import annotations
 

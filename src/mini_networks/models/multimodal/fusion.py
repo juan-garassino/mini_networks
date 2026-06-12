@@ -1,4 +1,27 @@
-"""Fusion and cross-attention blocks."""
+"""Three ways to fuse two modalities, from crudest to most expressive.
+
+Key idea: once each modality is encoded, the design question is how their
+representations interact. This file implements the standard ladder: concatenate
+pooled vectors, gate between pooled vectors, or let one token sequence attend to
+the other before pooling. Each strategy exposes the same call shape so they are
+swappable in the encoders one level up.
+
+This implementation (d_model=128 default): ConcatFusion concatenates two pooled
+vectors [B, 128] each into [B, 256] and projects back with one Linear — modality
+interaction happens only through that single matrix. GatedFusion computes
+g = sigmoid(W [a; b]) and returns g * a + (1 - g) * b, a learned per-dimension
+convex blend that can dynamically favour one modality. CrossAttentionBlock is one
+round of attention where the query sequence attends to the context sequence:
+softmax(Q_query K_ctx^T / sqrt(d)) V_ctx (4 heads), residual + LayerNorm, then a
+4x-wide GELU FFN with its own residual. CrossAttentionFusion wraps that block and
+pools the result to [B, 128] by mean or first-token ("cls") readout.
+
+Deliberately simplified vs production fusion stacks: a single cross-attention
+layer, one direction only (no co-attention where both sides query each other),
+no gating between the attention output and the query stream (cf. Flamingo's tanh
+gates), and the FFN residual is added without a final LayerNorm — fine at this
+depth, sloppy if you stack it.
+"""
 from __future__ import annotations
 
 import torch

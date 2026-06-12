@@ -1,4 +1,34 @@
-"""Minimal PixelCNN with masked convolutions (grayscale)."""
+"""Minimal PixelCNN with masked convolutions (grayscale).
+
+PixelCNN (van den Oord et al., 2016) is an autoregressive image model: the
+joint distribution over pixels factorises into a product of conditionals
+in raster-scan order,
+
+    p(x) = prod_i p(x_i | x_1, ..., x_{i-1})
+
+and the whole network is just a conv net whose kernels are masked so pixel
+i can never see itself or any pixel after it. MaskedConv2d zeroes the
+kernel weights at and right of centre on the middle row and all rows below.
+Mask "A" (first layer) also hides the centre pixel itself — otherwise the
+model could copy its input; mask "B" (later layers) allows the centre,
+because by then that position holds features of preceding pixels only.
+
+This implementation (n_filters=32, n_layers=4):
+
+    [B,1,28,28] -> MaskedConv "A" 3x3 (1->32) -> ReLU
+                -> 3 x [MaskedConv "B" 3x3 (32->32) -> ReLU]
+                -> Conv1x1 (32->1)   per-pixel logit
+
+Training is one parallel forward pass (every conditional is computed at
+once thanks to the masks); sampling is inherently sequential — 784 forward
+passes, one pixel at a time.
+
+Deliberately simplified: a single logit per pixel (Bernoulli on binarised
+MNIST) instead of a 256-way softmax, a small kernel and few layers (the
+receptive field has the original's blind spot — the stacked 3x3 masks miss
+part of the upper-right context, fixed in Gated PixelCNN by separate
+vertical/horizontal stacks), and no residual connections or gating.
+"""
 from __future__ import annotations
 
 import torch

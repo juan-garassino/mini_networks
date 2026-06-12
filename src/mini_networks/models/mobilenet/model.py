@@ -1,4 +1,27 @@
-"""Tiny MobileNet-like model (depthwise separable conv)."""
+"""Tiny MobileNet-like model (depthwise separable conv).
+
+MobileNet's key idea (Howard et al., 2017): factor a standard convolution
+into a depthwise conv (one 3x3 filter per channel, no cross-channel mixing)
+followed by a pointwise 1x1 conv (mixes channels, no spatial extent). Cost
+drops from k*k*Cin*Cout to k*k*Cin + Cin*Cout per position — roughly an
+8-9x saving for 3x3 kernels — with little accuracy loss.
+
+This implementation with width_mult=1.0:
+
+    [B,1,28,28] -> stem Conv3x3+BN+ReLU (32ch)          28x28
+                -> DepthwiseSeparable(32->64,  s=2)      14x14
+                -> DepthwiseSeparable(64->128, s=2)       7x7
+                -> global avg pool -> Linear(128->10)
+
+Each DepthwiseSeparable block is depthwise Conv3x3 -> BN -> ReLU ->
+pointwise Conv1x1 -> BN -> ReLU. The width_mult knob scales every channel
+count, mirroring the paper's width multiplier alpha.
+
+Deliberately simplified: 2 separable blocks instead of MobileNetV1's 13,
+no resolution multiplier, and none of the V2/V3 additions (inverted
+residuals, linear bottlenecks, squeeze-excite, hard-swish). MNIST-scale
+channels throughout.
+"""
 from __future__ import annotations
 
 import torch

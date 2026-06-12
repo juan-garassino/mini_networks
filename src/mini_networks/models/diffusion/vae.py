@@ -1,7 +1,29 @@
 """Variational Autoencoder for latent diffusion on MNIST.
 
-Compresses 1×28×28 → 4×7×7 latent space, enabling diffusion to run
-at 1/16 the pixel cost. Architecture mirrors legacy reference.
+This is the compression stage of a latent diffusion model (Rombach et al.,
+2022): instead of denoising 1x28x28 pixels, the diffusion UNet operates on
+a 4x7x7 latent — 1/4 the values — and this VAE maps between the two spaces.
+Unlike the classifier-style ConvVAE in models/vae/, the latent here stays
+spatial (a small feature map, not a flat vector), so the diffusion model
+can still use convolutions on it.
+
+Standard VAE machinery applies. The encoder predicts q(z|x) = N(mu, sigma^2)
+per latent position, sampled with the reparameterisation trick
+z = mu + exp(0.5*logvar) * eps (mean-only at eval time), and training
+maximises the ELBO = E[log p(x|z)] - KL(q(z|x) || N(0,I)), implemented as
+MSE + kl_weight * KL with KL = -0.5 * mean(1 + logvar - mu^2 - exp(logvar)).
+
+Architecture (latent_channels=4):
+
+    encode: 1x28x28 -> Conv(32) -> Conv s2 (64) -> Conv s2 (128)
+            -> Conv(128) -> Conv1x1 -> 8x7x7, split into mu | logvar
+    decode: 4x7x7 -> Conv(128) -> ConvT s2 (64) -> ConvT s2 (32)
+            -> Conv -> Tanh -> 1x28x28 in [-1,1]  (+ bilinear snap to 28x28)
+
+Deliberately simplified vs Stable Diffusion's autoencoder: a very small KL
+weight (1e-3) but no perceptual (LPIPS) or adversarial loss, BatchNorm +
+LeakyReLU plain conv stacks instead of ResNet blocks with attention, 4x
+spatial downsampling instead of 8x, and MNIST-scale channel counts.
 """
 from __future__ import annotations
 

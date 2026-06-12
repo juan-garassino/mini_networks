@@ -1,4 +1,28 @@
-"""Minimal Transformer seq2seq."""
+"""Minimal encoder-decoder Transformer for sequence-to-sequence text tasks.
+
+Key idea: unlike a decoder-only LM, seq2seq separates reading from writing. An
+encoder ingests the full source bidirectionally; a decoder generates the target
+while attending to the encoder's output via cross-attention:
+    cross_attn = softmax(Q_dec K_enc^T / sqrt(d_k)) V_enc,
+so every target position can consult any source position — the original
+"Attention Is All You Need" architecture.
+
+This implementation: separate source and target embedding tables (vocab →
+d_model) plus one shared learned positional embedding (seq_len → d_model), all
+wrapped around torch's nn.Transformer with n_layers encoder layers, n_layers
+decoder layers, n_heads heads, and d_ff feed-forward width (batch_first). The
+head is Linear(d_model → vocab). The trainer splits each text sequence into
+(src, tgt) halves and trains with teacher forcing: logits = model(src, tgt),
+cross-entropy against tgt.
+
+Deliberately simplified — read carefully before reusing: no causal tgt_mask is
+passed to nn.Transformer, so the decoder self-attention can see future target
+tokens. That is tolerable for this teaching task (the target is fully given and
+scored in place) but it must be fixed with generate_square_subsequent_mask for
+real autoregressive decoding. Also absent: BOS-shifted targets, padding masks,
+weight tying between embeddings and head, and a true step-by-step decode — infer()
+just feeds the source back as the target and takes an argmax.
+"""
 from __future__ import annotations
 
 import torch

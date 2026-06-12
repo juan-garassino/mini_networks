@@ -1,4 +1,27 @@
-"""Noise scheduler for DDPM (linear and cosine schedules)."""
+"""DDPM noise scheduler: the forward corruption process and the reverse denoising step.
+
+Key idea: diffusion defines a fixed Markov chain that gradually destroys an image
+with Gaussian noise over T steps, governed by variances beta_t. Because Gaussians
+compose, any x_t is reachable from x_0 in one jump:
+    q(x_t | x_0):  x_t = sqrt(a_bar_t) * x_0 + sqrt(1 - a_bar_t) * eps,
+where a_t = 1 - beta_t and a_bar_t = prod_{s<=t} a_s. Generation inverts the chain
+one step at a time using the model's noise prediction.
+
+This implementation: timesteps=1000 by default with either a linear beta schedule
+(1e-4 → 0.02) or the cosine schedule of Nichol & Dhariwal (a_bar follows a squared
+cosine, betas derived from consecutive ratios and clamped to 0.999). All derived
+tensors (alphas, a_bar, sqrt terms, posterior variance) are precomputed as [T]
+buffers. add_noise() is the closed-form forward jump above. step() is one reverse
+update:
+    mean = 1/sqrt(a_t) * (x_t - beta_t / sqrt(1 - a_bar_t) * eps_theta)
+    x_{t-1} = mean + sqrt(posterior_var_t) * z,  z ~ N(0, I)   (no noise at t=0),
+with posterior_var_t = beta_t * (1 - a_bar_{t-1}) / (1 - a_bar_t).
+
+Deliberately simplified vs the DDPM paper and successors: the reverse variance is
+fixed (not learned, as in Improved DDPM), sampling is full T-step ancestral only —
+no DDIM, no strided/respaced schedules — and step() takes a scalar t, processing
+one timestep for the whole batch.
+"""
 from __future__ import annotations
 
 import math

@@ -1,18 +1,25 @@
-"""NanoRAG: TF-IDF retrieval + TransformerLM generation.
+"""NanoRAG: retrieval-augmented generation from first principles — TF-IDF + our own LM.
 
-Architecture (inspired by legacy/014-rag/miniRAG.py)
------------------------------------------------------
-  1. Document store   — plain text chunks indexed by TF-IDF vectors
-  2. Retriever        — cosine similarity between query and chunk TF-IDF
-  3. Generator        — our own TransformerLM (not GPT-2)
-     The retrieved context is prepended to the user prompt before encoding.
+Key idea: a language model's knowledge is frozen at training time; RAG bolts on a
+retriever so generation can be conditioned on documents looked up at query time.
+Here both halves are minimal and fully inspectable: a from-scratch TF-IDF index
+(stdlib + torch only) and the repo's own TransformerLM as the generator.
 
-Educational notes
------------------
-  - TF-IDF is computed from scratch using only the standard library and torch.
-  - Cosine similarity retrieval is O(n_docs * vocab) — fast for small corpora.
-  - The generator is the same TransformerLM used in models/transformer, so
-    RAG is purely additive: no new model weights, just smarter prompting.
+This implementation: NanoRAG.add_documents() slices texts into 200-char chunks
+and TFIDFIndex.build() turns them into a [n_docs, V] matrix, where V is the word
+vocabulary found by the regex tokenizer [a-z0-9]+. retrieve() embeds the query
+the same way and ranks chunks by cosine similarity, returning top_k=3. generate()
+prepends them as "[Context: ...] query", encodes with the LM's tokenizer, and
+calls model.generate().
+
+Key equations: tfidf(t, d) = tf(t, d) * idf(t) with tf = count/len(doc) and
+smoothed idf = log((N + 1)/(df + 1)) + 1; score(q, d) = (q . d) / (|q| |d|).
+
+Deliberately simplified vs RAG (Lewis et al. 2020): sparse lexical TF-IDF instead
+of a learned dense retriever (DPR) — no embeddings, no ANN index, exact O(n_docs *
+V) scoring; the retriever is never trained, and there is no marginalisation over
+retrieved documents — context is just concatenated into the prompt of a small
+char/BPE-level LM, so RAG here is purely additive prompting, not joint training.
 """
 from __future__ import annotations
 

@@ -1,17 +1,29 @@
-"""Three RL agents for MazeEnv: Q-table, DQN, PPO.
+"""Three generations of RL on one maze: tabular Q-learning, DQN, and PPO.
 
-All agents share a simple interface:
-  act(state)                    → int action
-  update(state, action, reward, next_state, done) → optional float loss
-  end_episode(trajectory)       → for PPO batch update (ignored by others)
+Key idea: the same environment solved three ways, ordered by how value/policy is
+represented. All agents share one interface — act(state), update(s, a, r, s',
+done), end_episode(trajectory) — so the trainer treats them interchangeably.
 
-Educational comparison
-----------------------
-  QAgent   — tabular, no neural network, can overfit small mazes perfectly
-  DQNAgent — neural Q-network + replay buffer + target network
-             handles large state spaces but may be brittle
-  PPOAgent — on-policy actor-critic with clipped surrogate + GAE
-             most stable on continuous/complex tasks
+QAgent: a defaultdict Q-table keyed by (state rounded to 1 decimal, action), with
+epsilon-greedy exploration. Update: Q(s,a) += lr * (r + gamma * max_a' Q(s',a') -
+Q(s,a)). No function approximation — it memorises, which is exactly right for a
+small maze and hopeless beyond it.
+
+DQNAgent: replaces the table with an MLP state_size → 64 → 64 → n_actions. Two
+DQN-paper stabilisers: a replay buffer (capacity 1000, batch 32) that breaks
+temporal correlation, and a frozen target network (copied every 100 episodes)
+providing fixed bootstrap targets. Loss: MSE(Q_online(s,a), r + gamma * (1-done) *
+max Q_target(s')).
+
+PPOAgent: on-policy actor-critic (two MLPs, hidden 64). Collects one full episode,
+computes GAE advantages (gae_t = delta_t + gamma*lam*gae_{t+1}, lam=0.95,
+delta_t = r + gamma*V(s') - V(s)), then runs 4 epochs of the clipped surrogate
+-min(rho*A, clip(rho, 0.8, 1.2)*A) + 0.5*value MSE - 0.01*entropy.
+
+Deliberately simplified: Q-table quantisation can alias distinct states; DQN has
+no Double-DQN, dueling heads, or prioritised replay; PPO updates from a single
+episode (no vectorised envs or minibatching) and recomputes "old" log-probs at
+update time, so the first PPO epoch always starts at ratio = 1.
 """
 from __future__ import annotations
 

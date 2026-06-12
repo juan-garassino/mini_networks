@@ -1,4 +1,28 @@
-"""Transformer token classifier."""
+"""Transformer encoder for per-token classification (BERT-style tagging, in miniature).
+
+Key idea: not every text model predicts the next token. Token classification
+emits one label per input position — the pattern behind NER, POS tagging, and
+span extraction. The crucial architectural difference from a language model is
+the absence of a causal mask: the encoder is fully bidirectional, so the label
+for position t is computed from the whole sequence, left and right context alike.
+
+This implementation: token embedding (vocab → d_model) + learned positional
+embedding (seq_len → d_model), summed and fed through an n_layers
+nn.TransformerEncoder (n_heads heads, d_ff = 4 * d_model, dropout 0.1,
+batch_first). The head is Linear(d_model → 2) applied at every position; the toy
+task is tagging each character as vowel vs other, so the model can be sanity-
+checked by eye. Output shape is [B, T, 2]; the trainer applies cross-entropy per
+position: y_t = softmax(W h_t).
+
+Key contrast to hold onto: TransformerLM masks attention and predicts a vocab-
+sized distribution at each step; this model attends everywhere and predicts a
+tiny label set at each step — same backbone, opposite information flow.
+
+Deliberately simplified vs BERT-style taggers: characters instead of subwords, a
+hard-coded 2-class head, no padding/attention masks, no [CLS]/[SEP] structure,
+no pretraining — the encoder trains from scratch on the tagging objective, and
+no CRF layer to model label-to-label transitions.
+"""
 from __future__ import annotations
 
 import torch

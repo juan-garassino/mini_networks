@@ -1,4 +1,30 @@
-"""YOLO-style digit detector: shared CNN backbone → cls + bbox heads."""
+"""YOLO-style digit detector: shared CNN backbone -> cls + bbox heads.
+
+Object detection as direct regression (the single-shot idea behind YOLO):
+one CNN forward pass predicts both what the object is and where it is — no
+region proposals, no sliding windows. A shared backbone extracts features
+once; two small heads branch off it, one for class logits and one for box
+coordinates, trained jointly with a summed loss:
+
+    L = CrossEntropy(cls_logits, label) + w * MSE(bbox_pred, bbox)
+
+This implementation, on a 56x56 canvas containing one MNIST digit:
+
+    [B,1,56,56] -> Conv3x3(1->32) +ReLU -> MaxPool2     28x28
+                -> Conv3x3(32->64) +ReLU -> MaxPool2    14x14
+                -> Conv3x3(64->128)+ReLU -> AdaptiveAvgPool(4) -> 4x4
+                -> Flatten(2048)
+       cls head:  Linear(2048->256) -> ReLU -> Linear(256->10)
+       bbox head: Linear(2048->256) -> ReLU -> Linear(256->4) -> Sigmoid
+
+The sigmoid keeps box predictions in [0,1], i.e. coordinates normalised to
+canvas size, so the MSE box loss is scale-free.
+
+Deliberately simplified: exactly one object per image, so there is no grid
+of cells, no anchor boxes, no objectness score, and no non-max suppression —
+the parts of real YOLO that handle multiple and overlapping detections.
+MSE on raw coordinates also stands in for IoU-based box losses.
+"""
 from __future__ import annotations
 
 import torch

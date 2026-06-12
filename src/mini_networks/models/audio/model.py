@@ -1,4 +1,27 @@
-"""Simple 1D CNN for audio classification."""
+"""Four audio classifiers — one task, four input representations.
+
+Key idea: the interesting choice in audio ML is usually the representation, not
+the architecture. This file holds the same classification head behind four front
+ends: raw waveform (1D conv), linear spectrogram (2D conv), mel spectrogram
+(2D conv), and spectrogram frames as a token sequence (Transformer encoder).
+Comparing them on one dataset shows what each representation buys.
+
+This implementation: AudioCNN runs Conv1d over the raw wave [B, 1, T] with
+channels 1 → 32 → 64 → 128, each kernel 5 / stride 2 (so T shrinks 8x), then
+AdaptiveAvgPool1d(1) and Linear(128 → n_classes). AudioSpecCNN and AudioMelSpecCNN
+are architecturally identical 2D CNNs (1 → 16 → 32 → 64, 3x3 convs with 2x2
+max-pools, AdaptiveAvgPool2d, Linear(64 → n_classes)) — only the input features
+differ, which is the point: a (mel-)spectrogram is just an image of time vs
+frequency. AudioTransformer treats each spectrogram frame [B, T, D] as a token:
+Linear(D → d_model=64), a 2-layer nn.TransformerEncoder (4 heads), mean-pool over
+time, Linear(64 → n_classes).
+
+Deliberately simplified vs production audio models: the STFT/mel extraction lives
+in the data pipeline, not here; global average pooling discards temporal order in
+the CNNs; no SpecAugment, no log-mel normalisation choices, no pretrained
+self-supervised features (wav2vec 2.0 et al.), and the Transformer has no
+positional encoding — mean pooling makes it order-invariant.
+"""
 from __future__ import annotations
 
 import torch

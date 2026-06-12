@@ -1,4 +1,26 @@
-"""Reusable multimodal blocks and simple wrappers."""
+"""Multimodal encoder wrappers: pair text with a second modality, fuse, get one vector.
+
+Key idea: a multimodal model is three decisions — how to encode each modality,
+whether to fuse at the level of pooled vectors (late fusion) or token sequences
+(cross-attention), and how to pool. These wrappers make each decision a config
+string so the trade-offs can be compared on the same data.
+
+This implementation (d_model=128 throughout): MultiModalEncoder pairs a
+TextEncoder (token + pos embedding, 2-layer Transformer encoder) with MNIST-style
+images, encoded two ways — VisionPatchEncoder slices 28x28 into 4x4 patches via
+a strided Conv2d, giving 49 tokens of 128 dims for cross-attention, while
+VisionCNNEncoder produces a single pooled 128-dim vector for the late-fusion
+paths. The fusion flag picks ConcatFusion (project [text; image] of 256 → 128),
+GatedFusion (g = sigmoid(W[a; b]); out = g*a + (1-g)*b, a learned convex blend),
+or CrossAttentionFusion (text tokens attend to image tokens, then mean/cls pool).
+CrossModalEncoder generalises the second branch to vision, audio (Conv1d frame
+tokens), or tabular (one token per feature) against the same text encoder.
+
+Deliberately simplified vs CLIP/Flamingo/ViLBERT-class models: a single fusion
+block rather than interleaved cross-attention layers, no contrastive or any other
+pretraining objective baked in, no modality-type embeddings, and attention runs
+in one direction only (text queries the other modality, never the reverse).
+"""
 from __future__ import annotations
 
 import torch

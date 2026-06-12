@@ -1,4 +1,33 @@
-"""Simple convolutional VAE for 28x28 grayscale images."""
+"""Simple convolutional VAE for 28x28 grayscale images.
+
+A Variational Autoencoder (Kingma & Welling, 2013) is an autoencoder whose
+bottleneck is a probability distribution, not a point: the encoder predicts
+q(z|x) = N(mu, sigma^2) and the decoder reconstructs x from a sample z.
+Training maximises the ELBO:
+
+    ELBO = E_q[log p(x|z)] - KL(q(z|x) || N(0, I))
+
+i.e. reconstruct well while keeping the posterior close to a standard
+normal prior — which is what makes z ~ N(0, I) decodable into new samples.
+Sampling stays differentiable via the reparameterisation trick:
+z = mu + sigma * eps, with eps ~ N(0, I).
+
+This implementation (latent_dim=32):
+
+    encode:  [B,1,28,28] -> Conv s=2 (32) -> Conv s=2 (64) -> [B,64,7,7]
+             -> flatten(3136) -> fc_mu / fc_logvar -> [B,32] each
+    decode:  z [B,32] -> Linear(32->3136) -> reshape [B,64,7,7]
+             -> ConvT s=2 (32) -> ConvT s=2 (1) -> Sigmoid -> [B,1,28,28]
+
+vae_loss combines mean MSE reconstruction with the closed-form Gaussian KL
+KL = -0.5 * mean(1 + logvar - mu^2 - exp(logvar)); beta scales the KL term
+(beta-VAE style: higher beta -> more regular latent, blurrier outputs).
+
+Deliberately simplified: MSE instead of the Bernoulli log-likelihood the
+paper uses for binarised MNIST, a tiny 2-conv encoder/decoder, mean
+reduction over both terms (so the recon/KL balance differs from the strict
+per-image ELBO), and no KL warm-up or free-bits tricks.
+"""
 from __future__ import annotations
 
 import torch

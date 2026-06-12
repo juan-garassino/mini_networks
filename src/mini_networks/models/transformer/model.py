@@ -1,4 +1,27 @@
-"""Decoder-only TransformerLM with pluggable FFN blocks (standard / MoE / Mamba)."""
+"""Decoder-only Transformer language model with pluggable FFN blocks.
+
+Key idea: a GPT-style stack — token + learned positional embeddings, N blocks of
+causal self-attention followed by a position-wise feed-forward sublayer — where
+the feed-forward sublayer is swappable via block_type: "standard" | "moe" | "mamba".
+
+This implementation (defaults): vocab → d_model=128 embeddings, n_layers=4 blocks
+of nn.MultiheadAttention (n_heads=4, causal mask) + FFN, LayerNorm, lm_head back
+to vocab. StandardFFN is Linear(128→256) → GELU → Linear(256→128). MoEFFN adds a
+Gumbel-softmax top-k=1 router over num_experts=4 expert paths plus an always-on
+shared path scaled by a learnable shared_scale. MambaFFN is a depthwise-conv +
+gated exponential-decay scan (see models/mamba). Every FFN returns (out, aux_loss),
+so TransformerLM.forward(tokens) returns (logits [B, T, V], total_aux_loss) — the
+trainer adds aux_loss to the cross-entropy; it is 0 for non-MoE blocks.
+
+Key equations: attention = softmax(Q K^T / sqrt(d_k)) V with an upper-triangular
+causal mask; LM loss = -log p(x_t | x_<t); MoE aux = blw * KL(mean router probs ||
+uniform) - entw * mean router entropy (load balancing + exploration).
+
+Deliberately simplified vs the papers: post-LN residuals (GPT-2 uses pre-LN),
+learned absolute positions (no RoPE), generate() recomputes the full context each
+step (no KV cache), and MoE runs every expert densely then weights the outputs —
+no sparse dispatch, capacity factor, or expert parallelism as in Switch/GShard.
+"""
 from __future__ import annotations
 
 import math

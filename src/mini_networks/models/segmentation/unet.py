@@ -1,4 +1,31 @@
-"""PyTorch UNet for binary and multiclass segmentation on MNIST."""
+"""PyTorch UNet for binary and multiclass segmentation on MNIST.
+
+UNet (Ronneberger et al., 2015) is an encoder-decoder for dense per-pixel
+prediction. The key idea is the skip connection: each decoder stage
+concatenates the same-resolution encoder feature map before convolving, so
+fine spatial detail lost to pooling is re-injected on the way up — the
+encoder answers "what", the skips preserve "where".
+
+This implementation with base_channels=32:
+
+    enc1 ConvBlock(1->32)    28x28 ----------------------+
+      pool -> enc2 ConvBlock(32->64)   14x14 ------+     |
+        pool -> bottleneck ConvBlock(64->128) 7x7  |     |
+        up2 ConvT(128->64) -> cat(64+64) -> dec2 --+     |
+      up1 ConvT(64->32)  -> cat(32+32) -> dec1 ----------+
+    out Conv1x1(32 -> out_channels)
+
+Each ConvBlock is Conv3x3 -> BN -> ReLU -> Dropout2d. out_channels=1
+applies sigmoid for binary masks; >1 returns logits for multiclass (softmax
+lives in the loss). Dice losses below optimise overlap directly:
+dice = 2*|P∩T| / (|P|+|T|), loss = 1 - dice — more robust than plain
+cross-entropy when the foreground is a small fraction of the pixels.
+
+Deliberately simplified: 2 encoder levels instead of the paper's 4
+(28x28 only survives two poolings), one conv per block instead of two,
+padded convs + interpolate instead of the paper's unpadded crop-and-copy,
+and no elastic-deformation augmentation.
+"""
 from __future__ import annotations
 
 import torch

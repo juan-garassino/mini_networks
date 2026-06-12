@@ -1,4 +1,32 @@
-"""Tiny ConvNeXt-like model for 28x28 grayscale images."""
+"""Tiny ConvNeXt-like model for 28x28 grayscale images.
+
+ConvNeXt (Liu et al., 2022) asks: how much of a Vision Transformer's edge
+comes from attention, and how much from its macro-design? It "modernises"
+a ResNet with Transformer-era choices — depthwise conv as a stand-in for
+token mixing, an inverted bottleneck MLP (expand 4x, like a Transformer
+FFN), LayerNorm instead of BatchNorm, GELU instead of ReLU — and matches
+ViTs without any attention.
+
+Each ConvNeXtBlock here follows that recipe:
+
+    x -> depthwise Conv3x3 -> LayerNorm (channels-last permute)
+      -> Conv1x1 (dim -> 4*dim) -> GELU -> Conv1x1 (4*dim -> dim) -> + x
+
+Overall layout with base_channels=32:
+
+    [B,1,28,28] -> ConvBNReLU stem (32ch)        28x28
+                -> ConvNeXtBlock(32)             28x28
+                -> Conv2x2 s=2 downsample (64)   14x14
+                -> ConvNeXtBlock(64)
+                -> Conv2x2 s=2 downsample (128)   7x7
+                -> ConvNeXtBlock(128)
+                -> global avg pool -> Linear(128->10)
+
+Deliberately simplified: one block per stage (real ConvNeXt-T uses
+(3,3,9,3) blocks at 96-768 channels), 3x3 depthwise kernels instead of the
+paper's 7x7, a BN+ReLU stem rather than the patchify stem, and no
+layer-scale, stochastic depth, or EMA training tricks.
+"""
 from __future__ import annotations
 
 import torch

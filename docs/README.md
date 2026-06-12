@@ -1,35 +1,28 @@
 # Documentation Index
 
-**Start Here**
-- `docs/datasets.md` Data registry, shared task modes, and dataset mapping.
-- `docs/adding_datasets.md` How to add a new dataset to the shared registry.
-- `docs/multimodal_blocks.md` Encoders, cross‑attention, and fusion blocks.
-- `docs/models.md` Model inventory with short descriptions.
-- `docs/compositions.md` Composition interfaces and pipelines.
-- `docs/runs_and_logging.md` Logging format and artifact layout.
+The docs are an ordered curriculum. Each chapter pairs a short theory recap with
+the actual implementation in `src/mini_networks/` and ends with a results table
+fed from the latest quality-gate sweep (`uv run python scripts/render_results.py`).
 
-**Architecture Layers**
-Data loading → preprocessing → building blocks → networks → multimodal compositions → inference/evaluation.
+| # | Chapter | Covers |
+|---|---|---|
+| 00 | [Overview](00-overview.md) | repo map, runtime contract, tiers, quality gate, how to run anything |
+| 01 | [Data](01-data.md) | dataset registry, MNIST task modes, text/audio/tabular sets |
+| 02 | [Classifiers](02-classifiers.md) | CNN, ResNet, ViT, MobileNet, ConvNeXt |
+| 03 | [Autoencoders](03-autoencoders.md) | UNet AE, VAE, latent spaces |
+| 04 | [GAN](04-gan.md) | minimax training, mode collapse, judge scoring |
+| 05 | [Diffusion](05-diffusion.md) | DDPM, EMA, CFG, tier-capped timesteps, variants |
+| 06 | [Sequence models](06-sequence-models.md) | RNN/LSTM/GRU, Transformer (+MoE/Mamba FFN), NanoMamba |
+| 07 | [LoRA fine-tuning](07-lora-finetuning.md) | low-rank adapters, two-stage transfer |
+| 08 | [RAG](08-rag.md) | TF-IDF retrieval + our own TransformerLM |
+| 09 | [CLIP & multimodal](09-clip-multimodal.md) | contrastive dual encoders, fusion blocks |
+| 10 | [RL & RLHF](10-rl-rlhf.md) | Q/DQN/PPO maze agents, REINFORCE, PPO-with-KL |
+| 11 | [Compositions](11-compositions.md) | multi-model pipelines and the runner contract |
 
-**Refactor Map**
-- `core/data/` datasets + shared preprocessing
-- `core/blocks/` reusable layers and blocks
-- `core/runtime.py` shared trainer base classes (e.g., `SupervisedTrainer`, `ContrastiveTrainer`)
-- `core/diffusion/` shared diffusion sampling driver
-- `models/` model definitions + trainers
-- `compositions/` cross‑model pipelines + composition bases
+How-to guides:
+- [Adding a dataset](adding_datasets.md)
 
-**Core Concepts**
-mini_networks standardizes how experiments are executed so different models can be compared and composed without bespoke glue code.
-
-Key contracts:
-- `train(config, dataloader, logger)` for training.
-- `evaluate(config, dataloader, logger)` for evaluation.
-- `infer(config, inputs)` for inference.
-
-Core bases:
-- `BaseTrainer`, `SupervisedTrainer`, `ContrastiveTrainer` in `core/runtime.py`
-- `CompositionBase`, `ContrastiveCompositionBase` in `compositions/base.py`
-- `sample_loop` in `core/diffusion/sampling.py` for diffusion sampling
-
-Everything depends on a shared data registry and a common logging format. This keeps Colab workflows simple and makes cross‑model experiments reproducible.
+The model source files themselves are annotated: every `models/<name>/model.py`
+opens with a header docstring covering the key idea, this implementation's
+dimensions, the governing equations, and what is deliberately simplified
+versus the original paper.

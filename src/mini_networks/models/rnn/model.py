@@ -1,25 +1,27 @@
-"""RNN language models: vanilla RNN, LSTM, and GRU.
+"""Recurrent language models: one wrapper class over nn.RNN, nn.LSTM, and nn.GRU.
 
-All three share the same interface so they are drop-in interchangeable:
+Key idea: instead of attending over all previous tokens, a recurrent network
+compresses the entire history into a fixed-size hidden state that is updated one
+token at a time. The cell_type config flag ("rnn" | "lstm" | "gru") selects the
+recurrence, everything else is identical.
 
-  logits, aux = model(tokens)           # train / eval forward pass
-  output = model.generate(prompt, ...)  # autoregressive generation
+This implementation (defaults): token embedding vocab → hidden_dim=256, then a
+2-layer recurrent cell (batch_first, inter-layer dropout), then lm_head
+Linear(256 → vocab). forward(tokens [B, T]) returns (logits [B, T, V],
+aux_loss=0.0) — the same API as TransformerLM and NanoMamba, so trainers are
+fully interchangeable.
 
-Architecture
-------------
-  token_embed  [vocab_size → hidden_dim]
-  cell         nn.RNN | nn.LSTM | nn.GRU  (n_layers, hidden_dim)
-  dropout      applied between layers inside the cell (PyTorch built-in)
-  lm_head      [hidden_dim → vocab_size]
+Key equations: vanilla RNN h_t = tanh(W_x x_t + W_h h_{t-1} + b); LSTM adds gates
+f, i, o and a cell state c_t = f_t * c_{t-1} + i_t * tanh(g_t) so gradients can
+flow through c unchanged; GRU merges this into update/reset gates with a single
+state.
 
-The key educational difference from Transformer / Mamba:
-  - Transformer processes all positions in parallel via attention
-  - Mamba processes all positions in parallel via a parallel scan
-  - RNN/LSTM/GRU process one token at a time, maintaining a hidden state
-    → sequential by nature, but can maintain explicit memory across steps
-
-generate() carries the hidden state between steps for efficient inference,
-rather than reprocessing the full context each step.
+The educational payoff is in generate(): it warms the hidden state up on the
+prompt once, then feeds back one token at a time, carrying (h, c) between steps —
+each new token costs O(1) instead of the Transformer's full-context recompute.
+Deliberately simplified: cuDNN-fused PyTorch cells rather than hand-written gate
+math, zero-initialised hidden state, no truncated-BPTT state carrying between
+training batches, and sampling is temperature-only (no top-k / nucleus).
 """
 from __future__ import annotations
 

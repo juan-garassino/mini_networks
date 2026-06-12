@@ -47,9 +47,6 @@ jobs:
   sweep-s:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # Non-blocking until Phase 2 stabilization makes the full check sweep green;
-    # the uploaded report is the source of truth meanwhile.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3

@@ -1,23 +1,25 @@
-"""LoRA (Low-Rank Adaptation) applied to a small CNN for MNIST/FashionMNIST.
+"""LoRA (Low-Rank Adaptation) demonstrated on a small CNN, MNIST → FashionMNIST.
 
-Architecture
------------
-  Conv1: 1→16, 3×3, ReLU, MaxPool
-  Conv2: 16→32, 3×3, ReLU, MaxPool
-  FC1:   512→hidden_dim   ← LoRA adapter replaces this layer
-  FC2:   hidden_dim→10    ← LoRA adapter replaces this layer
+Key idea: fine-tuning a layer's full weight matrix W [out, in] is wasteful — the
+weight *update* usually has low intrinsic rank. LoRA freezes W and learns a rank-r
+correction Delta = B @ A, shrinking trainable parameters from O(in*out) to
+O(rank*(in+out)) while leaving the pretrained weights untouched.
 
-LoRA adapter (StandardLoRALinear)
-----------------------------------
-  forward(x) = W·x + (B·A·x) * (alpha / rank)
+This implementation: LoRALinear computes
+    forward(x) = W·x + (x @ A^T @ B^T) * (alpha / rank)
+with A [rank, in] Kaiming-init (a random down-projection) and B [out, rank]
+zero-init, so the adapter contributes exactly nothing at step 0 and the model
+starts from the pretrained function. Defaults rank=4, alpha=4 → scale 1.0.
+LoRACNN is Conv(1→16) → pool → Conv(16→32) → pool → flatten to 7*7*32=1568 →
+LoRALinear(1568→128) → LoRALinear(128→10). The trainer pretrains everything on
+MNIST, then calls freeze_for_finetune() (convs + both W frozen) and fine-tunes
+only the four A/B matrices on FashionMNIST.
 
-  A: [rank, in_features]  — Kaiming-uniform init (learns direction)
-  B: [out_features, rank] — zero init (starts as identity adaptation)
-
-During fine-tuning:
-  - Conv layers are frozen (freeze_conv=True)
-  - W (original weights) are frozen
-  - Only A, B matrices are trained → O(rank*(in+out)) params vs O(in*out)
+Deliberately simplified vs the LoRA paper (Hu et al. 2021): adapters sit on a
+CNN's two fully-connected layers, not on a Transformer's attention q/v
+projections; the low-rank delta is computed on the fly at inference instead of
+being merged into W (the paper's zero-latency trick); and there is no LoRA-path
+dropout or per-layer rank tuning.
 """
 from __future__ import annotations
 

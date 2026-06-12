@@ -1,4 +1,30 @@
-"""Minimal ViT for 28x28 grayscale images."""
+"""Minimal ViT for 28x28 grayscale images.
+
+Vision Transformer (Dosovitskiy et al., 2020): treat an image as a sequence
+of patch tokens and let self-attention relate every patch to every other in
+a single layer — no convolutional locality prior at all. Attention is
+softmax(Q K^T / sqrt(d)) V, so each patch aggregates information from all
+patches, weighted by learned similarity.
+
+This implementation:
+
+    [B,1,28,28] -> Conv2d(k=4, s=4) patch embed -> 7x7 = 49 tokens of d=64
+                -> prepend learnable [CLS] token  -> 50 tokens
+                -> add learnable positional embedding (zeros-initialised)
+                -> 4 x TransformerEncoderLayer (4 heads, FFN dim 128, dropout 0.1)
+                -> LayerNorm on the CLS token -> Linear(64->10)
+
+The strided conv is the standard trick for "flatten each PxP patch and
+project it" in one op. Only the CLS token feeds the classifier head; the
+positional embedding is what tells the model where each patch came from,
+since attention itself is permutation-invariant.
+
+Deliberately simplified vs the paper: tiny everything (ViT-Base uses
+d=768, 12 layers, 12 heads, 16x16 patches on 224x224 images), no
+large-scale pretraining — ViTs underperform CNNs when trained from scratch
+on small data, which MNIST forgives — and stock PyTorch encoder layers
+(post-norm by default) instead of the paper's pre-norm blocks.
+"""
 from __future__ import annotations
 
 import torch
