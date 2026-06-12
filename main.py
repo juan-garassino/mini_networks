@@ -104,7 +104,7 @@ def cmd_compose(args: argparse.Namespace) -> None:
 def cmd_evaluate(args: argparse.Namespace) -> None:
     """Evaluate a model from a checkpoint directory."""
     from rich.console import Console
-    from mini_networks.api.dependencies import get_model_registry
+    from mini_networks.core.registry import get_model_registry
 
     console = Console()
     registry = get_model_registry()

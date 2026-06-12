@@ -16,6 +16,10 @@ class TestEvalSpecs:
         expected = set(MODELS) | set(COMPOSITIONS)
         assert set(EVAL_SPECS) == expected
 
+    def test_model_names_match_registry(self):
+        from mini_networks.core.registry import MODEL_NAMES, get_model_registry
+        assert list(get_model_registry()) == MODEL_NAMES
+
     def test_get_eval_spec_unknown_raises(self):
         import pytest
         with pytest.raises(KeyError, match="EvalSpec"):

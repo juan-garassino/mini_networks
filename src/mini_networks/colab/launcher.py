@@ -38,39 +38,7 @@ console = Console()
 # Available items
 # ---------------------------------------------------------------------------
 
-MODELS = [
-    "clip",
-    "diffusion",
-    "segmentation",
-    "detection",
-    "classifier",
-    "resnet",
-    "vit",
-    "vae",
-    "unet_ae",
-    "simclr",
-    "transformer",
-    "mamba",
-    "gan",
-    "rnn",
-    "lora",
-    "rag",
-    "rl_maze",
-    "rlhf",
-    "reinforce",
-    "audio_classifier",
-    "audio_spectrogram",
-    "audio_transformer",
-    "audio_melspectrogram",
-    "tabular_classifier",
-    "tabular_diffusion",
-    "mobilenet",
-    "convnext",
-    "vision_embed",
-    "text_seq2seq",
-    "text_token_classifier",
-    "pixelcnn",
-]
+from mini_networks.core.registry import MODEL_NAMES as MODELS
 
 COMPOSITIONS = [
     "clip_guided_diffusion",
@@ -349,7 +317,7 @@ def run_model(
     validate_inference: bool = False,
 ) -> "Logger":  # noqa: F821
     """Train a single model and return the Logger instance."""
-    from mini_networks.api.dependencies import get_model_registry
+    from mini_networks.core.registry import get_model_registry
     from mini_networks.core.checkpoints import find_resumable_run
     from mini_networks.core.logging.logger import Logger
 

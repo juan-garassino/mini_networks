@@ -88,7 +88,7 @@ class JudgeContext:
         if self._trainer is not None:
             return self._trainer, self._config
         import torch  # noqa: F401
-        from mini_networks.api.dependencies import get_model_registry
+        from mini_networks.core.registry import get_model_registry
         from mini_networks.core.checkpoints import latest_run_dir
         from mini_networks.colab.launcher import run_model, _run_base
 
@@ -174,7 +174,7 @@ def _decide(result: CheckResult, spec: EvalSpec, s_ok: bool, tier: str) -> None:
 
 
 def check_model(name: str, args, judge: JudgeContext) -> CheckResult:
-    from mini_networks.api.dependencies import get_model_registry
+    from mini_networks.core.registry import get_model_registry
     from mini_networks.colab.launcher import run_model, _run_model_inference_probe
 
     spec = get_eval_spec(name)

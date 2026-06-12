@@ -2,7 +2,7 @@
 import os
 import tempfile
 
-from mini_networks.api.dependencies import get_model_registry
+from mini_networks.core.registry import get_model_registry
 from mini_networks.core.logging.logger import Logger
 
 DATA_ROOT = os.environ.get("MINI_TEST_DATA_ROOT", "/tmp/mini_networks_test_data")
