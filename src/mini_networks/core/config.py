@@ -30,29 +30,23 @@ class BaseConfig(BaseModel):
     def effective_fast_demo(self) -> bool:
         return self.effective_tier == "S"
 
+    def _budget(self, key: str) -> int | None:
+        from mini_networks.core.tiers import budget
+        return budget(self.model_name, self.effective_tier, key)
+
     @property
     def effective_epochs(self) -> int:
-        if self.effective_tier == "S":
-            return 1
-        if self.effective_tier == "M":
-            return min(self.epochs, 3)
-        return self.epochs
+        cap = self._budget("epochs")
+        return self.epochs if cap is None else min(self.epochs, cap)
 
     @property
     def effective_batch_size(self) -> int:
-        if self.effective_tier == "S":
-            return min(self.batch_size, 16)
-        if self.effective_tier == "M":
-            return min(self.batch_size, 32)
-        return self.batch_size
+        cap = self._budget("batch_cap")
+        return self.batch_size if cap is None else min(self.batch_size, cap)
 
     @property
     def dataset_sample_limit(self) -> int | None:
-        if self.effective_tier == "S":
-            return 32
-        if self.effective_tier == "M":
-            return 512
-        return None
+        return self._budget("sample_limit")
 
     def tier_epochs(self, full_epochs: int, medium_cap: int = 2) -> int:
         if self.effective_tier == "S":
@@ -63,19 +57,11 @@ class BaseConfig(BaseModel):
 
     @property
     def max_train_batches(self) -> int | None:
-        if self.effective_tier == "S":
-            return 1
-        if self.effective_tier == "M":
-            return 8
-        return None
+        return self._budget("train_batches")
 
     @property
     def max_eval_batches(self) -> int | None:
-        if self.effective_tier == "S":
-            return 1
-        if self.effective_tier == "M":
-            return 4
-        return None
+        return self._budget("eval_batches")
 
     def limit_steps(self, full_steps: int, s_cap: int, m_cap: int) -> int:
         if self.effective_tier == "S":
@@ -88,4 +74,6 @@ class BaseConfig(BaseModel):
     def effective_timesteps(self) -> int:
         """Tier-capped diffusion chain length. Subclasses define `timesteps`;
         train and sample must both use this so the noise chain is consistent."""
-        return self.limit_steps(getattr(self, "timesteps", 0), s_cap=25, m_cap=200)
+        full = getattr(self, "timesteps", 0)
+        cap = self._budget("timesteps")
+        return full if cap is None else min(full, cap)

@@ -70,6 +70,16 @@ class TextTokenClassifierTrainer(BaseTrainer):
 
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
 
+    def load_checkpoint(self, config: BaseConfig, artifacts_dir) -> None:
+        from pathlib import Path
+        assert isinstance(config, TextTokenClassifierConfig)
+        state = torch.load(Path(artifacts_dir) / "model.pt",
+                           map_location=config.device, weights_only=True)
+        vocab_size = state["token.weight"].shape[0]
+        self.model = self._build(config, vocab_size)
+        self.model.load_state_dict(state)
+        self.model.eval()
+
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         assert isinstance(config, TextTokenClassifierConfig)
         if self.model is None:

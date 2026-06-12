@@ -80,6 +80,18 @@ class ReinforceTrainer(BaseTrainer):
 
         torch.save(policy.state_dict(), logger.artifact_path("model.pt"))
 
+    def load_checkpoint(self, config: BaseConfig, artifacts_dir) -> None:
+        from pathlib import Path
+        assert isinstance(config, ReinforceConfig)
+        env = _make_env(config)
+        self.env = env
+        state = env.reset()
+        self.policy = self._build(config, state_size=len(state))
+        weights = torch.load(Path(artifacts_dir) / "model.pt",
+                             map_location=config.device, weights_only=True)
+        self.policy.load_state_dict(weights)
+        self.policy.eval()
+
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         assert isinstance(config, ReinforceConfig)
         if self.policy is None or self.env is None:

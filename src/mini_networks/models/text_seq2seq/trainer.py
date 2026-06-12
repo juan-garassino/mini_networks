@@ -89,6 +89,16 @@ class TextSeq2SeqTrainer(BaseTrainer):
                 total += F.cross_entropy(logits.view(-1, logits.size(-1)), tgt.view(-1)).item()
         return {"eval_loss": total / max(1, len(dataloader))}
 
+    def load_checkpoint(self, config: BaseConfig, artifacts_dir) -> None:
+        from pathlib import Path
+        assert isinstance(config, TextSeq2SeqConfig)
+        state = torch.load(Path(artifacts_dir) / "model.pt",
+                           map_location=config.device, weights_only=True)
+        vocab_size = state["src_embed.weight"].shape[0]
+        self.model = self._build(config, vocab_size)
+        self.model.load_state_dict(state)
+        self.model.eval()
+
     def infer(self, config: BaseConfig, inputs: Any) -> Any:
         assert isinstance(config, TextSeq2SeqConfig)
         if self.model is None:

@@ -135,8 +135,13 @@ class RAGTrainer(BaseTrainer):
         tok_path = path / "tokenizer.json"
         if tok_path.exists():
             self.tokenizer = CharTokenizer.load(str(tok_path))
-        # Note: RAG index (self.rag) is not rebuilt from checkpoint.
-        # Call train() to rebuild the full pipeline including the TF-IDF index.
+        # Rebuild the TF-IDF index from the corpus — it is derived data, so we
+        # reconstruct it from the dataset rather than serializing it.
+        ds = make_rag_dataloader(config).dataset
+        corpus = getattr(ds, "text", "")
+        if corpus:
+            self.rag = NanoRAG(top_k=config.top_k, chunk_size=config.chunk_size)
+            self.rag.add_documents([corpus])
 
 
 def make_rag_dataloader(config: RAGConfig, split: str = "train") -> DataLoader:

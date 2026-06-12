@@ -72,6 +72,18 @@ class TabularDiffusionTrainer(BaseTrainer):
 
         torch.save(model.state_dict(), logger.artifact_path("model.pt"))
 
+    def load_checkpoint(self, config: BaseConfig, artifacts_dir) -> None:
+        from pathlib import Path
+        assert isinstance(config, TabularDiffusionConfig)
+        state = torch.load(Path(artifacts_dir) / "model.pt",
+                           map_location=config.device, weights_only=True)
+        self.model = self._build(config)
+        self.model.load_state_dict(state)
+        self.model.eval()
+        self.scheduler = TabularNoiseScheduler(
+            config.effective_timesteps, config.beta_start, config.beta_end
+        )
+
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         assert isinstance(config, TabularDiffusionConfig)
         if self.model is None:
