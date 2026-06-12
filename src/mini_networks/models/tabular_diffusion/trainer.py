@@ -48,7 +48,7 @@ class TabularDiffusionTrainer(BaseTrainer):
         assert isinstance(config, TabularDiffusionConfig)
         model = self._build(config)
         self.model = model
-        scheduler = TabularNoiseScheduler(config.timesteps, config.beta_start, config.beta_end)
+        scheduler = TabularNoiseScheduler(config.effective_timesteps, config.beta_start, config.beta_end)
         self.scheduler = scheduler
         opt = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
         logger.log_config(config.model_dump())
@@ -59,7 +59,7 @@ class TabularDiffusionTrainer(BaseTrainer):
             for x, _ in dataloader:
                 x = x.to(config.device)
                 B = x.size(0)
-                t = torch.randint(0, config.timesteps, (B,), device=config.device)
+                t = torch.randint(0, config.effective_timesteps, (B,), device=config.device)
                 noise = torch.randn_like(x)
                 xt = scheduler.add_noise(x, noise, t)
                 pred = model(xt, t)
@@ -82,7 +82,7 @@ class TabularDiffusionTrainer(BaseTrainer):
             for x, _ in dataloader:
                 x = x.to(config.device)
                 B = x.size(0)
-                t = torch.randint(0, config.timesteps, (B,), device=config.device)
+                t = torch.randint(0, config.effective_timesteps, (B,), device=config.device)
                 noise = torch.randn_like(x)
                 xt = self.scheduler.add_noise(x, noise, t) if self.scheduler else x
                 pred = self.model(xt, t)
@@ -99,7 +99,7 @@ class TabularDiffusionTrainer(BaseTrainer):
             predict_noise=lambda x, t_batch, t, _: self.model(x, t_batch),
             shape=(n, config.n_features),
             device=config.device,
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
         )
         return {"samples": x.cpu()}
 

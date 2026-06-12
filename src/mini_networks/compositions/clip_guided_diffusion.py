@@ -130,7 +130,7 @@ class CLIPGuidedDiffusion:
 
     def _build_scheduler(self, config: CLIPGuidedDiffusionConfig) -> NoiseScheduler:
         return NoiseScheduler(
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
             beta_start=config.beta_start,
             beta_end=config.beta_end,
         ).to(torch.device(config.device))
@@ -252,7 +252,7 @@ class CLIPGuidedDiffusion:
             sample_limit=config.dataset_sample_limit,
         )
 
-        T = config.timesteps
+        T = config.effective_timesteps
         # VAE frozen in eval mode: stable BatchNorm stats for latent encoding
         if self.vae is not None:
             self.vae.eval()
@@ -369,7 +369,7 @@ class CLIPGuidedDiffusion:
             ),
             shape=shape,
             device=dev,
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
         )
 
         if config.use_vae and self.vae is not None:
@@ -436,7 +436,7 @@ class CLIPGuidedDiffusion:
         uncond_mask = torch.ones(1, dtype=torch.long, device=dev)
         cond_mask = torch.zeros(1, dtype=torch.long, device=dev)
 
-        T = config.timesteps
+        T = config.effective_timesteps
         state = {"current_class": current_class}
 
         def predict_noise(x, t_batch, t, state):
@@ -459,7 +459,7 @@ class CLIPGuidedDiffusion:
             predict_noise=predict_noise,
             shape=shape,
             device=dev,
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
             step_callback=step_cb,
             state=state,
         )

@@ -54,7 +54,7 @@ class DiffusionDistillation:
             sample_limit=config.dataset_sample_limit,
         )
         scheduler = NoiseScheduler(
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
             beta_start=config.beta_start,
             beta_end=config.beta_end,
         ).to(torch.device(config.device))
@@ -72,7 +72,7 @@ class DiffusionDistillation:
             for images, _ in dl:
                 images = images.to(config.device) * 2.0 - 1.0
                 B = images.size(0)
-                t = torch.randint(0, config.timesteps, (B,), device=config.device)
+                t = torch.randint(0, config.effective_timesteps, (B,), device=config.device)
                 noise = torch.randn_like(images)
                 xt = scheduler.add_noise(images, noise, t)
                 pred = teacher(xt, t)
@@ -91,7 +91,7 @@ class DiffusionDistillation:
             for images, _ in dl:
                 images = images.to(config.device) * 2.0 - 1.0
                 B = images.size(0)
-                t = torch.randint(0, config.timesteps, (B,), device=config.device)
+                t = torch.randint(0, config.effective_timesteps, (B,), device=config.device)
                 noise = torch.randn_like(images)
                 xt = scheduler.add_noise(images, noise, t)
                 with torch.no_grad():

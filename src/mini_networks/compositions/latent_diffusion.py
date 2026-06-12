@@ -41,7 +41,7 @@ class LatentDiffusion:
         vae = VAE(latent_channels=config.latent_channels).to(config.device)
         unet = UNet(in_channels=config.latent_channels, base_channels=32).to(config.device)
         scheduler = NoiseScheduler(
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
             beta_start=config.beta_start,
             beta_end=config.beta_end,
         ).to(torch.device(config.device))
@@ -76,7 +76,7 @@ class LatentDiffusion:
                     mu, logvar = vae.encode(images)
                     z = vae.reparameterise(mu, logvar)
                 B = z.size(0)
-                t = torch.randint(0, config.timesteps, (B,), device=config.device)
+                t = torch.randint(0, config.effective_timesteps, (B,), device=config.device)
                 noise = torch.randn_like(z)
                 zt = scheduler.add_noise(z, noise, t)
                 pred = unet(zt, t)
@@ -101,7 +101,7 @@ class LatentDiffusion:
             predict_noise=lambda z, t_batch, t, _: self.unet(z, t_batch),
             shape=(n, config.latent_channels, 7, 7),
             device=config.device,
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
         )
         images = self.vae.decode(z)
         return (images + 1.0) / 2.0

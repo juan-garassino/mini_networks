@@ -88,7 +88,7 @@ class DDPMTrainer(BaseTrainer):
             base_channels=config.base_channels,
         ).to(config.device)
         scheduler = NoiseScheduler(
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
             schedule=config.schedule,
             beta_start=config.beta_start,
             beta_end=config.beta_end,
@@ -118,7 +118,7 @@ class DDPMTrainer(BaseTrainer):
         else:
             scheduler_lr = None
 
-        T = config.timesteps
+        T = config.effective_timesteps
         global_step = 0
 
         for epoch in range(config.effective_epochs):
@@ -168,7 +168,7 @@ class DDPMTrainer(BaseTrainer):
         model = self.model
         scheduler = self.scheduler
         model.eval()
-        T = config.timesteps
+        T = config.effective_timesteps
         total_loss = 0.0
         with torch.no_grad():
             for images, _ in dataloader:
@@ -197,7 +197,7 @@ class DDPMTrainer(BaseTrainer):
                 predict_noise=lambda x, t_batch, t, _: model(x, t_batch),
                 shape=shape,
                 device=config.device,
-                timesteps=config.timesteps,
+                timesteps=config.effective_timesteps,
             )
         samples = (x.clamp(-1, 1) + 1) / 2
         return {"samples": samples.cpu()}

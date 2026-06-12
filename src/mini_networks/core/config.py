@@ -83,3 +83,9 @@ class BaseConfig(BaseModel):
         if self.effective_tier == "M":
             return min(full_steps, m_cap)
         return full_steps
+
+    @property
+    def effective_timesteps(self) -> int:
+        """Tier-capped diffusion chain length. Subclasses define `timesteps`;
+        train and sample must both use this so the noise chain is consistent."""
+        return self.limit_steps(getattr(self, "timesteps", 0), s_cap=25, m_cap=200)

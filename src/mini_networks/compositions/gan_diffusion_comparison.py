@@ -173,7 +173,7 @@ class GANDiffusionComparison:
             base_channels=config.base_channels,
         ).to(config.device)
         scheduler = NS(
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
             schedule=config.schedule,
             beta_start=config.beta_start,
             beta_end=config.beta_end,
@@ -196,7 +196,7 @@ class GANDiffusionComparison:
             for images, _ in dl:
                 images = images.to(config.device) * 2.0 - 1.0
                 B = images.shape[0]
-                t = torch.randint(0, config.timesteps, (B,), device=config.device)
+                t = torch.randint(0, config.effective_timesteps, (B,), device=config.device)
                 noise = torch.randn_like(images)
                 noisy = scheduler.add_noise(images, noise, t)
                 pred = unet(noisy, t)
@@ -255,7 +255,7 @@ class GANDiffusionComparison:
             predict_noise=lambda x, t_b, t, _: unet(x, t_b),
             shape=(n_samples, config.in_channels, config.image_size, config.image_size),
             device=config.device,
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
             seed=seed,
         )
         return ((x.clamp(-1, 1) + 1) / 2).cpu()

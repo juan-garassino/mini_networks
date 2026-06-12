@@ -137,7 +137,7 @@ class TransformerCLIPDiffusion:
 
     def _build_scheduler(self, config: TransformerCLIPDiffusionConfig) -> NoiseScheduler:
         return NoiseScheduler(
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
             beta_start=config.beta_start,
             beta_end=config.beta_end,
         ).to(torch.device(config.device))
@@ -265,7 +265,7 @@ class TransformerCLIPDiffusion:
             sample_limit=config.dataset_sample_limit,
         )
 
-        T = config.timesteps
+        T = config.effective_timesteps
         epochs = config.tier_epochs(config.diff_epochs, medium_cap=2)
         for epoch in range(epochs):
             unet.train()
@@ -388,7 +388,7 @@ class TransformerCLIPDiffusion:
             ),
             shape=(n_samples, 1, 28, 28),
             device=dev,
-            timesteps=config.timesteps,
+            timesteps=config.effective_timesteps,
         )
         return ((x.clamp(-1, 1) + 1) / 2).cpu()
 
