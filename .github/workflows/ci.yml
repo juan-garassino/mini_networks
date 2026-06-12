@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --dev
+      - name: Import every package module
+        run: |
+          uv run python - <<'EOF'
+          import importlib
+          import pkgutil
+
+          import mini_networks
+
+          failed = []
+          for mod in pkgutil.walk_packages(mini_networks.__path__, "mini_networks."):
+              try:
+                  importlib.import_module(mod.name)
+              except Exception as exc:
+                  failed.append(f"{mod.name}: {exc}")
+          if failed:
+              raise SystemExit("\n".join(failed))
+          print("all modules import cleanly")
+          EOF
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --dev
+      - run: make test-ci
+
+  sweep-s:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --dev
+      - name: S-tier micro-sweep (all models + compositions)
+        run: make validate-s DEVICE=cpu
+      - name: Upload sweep output on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-runs
+          path: runs/
+          retention-days: 7
+          if-no-files-found: ignore

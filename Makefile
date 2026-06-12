@@ -1,4 +1,4 @@
-.PHONY: help install install-dev list validate-s validate-m validate-l validate-models-s validate-compositions-s
+.PHONY: help install install-dev test test-ci clean list validate-s validate-m validate-l validate-models-s validate-compositions-s
 
 UV_RUN = uv run
 PYTHON ?= $(UV_RUN) python
@@ -12,6 +12,9 @@ help:
 	@echo "Available targets:"
 	@echo "  install               Install runtime dependencies with uv"
 	@echo "  install-dev           Install runtime + dev dependencies with uv"
+	@echo "  test                  Run fast test suite (slow tests deselected)"
+	@echo "  test-ci               Run tests for CI"
+	@echo "  clean                 Remove caches and stray run output"
 	@echo "  list                  List available models and compositions"
 	@echo "  validate-s            Run full sweep at tier S"
 	@echo "  validate-m            Run full sweep at tier M"
@@ -31,6 +34,16 @@ install:
 
 install-dev:
 	uv sync --dev
+
+test:
+	$(UV_RUN) pytest -q
+
+test-ci:
+	$(UV_RUN) pytest -q
+
+clean:
+	rm -rf .pytest_cache .ruff_cache
+	find . -name "__pycache__" -not -path "./legacy/*" -not -path "./.venv/*" -type d -prune -exec rm -rf {} +
 
 list:
 	$(PYTHON) main.py list

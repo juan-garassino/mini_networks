@@ -8,5 +8,16 @@ venv/
 dist/
 build/
 .pytest_cache/
+.ruff_cache/
 *.pt
 *.pth
+.DS_Store
+
+# legacy/ is reference-only source; never track its artifacts or datasets
+legacy/**/venv/
+legacy/**/data/
+legacy/001-data/
+legacy/data/
+*.gz
+*.idx
+*-ubyte
