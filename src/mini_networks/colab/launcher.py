@@ -530,9 +530,9 @@ def _run_clip_guided_diffusion(fast_demo, training_tier, data_root, device, chec
     logger = _make_composition_logger("clip_guided_diffusion", checkpoint_root)
     pipeline = CLIPGuidedDiffusion()
     pipeline.train_all(cfg, logger)
-    images = pipeline.text_to_image("digit zero", cfg)
+    images, class_id = pipeline.text_to_image("digit zero", cfg)
     console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
-    return {"images": images, "config": cfg, "run_dir": str(logger.run_dir)}
+    return {"images": images, "class_id": class_id, "config": cfg, "run_dir": str(logger.run_dir)}
 
 def _run_transformer_clip_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
     from mini_networks.compositions.transformer_clip_diffusion import (

@@ -43,5 +43,5 @@ class RAGConditionedDiffusion:
             config.prompt_seed,
             max_new_tokens=16,
         )
-        images = self.diff.text_to_image(prompt, config)
+        images, _class_id = self.diff.text_to_image(prompt, config)
         return images, prompt
