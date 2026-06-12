@@ -64,7 +64,9 @@ class LatentDiffusion:
                 total += loss.item()
             logger.log_metrics(epoch, {"vae_loss": total / max(1, len(dl))})
 
-        # Train UNet in latent space
+        # Train UNet in latent space — VAE must be frozen in eval mode so its
+        # BatchNorm stats and reparameterisation noise don't shift the latents
+        vae.eval()
         for epoch in range(config.effective_epochs):
             unet.train()
             total = 0.0
@@ -92,6 +94,8 @@ class LatentDiffusion:
     def sample(self, config: LatentDiffusionConfig, n: int = 4):
         if self.vae is None or self.unet is None or self.scheduler is None:
             raise RuntimeError("Train first.")
+        self.vae.eval()
+        self.unet.eval()
         z = sample_loop(
             scheduler=self.scheduler,
             predict_noise=lambda z, t_batch, t, _: self.unet(z, t_batch),

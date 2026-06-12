@@ -44,6 +44,10 @@ from mini_networks.models.diffusion.scheduler import NoiseScheduler
 from mini_networks.models.diffusion.vae import VAE, vae_loss
 from mini_networks.core.diffusion.sampling import sample_loop
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 # ---------------------------------------------------------------------------
 # Config
@@ -169,7 +173,7 @@ class CLIPGuidedDiffusion:
                 total += loss.item()
             avg = total / max(1, len(dl))
             logger.log_metrics(epoch, {"clip_loss": avg})
-            print(f"  [CLIP] epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [CLIP] epoch {epoch}  loss {avg:.4f}")
 
         self.clip = clip
         torch.save(clip.state_dict(), logger.artifact_path("clip.pt"))
@@ -220,7 +224,7 @@ class CLIPGuidedDiffusion:
                 total += loss.item()
             avg = total / max(1, len(dl))
             logger.log_metrics(epoch, {"vae_loss": avg})
-            print(f"  [VAE]  epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [VAE]  epoch {epoch}  loss {avg:.4f}")
         self.vae = vae
         torch.save(vae.state_dict(), logger.artifact_path("vae.pt"))
 
@@ -249,6 +253,9 @@ class CLIPGuidedDiffusion:
         )
 
         T = config.timesteps
+        # VAE frozen in eval mode: stable BatchNorm stats for latent encoding
+        if self.vae is not None:
+            self.vae.eval()
         for epoch in range(config.effective_epochs):
             unet.train()
             total = 0.0
@@ -281,7 +288,7 @@ class CLIPGuidedDiffusion:
 
             avg = total / max(1, len(dl))
             logger.log_metrics(epoch, {"diffusion_loss": avg})
-            print(f"  [Diffusion] epoch {epoch}  loss {avg:.4f}")
+            log.info(f"  [Diffusion] epoch {epoch}  loss {avg:.4f}")
 
         torch.save(unet.state_dict(), logger.artifact_path("unet.pt"))
 
@@ -342,6 +349,8 @@ class CLIPGuidedDiffusion:
         assert self.unet is not None and self.scheduler is not None
         unet, scheduler = self.unet, self.scheduler
         unet.eval()
+        if self.vae is not None:
+            self.vae.eval()
         dev = config.device
 
         if config.use_vae and self.vae is not None:
@@ -410,6 +419,8 @@ class CLIPGuidedDiffusion:
         assert self.unet is not None and self.scheduler is not None
         unet, scheduler = self.unet, self.scheduler
         unet.eval()
+        if self.vae is not None:
+            self.vae.eval()
         dev = config.device
         every = flip_every if flip_every is not None else config.flip_every
 
