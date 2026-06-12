@@ -1,219 +1,100 @@
-# Project Development Guide
+# CLAUDE.md — mini_networks
 
-This document explains how to turn the `mini_networks` repository into one cohesive, Colab‑ready educational product. It defines the technical map, the unification plan, and the specific model interconnections (CLIP + Diffusion + Transformers, etc.). Keep this as the source of truth for productization.
+Educational ML lab: ~31 models and ~19 cross-model compositions sharing one
+runtime contract, one data registry, one logging format, and one quality gate.
+Owner-facing reference lab; trainings run via CLI locally (CPU) or notebooks on
+a Colab GPU kernel. Design spec:
+`docs/superpowers/specs/2026-06-12-ultimate-educational-resource-design.md`.
 
-## 1. Repository Map (What Exists Today)
-
-**Top level:**
-- `legacy/` holds multiple independent experiments.
-
-**Data:**
-- `legacy/001-data/` contains raw MNIST and FashionMNIST datasets (binary idx files).
-
-**Experiment families (current state):**
-- **Adversarial/GAN:** `legacy/002-adversarial/` (miniGan package, Makefile, scripts).
-- **CLIP-style:** `legacy/003-clip/` (miniVisuaLinguist package).
-- **Diffusion (TF):** `legacy/004-diffusion/` (miniDiffusion package).
-- **Guided Diffusion (Torch):** `legacy/005-guided-diffusion/` (miniGuideDiff package).
-- **LoRA/CNN:** `legacy/006-lora/` (CNN + LoRA variants, logging, plotting).
-- **RL (Maze):** `legacy/007-maze-rl/` (Q/DQN/PPO, gif generation).
-- **Segmentation:** `legacy/008-segmentation/` (placeholder package, no real pipeline yet).
-- **Sequence Memory / RNN:** `legacy/009-sequence-memory/` (miniSequenceRememberer / miniRecurrent).
-- **Transformer (full training):** `legacy/010-transformer/` (tokenizers, training, generation, Colab mention).
-- **Transformer MoE (single file):** `legacy/011-transformer-moe/`.
-- **Transformer RLHF/PPO (single file):** `legacy/012-transformer-gptrl/`.
-- **Autoregressive Diffusion (single file):** `legacy/013-autoregressive-diff/`.
-- **RAG (single file):** `legacy/014-rag/`.
-
-## 2. Product Goal
-
-Build **one educational product** that:
-- Runs dynamically in **Colab**.
-- Shares **one data loading system**.
-- Shares **one logging/artifacts system**.
-- Lets users choose a model family (CNN, GAN, Diffusion, Transformer, RL, RAG).
-- Supports **cross-model composition** (CLIP‑guided diffusion, Transformer + MoE, etc.).
-
-## 3. Unification Strategy (Step‑by‑Step)
-
-1. **Inventory entrypoints**
-   - For every `legacy/<nnn>-<name>/`, identify the primary execution entry (`main.py`, `-run` script, or single-file prototype).
-
-2. **Define a shared runtime contract**
-   - Standardize on:
-     - `train(config, data_module, logger, output_dir)`
-     - `evaluate(config, data_module, logger, output_dir)`
-
-3. **Create a unified Config schema**
-   - One config (YAML/JSON + argparse) with shared fields and per‑project overrides.
-   - Map legacy flags and environment variables into this schema.
-
-4. **Standardize data loading**
-   - Add a dataset registry to `core/data/`.
-   - Support: MNIST, FashionMNIST, text corpora, image folders, maze env, synthetic data.
-   - Migrate or wrap existing loaders (e.g., `legacy/006-lora/src/data.py`).
-
-5. **Standardize logging**
-   - Create one logger that writes to:
-     - `runs/<project>/<timestamp>/metrics.jsonl`
-     - `runs/<project>/<timestamp>/config.yaml`
-     - `runs/<project>/<timestamp>/artifacts/`
-   - All plots, checkpoints, and gifs go to `artifacts/`.
-
-6. **Adapter layer per project**
-   - Each legacy project gets an adapter mapping its internal code to the shared runtime contract.
-   - Do **not** rewrite core model internals; only wrap them.
-
-7. **Composition layer**
-   - Define a minimal interface so models can plug together:
-     - `encode(inputs)`
-     - `score(a, b)`
-     - `guided_step(latent, t, guidance_fn)`
-     - `sample(config)`
-   - Composition adapters stitch multiple models together.
-
-8. **Cross‑model integrations**
-   - **CLIP‑guided diffusion**: CLIP provides similarity score; diffusion uses it as guidance.
-   - **Diffusion family bridge**: `legacy/004`, `legacy/005`, `legacy/013` share one sampler/driver.
-   - **Transformer + MoE**: shared tokenizer + embedding, swap FFN blocks with MoE experts.
-
-9. **Colab entrypoint**
-   - Single script `colab_launcher.py` to:
-     - Install deps
-     - Select model or composition
-     - Run training/eval
-
-10. **Validation pass**
-   - Smoke test each adapter (1 epoch, small batch, minimal dataset) to confirm data/logging compliance.
-
-## 4. Interconnection Design (How Models Compose)
-
-### 4.1 CLIP + Diffusion
-- **Goal:** Text‑guided image generation.
-- **Contract:**
-  - CLIP adapter exposes `encode(text)` and `encode(image)` + `score(text, image)`.
-  - Diffusion adapter exposes `guided_step(latent, t, guidance_fn)`.
-- **Mechanism:** Use CLIP similarity to compute gradients that guide diffusion sampling.
-
-### 4.2 Transformer + Diffusion + CLIP
-- **Goal:** Prompt generation → guided image generation.
-- **Flow:**
-  1. Transformer generates prompt variants.
-  2. CLIP ranks prompt candidates against desired image embedding.
-  3. Diffusion uses best prompt with CLIP guidance.
-
-### 4.3 Diffusion Family Bridge
-- **Goal:** Make multiple diffusion variants interchangeable.
-- **Mechanism:** Standard sampler API + logging pipeline for:
-  - `legacy/004-diffusion` (TensorFlow DDPM)
-  - `legacy/005-guided-diffusion` (Torch DDPM)
-  - `legacy/013-autoregressive-diff` (Torch hybrid)
-
-### 4.4 Transformer + MoE
-- **Goal:** One training loop, multiple FFN backends.
-- **Mechanism:**
-  - Common tokenizer + embeddings.
-  - FFN block is configurable (classic vs MoE).
-
-### 4.5 RAG + Transformer
-- **Goal:** Retrieval‑augmented generation.
-- **Mechanism:**
-  - RAG adapter retrieves context.
-  - Transformer adapter conditions generation on retrieved text.
-
-### 4.6 RL + Transformer
-- **Goal:** RL‑based fine‑tuning of language models.
-- **Mechanism:**
-  - Reward model from RLHF prototype (legacy/012).
-  - PPO update loop applied to Transformer outputs.
-
-### 4.7 GAN + Diffusion / CNN
-- **Goal:** Educational comparison and hybrid pipelines.
-- **Mechanism:**
-  - Shared dataset + logging.
-  - GAN used as baseline or discriminator for diffusion experiments.
-
-### 4.8 CNN/Dense + CLIP
-- **Goal:** Simple vision encoders for CLIP‑style training.
-- **Mechanism:**
-  - Reuse CNN backbone for image embedding.
-  - Pair with lightweight text encoder.
-
-## 5. Proposed Product Architecture (Target Layout)
+## Architecture (src/mini_networks/)
 
 ```
 core/
-  config.py
-  runtime.py
-  data/
-    registry.py
-    transforms.py
-  logging/
-    logger.py
-adapters/
-  clip/
-  diffusion/
-  guided_diffusion/
-  transformer/
-  transformer_moe/
-  lora_cnn/
-  gan/
-  rnn/
-  rl_maze/
-  rag/
-compositions/
-  clip_guided_diffusion.py
-  transformer_moe.py
-  transformer_diffusion_clip.py
-  rag_transformer.py
-product/
-  run.py
+  config.py          BaseConfig (pydantic v2) + tier system (see below)
+  runtime.py         BaseTrainer ABC: train/evaluate/infer/load_checkpoint
+                     + SupervisedTrainer / ContrastiveTrainer / reconstruction bases
+  evalspec.py        EvalSpec + EVAL_SPECS — quality-gate thresholds, 1 entry per item
+  sweep_report.py    CheckResult + report.{md,json} writers (stdlib-only)
+  checkpoints.py     latest_run_dir / find_resumable_run
+  data/registry.py   get_dataset/get_dataloader — MNIST task modes, text, audio, tabular
+  logging/logger.py  Logger → runs/<name>/<ts>/{metrics.jsonl,config.yaml,artifacts/}
+  diffusion/sampling.py  shared DDPM sample_loop (guidance + callbacks)
+models/<name>/       config.py + model.py + trainer.py per model
+compositions/        multi-model pipelines (each exposes train/sample or compare)
 colab/
-  colab_launcher.py
-runs/
+  launcher.py        MODELS/COMPOSITIONS lists, run_model/run_composition,
+                     inference probes, rich TUI
+  gate.py            quality-gate runner behind `sweep --check`
+api/                 FastAPI: routers/{training,inference,compositions}, in-memory jobs
+main.py (repo root)  argparse CLI: serve|train|evaluate|compose|sweep|menu|list
 ```
 
-## 6. Standardized Logging Rules
-- All outputs must go under `runs/<project>/<timestamp>/`.
-- Required files:
-  - `metrics.jsonl`
-  - `config.yaml`
-- Optional artifacts:
-  - `checkpoints/`
-  - `plots/`
-  - `gifs/`
-  - `samples/`
+Registry: `api/dependencies.py::get_model_registry()` maps
+`name → (ConfigClass, TrainerClass, dataloader_fn)`. Compositions are
+dispatched by name in `launcher.run_composition`.
 
-## 7. Standardized Data Rules
-- All dataset loaders live in `core/data/registry.py`.
-- Use `data/` under each project only as a cache or legacy source.
-- Loaders should accept a `data_root` and `download` flag.
+## Tier system (BaseConfig)
 
-## 8. Development Priorities
+| Tier | Means | Budgets |
+|---|---|---|
+| S | nano smoke run (CPU, CI) | 1 epoch, 1 train batch, batch≤16, 32 samples, 1 eval batch, diffusion timesteps capped to 25 |
+| M | "actually learns" bar (Colab GPU) | ≤3 epochs, 8 batches, 512 samples, timesteps≤200 |
+| L | full budget | config values as-is |
 
-**Phase 1 (Foundation)**
-- Create `core/` (config, runtime, data, logging).
-- Build adapters for:
-  - `legacy/006-lora` (cleanest training loop)
-  - `legacy/004-diffusion`
-  - `legacy/003-clip`
+`--fast_demo` forces S. Use `config.effective_*` properties (epochs, batch_size,
+timesteps, …) — never raw fields — so every code path honors the tier.
+`config.effective_timesteps` must be used for BOTH scheduler construction and
+sampling so the noise chain stays consistent.
 
-**Phase 2 (Composition)**
-- Implement `clip_guided_diffusion` composition.
-- Add `transformer_moe` composition.
+## Quality gate
 
-**Phase 3 (Long Tail)**
-- Add RL, GAN, RAG, and single‑file prototypes.
-- Normalize tests and add smoke checks.
+`python main.py sweep --check [--training_tier S|M|L]` — trains every selected
+item, then per item: finiteness + loss-trend S-checks from metrics.jsonl,
+checkpoint round-trip through a fresh trainer (`load_checkpoint`), EvalSpec
+metric on the loaded weights (threshold gates at M/L only), inference probe.
+Writes `runs/sweep/<ts>/report.{md,json}`; non-zero exit on any non-pass.
 
-## 9. Colab Expectations
-- All demos should run in <10 minutes by default.
-- Include `--fast_demo` mode: tiny dataset, 1–2 epochs.
-- Provide clear outputs: plots, samples, and logs in `runs/`.
+- Thresholds live in `core/evalspec.py`. **Threshold honesty rule:** changing a
+  number requires a justification comment next to it.
+- diffusion/gan/pixelcnn are scored by a trained MNIST classifier
+  (`gate.judge_samples`: confidence × class coverage); the gate trains or
+  reuses the judge automatically.
+- Single-item rerun: `--models <name> --skip-compositions`.
 
-## 10. Practical Notes from Current Code
-- Many legacy READMEs are templates; do not trust them for real instructions.
-- Some projects have local `venv/` directories; treat them as artifacts.
-- Tests are mostly empty; rely on smoke tests.
-- `legacy/010-transformer` already references Colab in README and uses a tokenizer pipeline.
+## Commands
 
+- `uv sync` / `uv sync --dev` — install
+- `make test` — fast suite (slow marker deselected via addopts)
+- `make validate-s` — full S-tier check sweep (what CI runs)
+- `python main.py train --model <name> --fast_demo` — one nano training
+- `python main.py sweep --check --fast_demo --models clip,gan --skip-compositions` — targeted gate
+- `python main.py serve` — FastAPI on :8000
+- `uv run pytest tests/ -m slow` — slow API tests (full trainings via TestClient)
+
+## CI (.github/workflows/ci.yml)
+
+Jobs: `smoke-import` (imports every module), `test` (`make test-ci`), `sweep-s`
+(full S-tier check sweep, report uploaded as artifact). `sweep-s` is
+`continue-on-error: true` until Phase 2 stabilization makes it green — remove
+that line when it does.
+
+## Conventions
+
+- Python 3.11, uv-managed, torch pinned `>=2.1,<2.3` + numpy `<2` (old x86_64 mac)
+- `from __future__ import annotations` everywhere; argparse only; stdlib logging
+  (`log = logging.getLogger(__name__)` — `logger` is reserved for the metrics Logger
+  parameter in trainers)
+- `torch.load` always with `weights_only=True`
+- Tests: pytest, flat `tests/`, stub/skip pattern for download-gated datasets
+  (`tests/conftest.py::dataset_or_skip`)
+- `legacy/` is reference-only; its datasets/venvs are untracked (history was
+  rewritten 2026-06-12 to purge binaries — do not re-add binary data to git)
+- The owner's machine is slow: locally run only targeted tests and single
+  S-tier (nano) runs; full sweeps belong to CI or Colab.
+
+## Working state
+
+- Phase 0 (foundation) + Phase 1 (quality gate) done.
+- Phase 2: M-tier stabilization on Colab GPU until all 50 items pass
+  (driver: `colab/notebooks/00_sweep.ipynb`).
+- Phase 3: docs/ curriculum chapters + annotated model sources.

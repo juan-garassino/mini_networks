@@ -49,16 +49,16 @@ list:
 	$(PYTHON) main.py list
 
 validate-s:
-	$(PYTHON) main.py sweep --training_tier S --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
+	$(PYTHON) main.py sweep --check --training_tier S --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
 
 validate-m:
-	$(PYTHON) main.py sweep --training_tier M --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
+	$(PYTHON) main.py sweep --check --training_tier M --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
 
 validate-l:
-	$(PYTHON) main.py sweep --training_tier L --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
+	$(PYTHON) main.py sweep --check --training_tier L --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
 
 validate-models-s:
-	$(PYTHON) main.py sweep --training_tier S --skip-compositions --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
+	$(PYTHON) main.py sweep --check --training_tier S --skip-compositions --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
 
 validate-compositions-s:
-	$(PYTHON) main.py sweep --training_tier S --skip-models --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)
+	$(PYTHON) main.py sweep --check --training_tier S --skip-models --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)

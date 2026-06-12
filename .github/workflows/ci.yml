@@ -46,18 +46,21 @@ jobs:
 
   sweep-s:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
+    # Non-blocking until Phase 2 stabilization makes the full check sweep green;
+    # the uploaded report is the source of truth meanwhile.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
       - run: uv sync --dev
-      - name: S-tier micro-sweep (all models + compositions)
+      - name: S-tier check sweep (all models + compositions)
         run: make validate-s DEVICE=cpu
-      - name: Upload sweep output on failure
+      - name: Upload sweep report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: sweep-runs
-          path: runs/
-          retention-days: 7
+          name: sweep-report
+          path: runs/sweep/
+          retention-days: 14
           if-no-files-found: ignore

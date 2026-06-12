@@ -23,6 +23,23 @@ python main.py evaluate --model diffusion --checkpoint runs/diffusion/<timestamp
 ```
 python main.py compose --composition clip_guided_diffusion --fast_demo
 ```
+6. Run the quality gate (trains everything, checks thresholds + checkpoints, writes a report).
+```
+python main.py sweep --check --training_tier S --device cpu
+```
+
+**Training tiers** — every config honors `--training_tier`:
+- `S` — nano smoke run (1 epoch, 1 minibatch, 25 diffusion steps); what CI runs. `--fast_demo` forces S.
+- `M` — the "actually learns" bar, meant for a Colab GPU; EvalSpec thresholds gate here.
+- `L` — full budget.
+
+The gate report lands in `runs/sweep/<timestamp>/report.{md,json}`. Per-model
+thresholds live in `src/mini_networks/core/evalspec.py`. Rerun one item:
+`python main.py sweep --check --models gan --skip-compositions`.
+
+**Colab workflow** — open `colab/notebooks/00_sweep.ipynb` from VSCode connected
+to a Colab GPU kernel to run M-tier sweeps; the other notebooks are per-family
+deep dives.
 
 **What’s Inside**
 - `src/mini_networks/` contains the unified runtime, data registry, and model implementations.

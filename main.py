@@ -178,8 +178,12 @@ def cmd_sweep(args: argparse.Namespace) -> None:
     total = len(models) + len(compositions)
     console.print(
         f"[bold]Sweep:[/bold] tier={training_tier} items={total} "
-        f"checkpoint_root={args.checkpoint_root}"
+        f"checkpoint_root={args.checkpoint_root} check={args.check}"
     )
+
+    if args.check:
+        _run_checked_sweep(console, models, compositions, args)
+        return
 
     results: list[tuple[str, str, str]] = []
 
@@ -231,6 +235,40 @@ def cmd_sweep(args: argparse.Namespace) -> None:
 
     failures = [row for row in results if row[2] != "ok"]
     if failures:
+        sys.exit(1)
+
+
+def _run_checked_sweep(console, models: list[str], compositions: list[str],
+                       args: argparse.Namespace) -> None:
+    """Quality-gate mode: per-item EvalSpec checks + report.{md,json}."""
+    from datetime import datetime
+    from rich.table import Table
+    from mini_networks.colab.gate import run_checked_sweep
+    from mini_networks.core.sweep_report import write_report
+
+    results, meta = run_checked_sweep(models, compositions, args)
+
+    sweep_dir = os.path.join(
+        args.checkpoint_root, "sweep", datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    )
+    md_path, json_path = write_report(results, sweep_dir, meta)
+
+    table = Table(title=f"Sweep Check — tier {meta['tier']}")
+    for col in ("Name", "Type", "Status", "Metric", "Value", "Threshold", "Round-trip", "Time"):
+        table.add_column(col)
+    for r in results:
+        style = {"pass": "green", "fail": "red", "error": "red"}[r.status]
+        table.add_row(
+            r.name, r.item_type, f"[{style}]{r.status}[/{style}]",
+            r.metric or "—",
+            f"{r.value:.4f}" if r.value is not None else "—",
+            f"{r.threshold:.4f}" if r.threshold is not None else "—",
+            r.roundtrip, f"{r.duration_s:.0f}s",
+        )
+    console.print(table)
+    console.print(f"Report: [cyan]{md_path}[/cyan]")
+
+    if any(r.status != "pass" for r in results):
         sys.exit(1)
 
 
@@ -297,6 +335,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_sweep.add_argument("--skip-models", dest="include_models", action="store_false")
     p_sweep.add_argument("--skip-compositions", dest="include_compositions", action="store_false")
     p_sweep.add_argument("--fail-fast", action="store_true")
+    p_sweep.add_argument("--check", action="store_true",
+                         help="Quality-gate mode: EvalSpec thresholds + checkpoint round-trip + report")
     p_sweep.add_argument("--no-resume", dest="resume", action="store_false")
     p_sweep.set_defaults(include_models=True, include_compositions=True, resume=True)
 
