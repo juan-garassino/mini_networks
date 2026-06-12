@@ -757,3 +757,20 @@ class _Subset(Dataset):
 
     def __getattr__(self, name: str):
         return getattr(self._dataset, name)
+
+
+def make_classification_dataloader(config, split: str = "train") -> DataLoader:
+    """Standard image-classification loader driven entirely by the config.
+
+    Shared by the supervised vision trainers (classifier, resnet, vit,
+    mobilenet, convnext) — their make_*_dataloader names alias this.
+    """
+    return get_dataloader(
+        name=config.dataset,
+        data_root=config.data_root,
+        split=split,
+        task="classification",
+        batch_size=config.effective_batch_size,
+        fast_demo=config.effective_fast_demo,
+        sample_limit=config.dataset_sample_limit,
+    )

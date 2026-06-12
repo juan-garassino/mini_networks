@@ -75,7 +75,21 @@ class SupervisedTrainer(BaseTrainer):
 
     def _forward(self, model, batch, config: BaseConfig):
         x, y = batch
-        return model(x), y
+        return model(x.to(config.device)), y
+
+    def infer(self, config: BaseConfig, inputs: Any) -> Any:
+        """Classify a batch. inputs: tensor or {"images"/"features": tensor}."""
+        if self.model is None:
+            raise RuntimeError("Model not loaded.")
+        self.model.eval()
+        with torch.no_grad():
+            x = inputs
+            if isinstance(inputs, dict):
+                x = inputs.get("images", inputs.get("features"))
+            x = x.to(config.device)
+            logits = self.model(x)
+            preds = logits.argmax(dim=-1)
+        return {"predictions": preds.cpu().tolist(), "logits": logits.cpu().tolist()}
 
     def train(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> None:
         model = self._build(config)
