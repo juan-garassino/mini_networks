@@ -90,7 +90,7 @@ class JudgeContext:
         import torch  # noqa: F401
         from mini_networks.core.registry import get_model_registry
         from mini_networks.core.checkpoints import latest_run_dir
-        from mini_networks.colab.launcher import run_model, _run_base
+        from mini_networks.colab.runners import run_model, _run_base
 
         args = self._args
         ConfigClass, TrainerClass, _ = get_model_registry()["classifier"]
@@ -175,7 +175,8 @@ def _decide(result: CheckResult, spec: EvalSpec, s_ok: bool, tier: str) -> None:
 
 def check_model(name: str, args, judge: JudgeContext) -> CheckResult:
     from mini_networks.core.registry import get_model_registry
-    from mini_networks.colab.launcher import run_model, _run_model_inference_probe
+    from mini_networks.colab.runners import run_model
+    from mini_networks.colab.probes import _run_model_inference_probe
 
     spec = get_eval_spec(name)
     tier = "S" if args.fast_demo else args.training_tier
@@ -233,7 +234,8 @@ def check_model(name: str, args, judge: JudgeContext) -> CheckResult:
 
 
 def check_composition(name: str, args) -> CheckResult:
-    from mini_networks.colab.launcher import run_composition, _validate_probe_output
+    from mini_networks.colab.runners import run_composition
+    from mini_networks.colab.probes import _validate_probe_output
     from mini_networks.core.logging.logger import Logger
 
     spec = get_eval_spec(name)

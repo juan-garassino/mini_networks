@@ -20,6 +20,11 @@ class TestEvalSpecs:
         from mini_networks.core.registry import MODEL_NAMES, get_model_registry
         assert list(get_model_registry()) == MODEL_NAMES
 
+    def test_composition_runners_match_catalog(self):
+        from mini_networks.colab.catalog import COMPOSITIONS
+        from mini_networks.colab.runners import COMPOSITION_RUNNERS
+        assert set(COMPOSITION_RUNNERS) == set(COMPOSITIONS)
+
     def test_get_eval_spec_unknown_raises(self):
         import pytest
         with pytest.raises(KeyError, match="EvalSpec"):

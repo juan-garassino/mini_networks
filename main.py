@@ -60,7 +60,7 @@ def cmd_serve(args: argparse.Namespace) -> None:
 
 def cmd_train(args: argparse.Namespace) -> None:
     """Train a single model."""
-    from mini_networks.colab.launcher import run_model
+    from mini_networks.colab.runners import run_model
     from rich.console import Console
 
     console = Console()
@@ -84,7 +84,7 @@ def cmd_train(args: argparse.Namespace) -> None:
 
 def cmd_compose(args: argparse.Namespace) -> None:
     """Run a multi-model composition."""
-    from mini_networks.colab.launcher import run_composition
+    from mini_networks.colab.runners import run_composition
     from rich.console import Console
 
     console = Console()
@@ -138,13 +138,13 @@ def cmd_evaluate(args: argparse.Namespace) -> None:
 
 def cmd_menu(args: argparse.Namespace) -> None:
     """Launch the interactive rich TUI."""
-    from mini_networks.colab.launcher import interactive_menu
+    from mini_networks.colab.menu import interactive_menu
     interactive_menu()
 
 
 def cmd_list(args: argparse.Namespace) -> None:
     """List all available models and compositions."""
-    from mini_networks.colab.launcher import list_models, list_compositions
+    from mini_networks.colab.menu import list_models, list_compositions
     list_models()
     list_compositions()
 
@@ -163,7 +163,8 @@ def cmd_sweep(args: argparse.Namespace) -> None:
     """Run a sweep across models and/or compositions."""
     from rich.console import Console
     from rich.table import Table
-    from mini_networks.colab.launcher import MODELS, COMPOSITIONS, run_model, run_composition
+    from mini_networks.colab.catalog import MODELS, COMPOSITIONS
+    from mini_networks.colab.runners import run_model, run_composition
 
     console = Console()
     training_tier = "S" if args.fast_demo else args.training_tier
