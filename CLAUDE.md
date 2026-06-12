@@ -22,16 +22,23 @@ core/
 models/<name>/       config.py + model.py + trainer.py per model
 compositions/        multi-model pipelines (each exposes train/sample or compare)
 colab/
-  launcher.py        MODELS/COMPOSITIONS lists, run_model/run_composition,
-                     inference probes, rich TUI
+  catalog.py         COMPOSITIONS list, descriptions, categories (MODELS aliases core registry)
+  probes.py          per-model inference probes + output validation
+  runners.py         run_model/run_composition + COMPOSITION_RUNNERS dict
+  menu.py            rich TUI + `python -m mini_networks.colab.launcher` CLI
+  launcher.py        thin facade keeping the historical import surface
   gate.py            quality-gate runner behind `sweep --check`
 api/                 FastAPI: routers/{training,inference,compositions}, in-memory jobs
 main.py (repo root)  argparse CLI: serve|train|evaluate|compose|sweep|menu|list
 ```
 
-Registry: `api/dependencies.py::get_model_registry()` maps
-`name → (ConfigClass, TrainerClass, dataloader_fn)`. Compositions are
-dispatched by name in `launcher.run_composition`.
+Registry: `core/registry.py::get_model_registry()` (cached) maps
+`name → (ConfigClass, TrainerClass, dataloader_fn)`; `MODEL_NAMES` is the
+static name list (sync-tested). Compositions dispatch through
+`runners.COMPOSITION_RUNNERS` (sync-tested against the catalog).
+Supervised vision trainers (classifier/resnet/vit/mobilenet/convnext)
+implement only `_build`; `_forward`/`infer` live on `SupervisedTrainer`,
+and they share `core/data/registry.py::make_classification_dataloader`.
 
 ## Tier system (BaseConfig)
 

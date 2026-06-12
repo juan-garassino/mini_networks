@@ -20,7 +20,7 @@ src/mini_networks/
   models/<name>/                 # one folder per model: config.py, model.py, trainer.py
   compositions/                  # multi-model pipelines (latent_diffusion, clip_guided_diffusion, ...)
   api/                           # FastAPI server (POST /train/{model}, /infer/{model})
-  colab/                         # launcher, interactive menu, gate.py (quality gate)
+  colab/                         # catalog, probes, runners, menu (TUI), gate.py (quality gate)
 colab/notebooks/                 # 00_sweep, 01_vision, 02_language, 03_rl, 04_compositions
 tests/                           # fast pytest suite (slow API tests opt-in)
 scripts/render_results.py        # injects sweep results into these docs
