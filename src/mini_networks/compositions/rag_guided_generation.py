@@ -85,8 +85,7 @@ class RAGGuidedGeneration:
     def generate(self, config: RAGGuidedGenerationConfig, query: str, max_new_tokens: int = 64) -> str:
         if self.model is None or self.rag is None or self.tokenizer is None:
             raise RuntimeError("Train first.")
-        context = self.rag.retrieve(query)
-        prompt = context + "\n" + query
+        prompt = self.rag.build_prompt(query)
         ids = self.tokenizer.encode(prompt)
         prompt_ids = torch.tensor([ids], dtype=torch.long, device=config.device)
         out = self.model.generate(prompt_ids, max_new_tokens=max_new_tokens)

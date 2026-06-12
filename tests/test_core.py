@@ -6,14 +6,7 @@ import pytest
 import torch
 
 from mini_networks.core.config import BaseConfig
-from mini_networks.core.data.registry import (
-    MNISTBinarySegmentation,
-    MNISTClassification,
-    MNISTDetection,
-    MNISTMulticlassSegmentation,
-    get_dataloader,
-    get_dataset,
-)
+from mini_networks.core.data.registry import get_dataloader, get_dataset
 from mini_networks.core.logging.logger import Logger
 
 

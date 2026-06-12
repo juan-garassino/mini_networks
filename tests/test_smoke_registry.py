@@ -3,6 +3,8 @@ import os
 
 from mini_networks.core.data.registry import get_dataloader
 
+from conftest import dataset_or_skip
+
 DATA_ROOT = os.environ.get("MINI_TEST_DATA_ROOT", "/tmp/mini_networks_test_data")
 
 
@@ -82,27 +84,29 @@ def test_synthetic_tabular_smoke():
 
 
 def test_speech_digits_smoke():
-    dl = get_dataloader(
-        name="speech_digits",
-        data_root=DATA_ROOT,
-        split="train",
-        batch_size=2,
-        fast_demo=True,
-        sample_len=4000,
-        require_downloads=False,
-    )
-    batch = _next_batch(dl)
+    with dataset_or_skip():
+        dl = get_dataloader(
+            name="speech_digits",
+            data_root=DATA_ROOT,
+            split="train",
+            batch_size=2,
+            fast_demo=True,
+            sample_len=4000,
+            require_downloads=False,
+        )
+        batch = _next_batch(dl)
     assert batch is not None
 
 
 def test_iris_smoke():
-    dl = get_dataloader(
-        name="iris",
-        data_root=DATA_ROOT,
-        split="train",
-        batch_size=4,
-        fast_demo=True,
-        require_downloads=False,
-    )
-    batch = _next_batch(dl)
+    with dataset_or_skip():
+        dl = get_dataloader(
+            name="iris",
+            data_root=DATA_ROOT,
+            split="train",
+            batch_size=4,
+            fast_demo=True,
+            require_downloads=False,
+        )
+        batch = _next_batch(dl)
     assert batch is not None

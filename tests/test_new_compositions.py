@@ -5,6 +5,8 @@ import tempfile
 import torch
 
 from mini_networks.core.logging.logger import Logger
+
+from conftest import dataset_or_skip
 from mini_networks.compositions.classifier_guided_diffusion import (
     ClassifierGuidedDiffusion,
     ClassifierGuidedDiffusionConfig,
@@ -99,7 +101,7 @@ def test_audio_text_contrastive_smoke():
     )
     cfg = AudioTextContrastiveConfig(fast_demo=True, data_root=DATA_ROOT, require_downloads=False)
     comp = AudioTextContrastive()
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory() as tmpdir, dataset_or_skip():
         logger = Logger(tmpdir, "test")
         comp.train(cfg, logger)
 
@@ -111,7 +113,7 @@ def test_tabular_text_cross_attention_smoke():
     )
     cfg = TabularTextCrossAttentionConfig(fast_demo=True, data_root=DATA_ROOT, require_downloads=False)
     comp = TabularTextCrossAttention()
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory() as tmpdir, dataset_or_skip():
         logger = Logger(tmpdir, "test")
         comp.train(cfg, logger)
 
@@ -123,7 +125,7 @@ def test_audio_text_dual_encoder_smoke():
     )
     cfg = AudioTextDualEncoderConfig(fast_demo=True, data_root=DATA_ROOT, require_downloads=False)
     comp = AudioTextDualEncoder()
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory() as tmpdir, dataset_or_skip():
         logger = Logger(tmpdir, "test")
         comp.train(cfg, logger)
 
@@ -135,7 +137,7 @@ def test_tabular_text_dual_encoder_smoke():
     )
     cfg = TabularTextDualEncoderConfig(fast_demo=True, data_root=DATA_ROOT, require_downloads=False)
     comp = TabularTextDualEncoder()
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory() as tmpdir, dataset_or_skip():
         logger = Logger(tmpdir, "test")
         comp.train(cfg, logger)
 

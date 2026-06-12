@@ -40,6 +40,7 @@ packages = ["src/mini_networks"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "slow: marks tests that run full training loops (skip with: -m 'not slow')",
