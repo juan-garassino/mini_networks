@@ -11,7 +11,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 from rich import box
 
-from mini_networks.colab.catalog import COMPOSITIONS, DESCRIPTIONS
+from mini_networks.colab.catalog import COMPOSITIONS, DESCRIPTIONS, MODELS
 from mini_networks.colab.probes import _run_model_inference_probe, _validate_probe_output
 
 console = Console()

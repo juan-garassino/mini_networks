@@ -86,6 +86,8 @@ class SupervisedTrainer(BaseTrainer):
             x = inputs
             if isinstance(inputs, dict):
                 x = inputs.get("images", inputs.get("features"))
+            if x is None:
+                raise ValueError("infer() expects a tensor or {'images'/'features': tensor}")
             x = x.to(config.device)
             logits = self.model(x)
             preds = logits.argmax(dim=-1)
