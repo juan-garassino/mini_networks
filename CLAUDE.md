@@ -29,8 +29,13 @@ compositions/        multi-model pipelines (each exposes train/sample or compare
 web/                 read-layer: metrics.py (pivot) + sources.py (Local/MLflow/
                      Composite RunSource) + model_catalog.py — reader of the contract
 cloud/               publisher.py: JobSpec + Pub/Sub publisher (cloud train dispatch)
-frontend/ (repo root)  no-build SPA (Observatory): index.html + ES-module JS, served
-                     by FastAPI StaticFiles at / (uPlot via CDN, SVG fallback)
+playground/ (repo root)  Next.js 16 + React 19 + TS + Tailwind v4 + shadcn/ui +
+                     Recharts + Motion + Lucide. Toy/storybook "enchanted grove"
+                     UI (4 views: Watch/Play/Lab/Quest). Static-exported
+                     (output:'export' → playground/out) and served by FastAPI
+                     StaticFiles at /. Pure client of /web,/train,/infer. Source
+                     committed; out/ + node_modules gitignored (build with
+                     `make playground`). Replaced the old no-build vanilla SPA.
 infra/gcp/           Dockerfile.train + entrypoint.sh (MODE=train) + terraform/ +
                      function/ — ephemeral Cloud Run Job pipeline (see its README)
 colab/
@@ -94,7 +99,9 @@ Writes `runs/sweep/<ts>/report.{md,json}`; non-zero exit on any non-pass.
 - `make validate-s` — full S-tier check sweep (what CI runs)
 - `python main.py train --model <name> --fast_demo` — one nano training
 - `python main.py sweep --check --fast_demo --models clip,gan --skip-compositions` — targeted gate
-- `python main.py serve` — FastAPI on :8000; playground (Observatory) at `/`, API docs at `/docs`
+- `python main.py serve` — FastAPI on :8000; playground at `/` (serves `playground/out`), API docs at `/docs`
+- `make playground` — build the Next.js UI to `playground/out` (rebuild after UI changes; CI builds it for deploy)
+- `make playground-dev` — Next dev server on :3000 with hot reload (proxies API to :8000 via `NEXT_PUBLIC_API_BASE`)
 - `make -C infra/gcp validate` — terraform fmt-check + validate (static, no cloud)
 - `make -C infra/gcp build-train` / `dry-run` — build the train image / run MODE=train against a local sqlite MLflow
 - `uv run pytest tests/ -m slow` — slow API tests (full trainings via TestClient)

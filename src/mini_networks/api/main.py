@@ -11,8 +11,11 @@ from mini_networks.api.routers.training import router as training_router
 from mini_networks.api.routers.compositions import router as compositions_router
 from mini_networks.api.routers.web import router as web_router
 
-# Repo-root frontend/ (no-build SPA). Absent in some installs → skip the mount.
-FRONTEND_DIR = Path(__file__).resolve().parents[3] / "frontend"
+# The built Next.js playground (static export). Built from playground/ via
+# `npm run build`; FastAPI serves the static `out/` here. Absent until built
+# (or in CI before the build step) → skip the mount, the API still runs.
+_REPO = Path(__file__).resolve().parents[3]
+FRONTEND_DIR = next((d for d in (_REPO / "playground" / "out", _REPO / "frontend") if d.exists()), _REPO / "playground" / "out")
 
 
 def create_app() -> FastAPI:
