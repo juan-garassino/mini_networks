@@ -137,15 +137,30 @@ from mini_networks.colab.launcher import interactive_menu
 interactive_menu()
 ```
 
-**API Server**
+**API Server & Playground**
 ```
 python main.py serve --host 0.0.0.0 --port 8000
 ```
-API docs are served at `/docs`.
+- **Playground (Observatory)** at `/` — a no-build SPA that reads the run
+  contract live: pick a run, watch its loss curve animate, see sample artifacts
+  and config/summary. It's a pure reader; training is unchanged.
+- API docs at `/docs`. Read-layer endpoints under `/web` (`/web/runs`,
+  `/web/runs/{id}/metrics`, `/web/models`, …).
 
 Composition endpoints:
 - `POST /compose/{composition_name}` starts training in the background.
 - `POST /compose/{composition_name}/infer` runs inference for a composition.
+
+**GCP ephemeral training (M/L)**
+M/L training can run on GCP Cloud Run Jobs: a Pub/Sub message launches an
+ephemeral job that trains and persists to MLflow (Neon Postgres + GCS), then
+self-terminates — nothing runs at rest. The playground reads MLflow with
+`MN_RUN_SOURCE=mlflow`. Build/validate without touching the cloud:
+```
+make -C infra/gcp validate     # terraform fmt-check + validate
+make -C infra/gcp dry-run      # train image vs a local sqlite MLflow
+```
+Provisioning + the env-var contract are documented in `infra/gcp/README.md`.
 
 **Docs**
 Start here:

@@ -1,0 +1,24 @@
+name: infra
+
+on:
+  push:
+    paths: ["infra/gcp/**"]
+  pull_request:
+    paths: ["infra/gcp/**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - name: fmt + validate (static — no cloud)
+        working-directory: infra/gcp/terraform
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate

@@ -1,0 +1,14 @@
+project_id = "garassino-ml"
+region     = "europe-west1"
+image_tag  = "latest"
+
+# WIF provider in garassino-op (fill the project number) + the repo allowed to push.
+wif_provider = "projects/<garassino-op-number>/locations/global/workloadIdentityPools/gh-actions/providers/github"
+github_repo  = "juan-garassino/mini-networks"
+
+# Cloud Run GPU is region-gated — keep off until europe-west1 support is confirmed.
+enable_gpu_job = false
+
+# Budget alerts need billing-account admin; account-level alerts already exist.
+manage_budget = false
+# billing_account = "XXXXXX-XXXXXX-XXXXXX"

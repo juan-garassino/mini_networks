@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 
 from mini_networks.api.dependencies import get_model_registry
 from mini_networks.api.schemas.inference import InferRequest, InferResponse
+from mini_networks.web.model_catalog import build_model_info
 
 router = APIRouter()
 
@@ -18,13 +19,8 @@ async def model_info(model_name: str):
     registry = get_model_registry()
     if model_name not in registry:
         raise HTTPException(status_code=404, detail=f"Unknown model: {model_name}")
-    ConfigClass, TrainerClass, _ = registry[model_name]
-    config = ConfigClass()
-    return {
-        "model": model_name,
-        "config_schema": ConfigClass.model_json_schema(),
-        "defaults": config.model_dump(),
-    }
+    info = build_model_info(model_name)
+    return {"model": model_name, "config_schema": info["config_schema"], "defaults": info["defaults"]}
 
 
 @router.post("/{model_name}", response_model=InferResponse)

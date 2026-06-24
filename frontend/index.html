@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>mini_networks · playground</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <span class="brand">mini_networks · playground</span>
+    <nav class="tabs">
+      <span class="tab active">◉ Observatory</span>
+      <span class="tab disabled" title="Plan B">✎ Sandbox</span>
+      <span class="tab disabled" title="Plan B">⚙ Lab</span>
+      <span class="tab disabled" title="Plan B">📖 Lessons</span>
+    </nav>
+  </header>
+
+  <main>
+    <aside id="run-list">
+      <div class="label">RUNS</div>
+      <ul id="runs"></ul>
+    </aside>
+
+    <section id="center">
+      <div id="run-title" class="run-title">Select a run</div>
+      <div id="chart"></div>
+      <div class="label">SAMPLES</div>
+      <div id="samples"></div>
+    </section>
+
+    <aside id="meta">
+      <div class="label">RUN INFO</div>
+      <pre id="config"></pre>
+      <div class="label">SUMMARY / GATE</div>
+      <pre id="summary"></pre>
+    </aside>
+  </main>
+
+  <footer id="status">idle</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.iife.min.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

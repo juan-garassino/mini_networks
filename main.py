@@ -46,9 +46,10 @@ def cmd_serve(args: argparse.Namespace) -> None:
         sys.exit("uvicorn not installed — run: uv sync")
 
     from rich.console import Console
+    host = "localhost" if args.host in ("0.0.0.0", "127.0.0.1") else args.host
     Console().print(
-        f"[bold green]Starting mini_networks API[/bold green]  "
-        f"http://{args.host}:{args.port}/docs"
+        f"[bold green]mini_networks[/bold green]  "
+        f"playground → http://{host}:{args.port}/   ·   API docs → http://{host}:{args.port}/docs"
     )
     uvicorn.run(
         "mini_networks.api.main:app",
@@ -69,6 +70,8 @@ def cmd_train(args: argparse.Namespace) -> None:
     extra: dict = {}
     if args.epochs is not None:
         extra["epochs"] = args.epochs
+    if getattr(args, "batch_size", None) is not None:
+        extra["batch_size"] = args.batch_size
     if args.device:
         extra["device"] = args.device
     if args.data_root:
@@ -77,6 +80,8 @@ def cmd_train(args: argparse.Namespace) -> None:
         extra["checkpoint_root"] = args.checkpoint_root
     extra["training_tier"] = "S" if args.fast_demo else args.training_tier
     extra["resume"] = args.resume
+    if getattr(args, "run_name", None):
+        extra["run_name"] = args.run_name
 
     logger = run_model(args.model, fast_demo=args.fast_demo, **extra)
     console.print(f"[green]Done.[/green] Artifacts: {logger.artifacts_dir}")
@@ -296,11 +301,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_train.add_argument("--model", required=True)
     p_train.add_argument("--fast_demo", action="store_true", default=False)
     p_train.add_argument("--epochs", type=int, default=None)
+    p_train.add_argument("--batch_size", type=int, default=None)
     p_train.add_argument("--device", default=None)
     p_train.add_argument("--data_root", default=None)
     p_train.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
     p_train.add_argument("--training_tier", choices=["S", "M", "L"], default="M")
     p_train.add_argument("--no-resume", dest="resume", action="store_false")
+    p_train.add_argument("--run_name", default=None,
+                         help="Explicit run name (else timestamp); becomes the MLflow run id")
     p_train.set_defaults(resume=True)
 
     # evaluate
