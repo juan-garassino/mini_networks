@@ -14,7 +14,12 @@ COPY main.py .
 COPY infra/gcp/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Install into the system interpreter so the entrypoint's bare `python` works.
+# CPU-only torch first — default PyPI torch on Linux pulls ~2GB of CUDA libraries
+# that a CPU Cloud Run Job can't use. (The L4 GPU job variant uses a CUDA base.)
+RUN uv pip install --system --index-url https://download.pytorch.org/whl/cpu \
+        "torch>=2.1,<2.3" "torchvision>=0.16,<0.18"
+# Then the package + cloud extra; torch is already satisfied so it isn't pulled
+# again. Installed into the system interpreter so the entrypoint's `python` works.
 RUN uv pip install --system ".[cloud]"
 
 # One-shot: entrypoint runs the train CLI and exits. No EXPOSE, no server.
