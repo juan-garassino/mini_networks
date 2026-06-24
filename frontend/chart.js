@@ -81,5 +81,7 @@ class SvgChart {
 }
 
 export function makeChart(el) {
-  return window.uPlot ? new UplotChart(el) : new SvgChart(el);
+  if (window.uPlot) return new UplotChart(el);
+  el.classList.add('is-svg'); // fallback has no axes — give it faint graph paper
+  return new SvgChart(el);
 }

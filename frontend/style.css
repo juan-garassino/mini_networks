@@ -208,11 +208,16 @@ body {
   font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-family: var(--sans); font-weight: 600; }
 
 .scope-screen { flex: 1; min-height: 200px; margin: 0 14px;
+  /* No CSS grid here — uPlot draws the only grid, so they don't double up.
+     The SVG fallback (no axes) gets a faint graph paper via .scope-screen.is-svg. */
+  background: radial-gradient(130% 110% at 50% 0%, #0a1517 0%, #070d0e 60%);
+  border: 1px solid var(--line); border-radius: var(--r); position: relative; overflow: hidden;
+}
+.scope-screen.is-svg {
   background:
     linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 24px,
     linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 36px 100%,
-    #070d0e;
-  border: 1px solid var(--line); border-radius: var(--r); position: relative; overflow: hidden;
+    radial-gradient(130% 110% at 50% 0%, #0a1517 0%, #070d0e 60%);
 }
 .scope-screen .uplot { filter: drop-shadow(0 0 3px var(--phos-glow)); }
 .scope-screen .u-axis, .scope-screen .u-legend { font-family: var(--mono) !important; }
