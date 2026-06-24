@@ -6,150 +6,195 @@
   <title>mini_networks · playground</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <div class="grain" aria-hidden="true"></div>
+  <!-- ====================== ILLUSTRATED SCENE ====================== -->
+  <div class="scene" aria-hidden="true">
+    <div class="clouds">
+      <svg class="cloud c1" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="40" cy="30" rx="30" ry="18"/><ellipse cx="70" cy="28" rx="26" ry="20"/><ellipse cx="92" cy="34" rx="20" ry="14"/><rect x="30" y="34" width="70" height="14" rx="7"/></g></svg>
+      <svg class="cloud c2" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="40" cy="30" rx="30" ry="18"/><ellipse cx="70" cy="28" rx="26" ry="20"/><ellipse cx="92" cy="34" rx="20" ry="14"/><rect x="30" y="34" width="70" height="14" rx="7"/></g></svg>
+      <svg class="cloud c3" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="40" cy="30" rx="30" ry="18"/><ellipse cx="70" cy="28" rx="26" ry="20"/><ellipse cx="92" cy="34" rx="20" ry="14"/><rect x="30" y="34" width="70" height="14" rx="7"/></g></svg>
+    </div>
+    <svg class="hills" viewBox="0 0 1440 280" preserveAspectRatio="xMidYMax slice">
+      <path d="M0 150 Q360 90 720 140 T1440 120 V280 H0 Z" fill="#9ad86a"/>
+      <path d="M0 200 Q300 150 640 195 T1200 185 T1440 200 V280 H0 Z" fill="#7ec85a"/>
+      <g fill="#6bb84a">
+        <ellipse cx="120" cy="240" rx="34" ry="22"/><ellipse cx="380" cy="255" rx="26" ry="16"/>
+        <ellipse cx="980" cy="250" rx="40" ry="24"/><ellipse cx="1300" cy="245" rx="30" ry="18"/>
+      </g>
+    </svg>
+  </div>
 
-  <header class="masthead">
+  <!-- ====================== HEADER ====================== -->
+  <header class="topbar">
     <div class="brand">
-      <!-- pixel "?" block -->
-      <svg class="brand-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
-        <rect width="16" height="16" fill="#0a0918"/>
-        <rect x="1" y="1" width="14" height="14" fill="#fbd000"/>
-        <rect x="1" y="1" width="14" height="2" fill="#ffe55c"/>
-        <rect x="1" y="13" width="14" height="2" fill="#c98a00"/>
-        <g fill="#0a0918">
-          <rect x="5" y="4" width="6" height="2"/><rect x="9" y="5" width="2" height="2"/>
-          <rect x="7" y="7" width="2" height="2"/><rect x="7" y="10" width="2" height="2"/>
-        </g>
-      </svg>
-      <div class="brand-text">
-        <span class="brand-name">mini_networks</span>
-        <span class="brand-sub">playground</span>
-      </div>
+      <span class="logo-badge">
+        <svg viewBox="0 0 48 48"><rect x="9" y="14" width="30" height="24" rx="11" fill="#fff"/><rect x="14" y="6" width="20" height="16" rx="8" fill="#fff"/><rect x="17" y="11" width="14" height="7" rx="3.5" fill="#3a2f6b"/><circle cx="21" cy="14.5" r="1.7" fill="#8ad6ff"/><circle cx="27" cy="14.5" r="1.7" fill="#8ad6ff"/><circle cx="24" cy="4" r="2" fill="#fff"/><circle cx="16" cy="26" r="3" fill="#ffd23f"/><circle cx="32" cy="26" r="3" fill="#ffd23f"/></svg>
+      </span>
+      <div class="brand-text"><span class="brand-name">mini_networks</span><span class="brand-sub">playground</span></div>
     </div>
 
     <nav class="viewnav" id="viewnav" aria-label="Views">
-      <button class="view-tab is-active" data-view="observatory">Watch</button>
-      <button class="view-tab" data-view="sandbox">Play</button>
-      <button class="view-tab" data-view="lab">Lab</button>
-      <button class="view-tab" data-view="lessons">Quest</button>
+      <button class="view-tab is-active" data-view="observatory"><span class="ti">&#9654;</span>Watch</button>
+      <button class="view-tab" data-view="sandbox"><span class="ti">&#127918;</span>Play</button>
+      <button class="view-tab" data-view="lab"><span class="ti">&#129514;</span>Lab</button>
+      <button class="view-tab" data-view="lessons"><span class="ti">&#127942;</span>Quest</button>
     </nav>
 
     <div class="telemetry">
+      <svg class="m-planet" viewBox="0 0 80 60"><ellipse cx="40" cy="30" rx="30" ry="9" fill="none" stroke="#cdbcff" stroke-width="3"/><circle cx="40" cy="30" r="15" fill="#b3a4ff"/><circle cx="34" cy="25" r="5" fill="#cdbcff" opacity=".7"/></svg>
       <span class="tlm"><span class="tlm-k">SRC</span><span class="tlm-v" id="tlm-source">--</span></span>
       <span class="tlm"><span class="tlm-k">UTC</span><span class="tlm-v" id="tlm-clock">--:--:--</span></span>
-      <span class="conn" id="conn"><span class="led" data-state="unknown"></span></span>
+      <span class="conn" id="conn"><span class="dot" data-state="unknown"></span></span>
     </div>
   </header>
 
-  <!-- ===================== OBSERVATORY (Watch) ===================== -->
+  <!-- ====================== OBSERVATORY (Watch) ====================== -->
   <section class="view is-active" id="view-observatory">
     <div class="console">
-      <aside class="rail registry panel">
-        <div class="rail-head"><span class="label">Runs</span><span class="count" id="run-count">0</span></div>
+      <!-- RUNS -->
+      <aside class="card runs-card">
+        <div class="card-head"><span class="card-title">Runs</span><span class="pill yellow" id="run-count">0</span></div>
         <div class="filters" id="filters">
-          <button class="chip is-active" data-filter="all">ALL</button>
-          <button class="chip" data-filter="running">LIVE</button>
-          <button class="chip" data-filter="done">DONE</button>
-          <button class="chip" data-filter="failed">FAIL</button>
+          <button class="chip-btn is-active" data-filter="all">All</button>
+          <button class="chip-btn" data-filter="running">Live</button>
+          <button class="chip-btn" data-filter="done">Done</button>
+          <button class="chip-btn" data-filter="failed">Fail</button>
         </div>
         <ul class="runs" id="runs"></ul>
       </aside>
 
+      <!-- CENTER -->
       <div class="stage">
-        <div class="scope panel">
+        <div class="card scope-card">
           <div class="scope-head">
-            <div class="scope-title"><span class="label">Scope</span><h1 id="run-title">SELECT A RUN</h1></div>
+            <div class="scope-title">
+              <span class="card-title small">Scope</span>
+              <h1 id="run-title">Select a run</h1>
+              <svg class="m-star" viewBox="0 0 40 40"><path d="M20 3 l5 11.5 12.5 1 -9.5 8.5 3 12.5 -11 -6.7 -11 6.7 3 -12.5 -9.5 -8.5 12.5 -1 Z" fill="#ffd23f" stroke="#eaa800" stroke-width="2" stroke-linejoin="round"/></svg>
+            </div>
             <div class="scope-chips" id="run-chips"></div>
-            <div class="rec" id="rec" hidden><span class="led" data-state="running"></span>REC</div>
+            <div class="rec" id="rec" hidden><span class="dot" data-state="failed"></span>REC</div>
           </div>
           <div class="scope-screen" id="chart"></div>
-          <div class="series-readout" id="series-readout"></div>
+          <!-- dino mascot + speech bubble -->
+          <div class="dino-wrap" aria-hidden="true">
+            <div class="bubble">Learning in progress! &#128640;</div>
+            <svg class="m-dino" viewBox="0 0 120 112">
+              <ellipse cx="60" cy="103" rx="28" ry="6" fill="rgba(40,50,90,.12)"/>
+              <g class="dino-bob">
+                <path d="M32 82 Q12 80 18 60 Q26 76 40 76 Z" fill="#7ad06a"/>
+                <path d="M44 46 l6 -11 6 11 Z M58 42 l6 -12 6 12 Z M72 46 l5 -10 5 10 Z" fill="#5cb84e"/>
+                <ellipse cx="60" cy="72" rx="31" ry="29" fill="#7ad06a"/>
+                <ellipse cx="60" cy="80" rx="19" ry="17" fill="#c7f0a8"/>
+                <circle cx="50" cy="64" r="4" fill="#2d3561"/><circle cx="70" cy="64" r="4" fill="#2d3561"/>
+                <circle cx="51.5" cy="62.5" r="1.3" fill="#fff"/><circle cx="71.5" cy="62.5" r="1.3" fill="#fff"/>
+                <circle cx="44" cy="72" r="4" fill="#ff9aa2" opacity=".7"/><circle cx="76" cy="72" r="4" fill="#ff9aa2" opacity=".7"/>
+                <path d="M54 76 Q60 82 66 76" stroke="#2d3561" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                <ellipse cx="50" cy="100" rx="8" ry="5" fill="#5cb84e"/><ellipse cx="72" cy="100" rx="8" ry="5" fill="#5cb84e"/>
+              </g>
+            </svg>
+          </div>
+          <div class="stat-cards" id="series-readout"></div>
         </div>
-        <div class="specimens panel">
-          <div class="rail-head"><span class="label">Specimens</span><span class="count" id="specimen-meta">0</span></div>
-          <div class="film" id="samples"></div>
+
+        <div class="card specimens-card">
+          <div class="card-head"><span class="card-title">&#128062; Specimens</span><span class="pill yellow" id="specimen-meta">0</span></div>
+          <div class="specimens-body">
+            <div class="film" id="samples"></div>
+            <!-- scene mascots -->
+            <svg class="m-plane" viewBox="0 0 44 32"><path d="M2 5 L42 2 L22 30 L17 19 Z" fill="#ffd23f" stroke="#eaa800" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 19 L42 2 L22 14 Z" fill="#f0b400"/></svg>
+            <svg class="plane-path" viewBox="0 0 300 80" preserveAspectRatio="none"><path d="M4 60 Q90 10 150 45 T296 24" fill="none" stroke="#c9b6ff" stroke-width="2.5" stroke-dasharray="2 8" stroke-linecap="round"/></svg>
+            <div class="sign"><svg viewBox="0 0 120 90"><rect x="52" y="46" width="8" height="40" fill="#b07a3c"/><rect x="12" y="14" width="96" height="40" rx="6" fill="#d79a52" stroke="#a8702f" stroke-width="3"/></svg><span class="sign-text">Keep training, champ! &#128170;</span></div>
+            <svg class="m-bot" viewBox="0 0 130 140">
+              <ellipse cx="65" cy="130" rx="34" ry="7" fill="rgba(40,50,90,.12)"/>
+              <g class="bot-body">
+                <rect x="38" y="66" width="54" height="52" rx="22" fill="#fff" stroke="#7d5fff" stroke-width="3"/>
+                <rect x="34" y="24" width="62" height="50" rx="24" fill="#fff" stroke="#7d5fff" stroke-width="3"/>
+                <rect x="42" y="38" width="46" height="24" rx="12" fill="#3a2f6b"/>
+                <circle cx="56" cy="50" r="4.2" fill="#8ad6ff"/><circle cx="74" cy="50" r="4.2" fill="#8ad6ff"/>
+                <line x1="65" y1="24" x2="65" y2="14" stroke="#7d5fff" stroke-width="3"/><circle cx="65" cy="12" r="3.5" fill="#7d5fff"/>
+                <rect x="26" y="78" width="11" height="28" rx="5.5" fill="#7d5fff"/>
+                <g class="bot-wave"><rect x="93" y="54" width="11" height="28" rx="5.5" fill="#7d5fff"/></g>
+              </g>
+            </svg>
+          </div>
         </div>
       </div>
 
-      <aside class="rail readout panel">
-        <div class="rail-head"><span class="label">Config</span></div>
-        <dl class="kv" id="config"></dl>
-        <div class="rail-head"><span class="label">Summary</span></div>
-        <div class="gate" id="summary"></div>
+      <!-- RIGHT -->
+      <aside class="side">
+        <div class="card config-card">
+          <div class="card-head"><span class="card-title">&#9881; Config</span>
+            <svg class="m-sprout" viewBox="0 0 24 24"><path d="M12 22 V12" stroke="#5cb84e" stroke-width="2.5" stroke-linecap="round"/><path d="M12 14 Q4 12 6 4 Q14 6 12 14Z" fill="#7ad06a"/><path d="M12 12 Q20 10 18 3 Q11 5 12 12Z" fill="#9bdc83"/></svg>
+          </div>
+          <dl class="kv" id="config"></dl>
+        </div>
+        <div class="card summary-card">
+          <div class="card-head"><span class="card-title">&#128203; Summary</span></div>
+          <div class="gate" id="summary"></div>
+        </div>
       </aside>
     </div>
   </section>
 
-  <!-- ===================== SANDBOX (Play) ===================== -->
+  <!-- ====================== SANDBOX (Play) ====================== -->
   <section class="view" id="view-sandbox">
     <div class="sandbox-grid">
-      <div class="panel pad-panel">
-        <div class="rail-head"><span class="label">Draw a Digit</span><span class="count" id="sb-model">—</span></div>
+      <div class="card pad-card">
+        <div class="card-head"><span class="card-title">Draw a Digit</span><span class="pill" id="sb-model">—</span></div>
         <div class="pad-wrap"><canvas id="pad" width="280" height="280"></canvas></div>
-        <div class="pad-btns">
-          <button class="btn-go" id="sb-guess">&#9654; GUESS</button>
-          <button class="btn-clear" id="sb-clear">CLEAR</button>
-        </div>
+        <div class="pad-btns"><button class="btn primary" id="sb-guess">&#9654; Guess</button><button class="btn ghost" id="sb-clear">Clear</button></div>
       </div>
-      <div class="panel guess-panel">
-        <div class="rail-head"><span class="label">Prediction</span></div>
-        <div class="predictions" id="predictions"><p class="hint">Draw a digit 0&ndash;9, then press GUESS.</p></div>
+      <div class="card guess-card">
+        <div class="card-head"><span class="card-title">Prediction</span></div>
+        <div class="predictions" id="predictions"><p class="hint">Draw a digit 0&ndash;9, then press Guess.</p></div>
       </div>
     </div>
   </section>
 
-  <!-- ===================== LAB ===================== -->
+  <!-- ====================== LAB ====================== -->
   <section class="view" id="view-lab">
     <div class="lab-grid">
-      <div class="panel lab-form-panel">
-        <div class="rail-head"><span class="label">Launch</span></div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Launch</span></div>
         <form class="lab" id="lab-form">
-          <div class="field"><span class="flabel">Model</span>
-            <div class="select-wrap"><select id="lab-model"></select></div>
-          </div>
-          <div class="field"><span class="flabel">Tier</span>
-            <div class="seg" id="lab-tier">
-              <button type="button" data-tier="S" class="is-on">S</button>
-              <button type="button" data-tier="M">M</button>
-              <button type="button" data-tier="L">L</button>
-            </div>
-          </div>
+          <div class="field"><span class="flabel">Model</span><div class="select-wrap"><select id="lab-model"></select></div></div>
+          <div class="field"><span class="flabel">Tier</span><div class="seg" id="lab-tier"><button type="button" data-tier="S" class="is-on">S</button><button type="button" data-tier="M">M</button><button type="button" data-tier="L">L</button></div></div>
           <div class="field"><span class="flabel">Epochs</span><input id="lab-epochs" type="number" min="1" value="3" /></div>
           <div class="field"><span class="flabel">Batch</span><input id="lab-batch" type="number" min="1" value="32" /></div>
-          <button class="btn-go" type="submit">&#9654; START</button>
+          <button class="btn primary big" type="submit">&#9654; Start training</button>
         </form>
         <div class="lab-result" id="lab-result"></div>
       </div>
-      <aside class="panel lab-recent">
-        <div class="rail-head"><span class="label">Recent Launches</span></div>
+      <aside class="card">
+        <div class="card-head"><span class="card-title">Recent Launches</span></div>
         <ul class="runs" id="lab-runs"></ul>
       </aside>
     </div>
   </section>
 
-  <!-- ===================== LESSONS (Quest) ===================== -->
+  <!-- ====================== QUEST (Lessons) ====================== -->
   <section class="view" id="view-lessons">
     <div class="quest-grid">
-      <div class="panel world-panel">
-        <div class="rail-head"><span class="label">World Map</span><span class="count" id="lesson-count">0</span></div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">World Map</span><span class="pill yellow" id="lesson-count">0</span></div>
         <div class="world" id="lesson-map"></div>
       </div>
-      <div class="panel">
-        <div class="rail-head"><span class="label" id="lesson-title">Select a chapter</span></div>
-        <div class="lesson-body" id="lesson-body"><div class="empty" style="height:200px"><p>Pick a level from the map &#9664;</p></div></div>
+      <div class="card">
+        <div class="card-head"><span class="card-title" id="lesson-title">Select a chapter</span></div>
+        <div class="lesson-body" id="lesson-body"><div class="hint">Pick a level from the map &#9664;</div></div>
       </div>
     </div>
   </section>
 
   <footer class="statusbar">
-    <span id="status">INSERT COIN…</span>
+    <span id="status">Loading…</span>
     <span class="spacer"></span>
-    <span>v0.2 · 1UP</span>
+    <span class="build">v0.3 · UP <span class="dot" data-state="ok"></span></span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.iife.min.js"></script>

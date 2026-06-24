@@ -57,16 +57,30 @@ function visible() {
   return runs.filter((r) => r.status === filter);
 }
 
+function hue(str) { let h = 7; for (const c of str) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+function avatar(model) {
+  const h = hue(model), c = `hsl(${h},62%,62%)`, d = `hsl(${h},58%,46%)`;
+  return `<svg class="avatar" viewBox="0 0 36 36">
+    <ellipse cx="18" cy="31" rx="10" ry="2.5" fill="rgba(45,53,97,.1)"/>
+    <path d="M9 13 l3 -6 3 6Z M27 13 l-3 -6 -3 6Z" fill="${d}"/>
+    <ellipse cx="18" cy="20" rx="12" ry="11" fill="${c}"/>
+    <ellipse cx="18" cy="23" rx="7" ry="5.5" fill="rgba(255,255,255,.45)"/>
+    <circle cx="14" cy="18" r="2" fill="#2d3561"/><circle cx="22" cy="18" r="2" fill="#2d3561"/>
+    <circle cx="14.7" cy="17.3" r=".7" fill="#fff"/><circle cx="22.7" cy="17.3" r=".7" fill="#fff"/>
+    <circle cx="11" cy="21" r="1.8" fill="#ff9aa2" opacity=".6"/><circle cx="25" cy="21" r="1.8" fill="#ff9aa2" opacity=".6"/>
+    <path d="M15 22 Q18 25 21 22" stroke="#2d3561" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
 function renderRegistry() {
   els.runCount.textContent = runs.length;
   const list = visible().slice().sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
-  if (!list.length) { els.runs.innerHTML = '<li class="empty" style="height:100px"><p>NO RUNS</p></li>'; return; }
+  if (!list.length) { els.runs.innerHTML = '<li class="hint">No runs match</li>'; return; }
   els.runs.innerHTML = list.map((r) => {
-    const [state] = statusMeta(r.status);
     const pm = primaryMetric(r.last_metrics);
     return `<li class="run ${r.id === selected ? 'is-sel' : ''}" data-id="${r.id}">
-      <span class="led" data-state="${state}"></span>
-      <span><span class="run-model">${r.model}</span><br><span class="run-name">${r.run_name || r.id}</span></span>
+      ${avatar(r.model)}
+      <span class="run-id"><span class="run-model">${r.model}</span><span class="run-name">${r.run_name || r.id}</span></span>
       <span class="run-val">${pm ? `<span class="v">${fmtNum(pm.v)}</span><span class="k">${pm.k}</span>` : ''}</span>
     </li>`;
   }).join('');
@@ -74,19 +88,19 @@ function renderRegistry() {
 }
 
 function renderChips(run, config) {
-  const tags = [`<span class="tag accent">${run.source}</span>`];
-  if (config && config.training_tier) tags.push(`<span class="tag">T:${config.training_tier}</span>`);
-  if (config && config.device) tags.push(`<span class="tag">${config.device}</span>`);
-  tags.push(`<span class="tag">${statusMeta(run.status)[1]}</span>`);
-  if (run.created_at) tags.push(`<span class="tag">${relTime(run.created_at)}</span>`);
+  const tags = [`<span class="chip c-green">${run.source}</span>`];
+  if (config && config.training_tier) tags.push(`<span class="chip c-violet">tier ${config.training_tier}</span>`);
+  if (config && config.device) tags.push(`<span class="chip c-blue">${config.device}</span>`);
+  tags.push(`<span class="chip c-gray">${statusMeta(run.status)[1]}</span>`);
+  if (run.created_at) tags.push(`<span class="chip c-gray">${relTime(run.created_at)}</span>`);
   els.chips.innerHTML = tags.join('');
 }
 
 function renderSeriesReadout(list) {
   els.seriesReadout.innerHTML = list.map((s) => {
     const last = s.points[s.points.length - 1];
-    return `<span class="sr-item"><span class="sr-dot" style="background:${s.color}"></span>
-      <span class="sr-k">${s.key}</span><span class="sr-v">${fmtNum(last ? last[1] : NaN)}</span></span>`;
+    return `<div class="stat"><span class="sdot" style="background:${s.color}"></span>
+      <span class="sk">${s.key}</span><span class="sv" style="color:${s.color}">${fmtNum(last ? last[1] : NaN)}</span></div>`;
   }).join('');
 }
 
@@ -108,14 +122,14 @@ function renderSummary(summary) {
   const entries = Object.entries(summary || {});
   els.summary.innerHTML = entries.length
     ? entries.map(([k, v]) => {
-        let led = '';
+        let gv = fmtVal(v);
         if (k === 'status') {
-          const st = v === 'completed' ? 'done' : v === 'failed' ? 'failed' : 'unknown';
-          led = `<span class="led" data-state="${st}"></span>`;
+          const cls = v === 'completed' ? 'badge-ok' : v === 'failed' ? 'badge-fail' : '';
+          gv = `<span class="${cls}">${v}${v === 'completed' ? ' ✓' : ''}</span>`;
         }
-        return `<div class="gate-row">${led}<span class="gk">${k}</span><span class="gv">${fmtVal(v)}</span></div>`;
+        return `<div class="gate-row"><span class="gk">${k}</span><span class="gv">${gv}</span></div>`;
       }).join('')
-    : '<div class="empty" style="height:40px"><p>…</p></div>';
+    : '<div class="hint">awaiting completion</div>';
 }
 
 async function select(id) {
@@ -148,9 +162,9 @@ async function refreshMetricsOnly() {
 }
 
 function showEmpty() {
-  els.title.textContent = 'NO RUNS';
+  els.title.textContent = 'No runs yet';
   els.rec.hidden = true;
-  els.chart.innerHTML = '<div class="empty"><div class="big">GAME OVER?</div><p>No runs yet. Launch one — <code>python main.py train --model vae</code> — and it shows up here, live.</p></div>';
+  els.chart.innerHTML = '<div class="hint">No runs yet — launch one in <b>Lab</b> (or <code>python main.py train --model vae</code>) and it appears here, live.</div>';
   els.seriesReadout.innerHTML = els.chips.innerHTML = els.config.innerHTML = els.summary.innerHTML = els.samples.innerHTML = '';
 }
 
