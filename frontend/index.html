@@ -6,26 +6,60 @@
   <title>mini_networks · playground</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <!-- ====================== ILLUSTRATED SCENE ====================== -->
+  <!-- ====================== ENCHANTED SCENE ====================== -->
   <div class="scene" aria-hidden="true">
+    <svg class="sun" viewBox="0 0 200 200"><g class="rays"><g fill="#ffe9a8" opacity=".55"><rect x="96" y="0" width="8" height="36" rx="4"/><rect x="96" y="164" width="8" height="36" rx="4"/><rect x="0" y="96" width="36" height="8" rx="4"/><rect x="164" y="96" width="36" height="8" rx="4"/><rect x="22" y="22" width="8" height="34" rx="4" transform="rotate(45 26 39)"/><rect x="170" y="22" width="8" height="34" rx="4" transform="rotate(-45 174 39)"/><rect x="22" y="144" width="8" height="34" rx="4" transform="rotate(-45 26 161)"/><rect x="170" y="144" width="8" height="34" rx="4" transform="rotate(45 174 161)"/></g></g><circle cx="100" cy="100" r="52" fill="#ffe07a"/><circle cx="100" cy="100" r="44" fill="#ffd23f"/></svg>
+
     <div class="clouds">
       <svg class="cloud c1" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="40" cy="30" rx="30" ry="18"/><ellipse cx="70" cy="28" rx="26" ry="20"/><ellipse cx="92" cy="34" rx="20" ry="14"/><rect x="30" y="34" width="70" height="14" rx="7"/></g></svg>
       <svg class="cloud c2" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="40" cy="30" rx="30" ry="18"/><ellipse cx="70" cy="28" rx="26" ry="20"/><ellipse cx="92" cy="34" rx="20" ry="14"/><rect x="30" y="34" width="70" height="14" rx="7"/></g></svg>
       <svg class="cloud c3" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="40" cy="30" rx="30" ry="18"/><ellipse cx="70" cy="28" rx="26" ry="20"/><ellipse cx="92" cy="34" rx="20" ry="14"/><rect x="30" y="34" width="70" height="14" rx="7"/></g></svg>
     </div>
-    <svg class="hills" viewBox="0 0 1440 280" preserveAspectRatio="xMidYMax slice">
-      <path d="M0 150 Q360 90 720 140 T1440 120 V280 H0 Z" fill="#9ad86a"/>
-      <path d="M0 200 Q300 150 640 195 T1200 185 T1440 200 V280 H0 Z" fill="#7ec85a"/>
-      <g fill="#6bb84a">
-        <ellipse cx="120" cy="240" rx="34" ry="22"/><ellipse cx="380" cy="255" rx="26" ry="16"/>
-        <ellipse cx="980" cy="250" rx="40" ry="24"/><ellipse cx="1300" cy="245" rx="30" ry="18"/>
+
+    <svg class="forest" viewBox="0 0 1440 460" preserveAspectRatio="xMidYMax slice">
+      <!-- far hills -->
+      <path d="M0 240 Q360 170 720 220 T1440 200 V460 H0Z" fill="#bfe0a0"/>
+      <!-- distant castle -->
+      <g fill="#a9c9d6" opacity=".7" transform="translate(1140 150)">
+        <rect x="0" y="20" width="14" height="50"/><rect x="44" y="20" width="14" height="50"/><rect x="14" y="32" width="30" height="38"/>
+        <path d="M0 20 l7 -12 7 12Z M44 20 l7 -12 7 12Z" /><path d="M14 32 l15 -16 15 16Z"/>
       </g>
+      <!-- mid hills -->
+      <path d="M0 300 Q300 240 640 290 T1200 280 T1440 300 V460 H0Z" fill="#7fbf57"/>
+      <!-- trees -->
+      <g class="tree t1" transform="translate(150 300)"><rect x="-11" y="-4" width="22" height="96" rx="9" fill="#8a5a32"/><g class="canopy"><ellipse cx="0" cy="-34" rx="64" ry="54" fill="#4e8c3a"/><ellipse cx="-38" cy="2" rx="46" ry="42" fill="#5fa047"/><ellipse cx="38" cy="-4" rx="44" ry="40" fill="#6fae4f"/></g></g>
+      <g class="tree t2" transform="translate(560 320)"><rect x="-9" y="-4" width="18" height="80" rx="8" fill="#8a5a32"/><g class="canopy"><ellipse cx="0" cy="-28" rx="50" ry="44" fill="#46823a"/><ellipse cx="30" cy="2" rx="38" ry="34" fill="#5fa047"/><ellipse cx="-30" cy="0" rx="36" ry="32" fill="#6fae4f"/></g></g>
+      <g class="tree t3" transform="translate(1010 314)"><rect x="-12" y="-4" width="24" height="92" rx="10" fill="#7d5230"/><g class="canopy"><ellipse cx="0" cy="-36" rx="70" ry="58" fill="#4e8c3a"/><ellipse cx="-42" cy="2" rx="50" ry="44" fill="#5fa047"/><ellipse cx="44" cy="-2" rx="46" ry="42" fill="#6fae4f"/></g></g>
+      <g class="tree t4" transform="translate(1330 326)"><rect x="-8" y="-4" width="16" height="70" rx="7" fill="#8a5a32"/><g class="canopy"><ellipse cx="0" cy="-24" rx="44" ry="40" fill="#5fa047"/><ellipse cx="26" cy="2" rx="34" ry="30" fill="#6fae4f"/></g></g>
+      <!-- foreground ground -->
+      <path d="M0 380 Q360 340 760 380 T1440 372 V460 H0Z" fill="#5aa83f"/>
+      <!-- ferns -->
+      <g fill="#3f7d2c">
+        <path d="M330 400 q-6 -34 0 -52 q6 18 0 52Z M318 398 q-22 -16 -28 -34 q24 8 28 34Z M342 398 q22 -16 28 -34 q-24 8 -28 34Z"/>
+        <path d="M860 408 q-6 -30 0 -46 q6 16 0 46Z M850 406 q-20 -14 -26 -30 q22 6 26 30Z"/>
+      </g>
+      <!-- pond + lily -->
+      <ellipse cx="120" cy="420" rx="90" ry="20" fill="#7fc7e0" opacity=".85"/>
+      <ellipse cx="120" cy="420" rx="90" ry="20" fill="none" stroke="#fff" stroke-opacity=".4" stroke-width="2"/>
+      <g transform="translate(150 416)"><path d="M0 0 a18 8 0 1 0 30 0 z" fill="#56a83f"/><circle cx="16" cy="-2" r="3" fill="#ffd23f"/></g>
+      <!-- mushrooms -->
+      <g class="mush m-a" transform="translate(470 396)"><ellipse cx="0" cy="44" rx="22" ry="6" fill="rgba(20,40,10,.18)"/><rect x="-10" y="12" width="20" height="34" rx="9" fill="#f5ecd6"/><path d="M-34 16 Q0 -22 34 16 Z" fill="#d6452f"/><g fill="#fff"><circle cx="-15" cy="4" r="5"/><circle cx="9" cy="0" r="6"/><circle cx="22" cy="11" r="4"/></g><circle cx="-8" cy="28" r="2.6" fill="#3a2c1f"/><circle cx="8" cy="28" r="2.6" fill="#3a2c1f"/><path d="M-6 34 Q0 39 6 34" stroke="#3a2c1f" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="-13" cy="33" r="3" fill="#ff9aa2" opacity=".6"/><circle cx="13" cy="33" r="3" fill="#ff9aa2" opacity=".6"/></g>
+      <g class="mush m-b" transform="translate(700 408) scale(.7)"><rect x="-9" y="12" width="18" height="30" rx="8" fill="#f5ecd6"/><path d="M-28 16 Q0 -18 28 16 Z" fill="#e07a3f"/><g fill="#fff"><circle cx="-10" cy="4" r="4"/><circle cx="12" cy="6" r="4"/></g></g>
+      <g class="mush m-c" transform="translate(1240 404) scale(.85)"><rect x="-9" y="12" width="18" height="30" rx="8" fill="#f5ecd6"/><path d="M-30 16 Q0 -20 30 16 Z" fill="#d6452f"/><g fill="#fff"><circle cx="-12" cy="3" r="5"/><circle cx="10" cy="2" r="5"/><circle cx="0" cy="9" r="4"/></g></g>
     </svg>
+
+    <div class="fireflies" id="fireflies"></div>
+
+    <svg class="bfly b1" viewBox="0 0 40 34"><g class="bw"><path d="M20 17 C6 0 -4 8 6 18 C-2 26 10 30 20 17Z" fill="#b98bff"/></g><g class="bw r"><path d="M20 17 C34 0 44 8 34 18 C42 26 30 30 20 17Z" fill="#8ad6ff"/></g><rect x="18.5" y="6" width="3" height="22" rx="1.5" fill="#3a2c4a"/></svg>
+    <svg class="bfly b2" viewBox="0 0 40 34"><g class="bw"><path d="M20 17 C6 0 -4 8 6 18 C-2 26 10 30 20 17Z" fill="#ffb1d8"/></g><g class="bw r"><path d="M20 17 C34 0 44 8 34 18 C42 26 30 30 20 17Z" fill="#ffd27a"/></g><rect x="18.5" y="6" width="3" height="22" rx="1.5" fill="#3a2c4a"/></svg>
+
+    <svg class="vine vine-l" viewBox="0 0 160 160"><g fill="#4e8c3a"><path d="M0 0 Q60 10 70 60 Q40 40 0 40Z"/><path d="M0 30 Q40 44 44 84 Q22 64 0 64Z" opacity=".9"/></g><g fill="#6fae4f"><circle cx="66" cy="58" r="9"/><circle cx="40" cy="80" r="7"/></g></svg>
+    <svg class="vine vine-r" viewBox="0 0 160 160"><g fill="#4e8c3a"><path d="M160 0 Q100 10 90 60 Q120 40 160 40Z"/><path d="M160 30 Q120 44 116 84 Q138 64 160 64Z" opacity=".9"/></g><g fill="#6fae4f"><circle cx="94" cy="58" r="9"/><circle cx="120" cy="80" r="7"/></g></svg>
   </div>
 
   <!-- ====================== HEADER ====================== -->
@@ -45,7 +79,7 @@
     </nav>
 
     <div class="telemetry">
-      <svg class="m-planet" viewBox="0 0 80 60"><ellipse cx="40" cy="30" rx="30" ry="9" fill="none" stroke="#cdbcff" stroke-width="3"/><circle cx="40" cy="30" r="15" fill="#b3a4ff"/><circle cx="34" cy="25" r="5" fill="#cdbcff" opacity=".7"/></svg>
+      <svg class="m-planet" viewBox="0 0 80 60"><ellipse cx="40" cy="30" rx="30" ry="9" fill="none" stroke="#fff0b8" stroke-width="3"/><circle cx="40" cy="30" r="15" fill="#ffe07a"/><circle cx="34" cy="25" r="5" fill="#fff3c0" opacity=".8"/></svg>
       <span class="tlm"><span class="tlm-k">SRC</span><span class="tlm-v" id="tlm-source">--</span></span>
       <span class="tlm"><span class="tlm-k">UTC</span><span class="tlm-v" id="tlm-clock">--:--:--</span></span>
       <span class="conn" id="conn"><span class="dot" data-state="unknown"></span></span>
@@ -55,7 +89,6 @@
   <!-- ====================== OBSERVATORY (Watch) ====================== -->
   <section class="view is-active" id="view-observatory">
     <div class="console">
-      <!-- RUNS -->
       <aside class="card runs-card">
         <div class="card-head"><span class="card-title">Runs</span><span class="pill yellow" id="run-count">0</span></div>
         <div class="filters" id="filters">
@@ -67,7 +100,6 @@
         <ul class="runs" id="runs"></ul>
       </aside>
 
-      <!-- CENTER -->
       <div class="stage">
         <div class="card scope-card">
           <div class="scope-head">
@@ -80,21 +112,28 @@
             <div class="rec" id="rec" hidden><span class="dot" data-state="failed"></span>REC</div>
           </div>
           <div class="scope-screen" id="chart"></div>
-          <!-- dino mascot + speech bubble -->
           <div class="dino-wrap" aria-hidden="true">
             <div class="bubble">Learning in progress! &#128640;</div>
-            <svg class="m-dino" viewBox="0 0 120 112">
-              <ellipse cx="60" cy="103" rx="28" ry="6" fill="rgba(40,50,90,.12)"/>
+            <svg class="m-dragon" viewBox="0 0 130 116">
+              <ellipse cx="64" cy="106" rx="30" ry="6" fill="rgba(20,40,10,.16)"/>
               <g class="dino-bob">
-                <path d="M32 82 Q12 80 18 60 Q26 76 40 76 Z" fill="#7ad06a"/>
-                <path d="M44 46 l6 -11 6 11 Z M58 42 l6 -12 6 12 Z M72 46 l5 -10 5 10 Z" fill="#5cb84e"/>
-                <ellipse cx="60" cy="72" rx="31" ry="29" fill="#7ad06a"/>
-                <ellipse cx="60" cy="80" rx="19" ry="17" fill="#c7f0a8"/>
-                <circle cx="50" cy="64" r="4" fill="#2d3561"/><circle cx="70" cy="64" r="4" fill="#2d3561"/>
-                <circle cx="51.5" cy="62.5" r="1.3" fill="#fff"/><circle cx="71.5" cy="62.5" r="1.3" fill="#fff"/>
-                <circle cx="44" cy="72" r="4" fill="#ff9aa2" opacity=".7"/><circle cx="76" cy="72" r="4" fill="#ff9aa2" opacity=".7"/>
-                <path d="M54 76 Q60 82 66 76" stroke="#2d3561" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-                <ellipse cx="50" cy="100" rx="8" ry="5" fill="#5cb84e"/><ellipse cx="72" cy="100" rx="8" ry="5" fill="#5cb84e"/>
+                <!-- tail -->
+                <path d="M30 84 Q8 82 14 58 Q24 78 40 78 Z" fill="#6fae4f"/>
+                <!-- wings -->
+                <g class="wing"><path d="M40 56 Q14 36 6 52 Q26 56 36 70 Z" fill="#b98bff"/></g>
+                <g class="wing r"><path d="M88 56 Q114 36 122 52 Q102 56 92 70 Z" fill="#b98bff"/></g>
+                <!-- horns -->
+                <path d="M48 44 l4 -12 5 11Z M73 43 l5 -12 4 12Z" fill="#ffe07a"/>
+                <!-- body -->
+                <ellipse cx="64" cy="72" rx="32" ry="30" fill="#7ad06a"/>
+                <ellipse cx="64" cy="80" rx="20" ry="17" fill="#cdf0ac"/>
+                <!-- spikes -->
+                <path d="M54 46 l5 -10 5 10Z M68 46 l5 -10 5 10Z" fill="#5fa047"/>
+                <circle cx="54" cy="64" r="4.2" fill="#2d3561"/><circle cx="74" cy="64" r="4.2" fill="#2d3561"/>
+                <circle cx="55.4" cy="62.6" r="1.3" fill="#fff"/><circle cx="75.4" cy="62.6" r="1.3" fill="#fff"/>
+                <circle cx="48" cy="72" r="4" fill="#ff9aa2" opacity=".7"/><circle cx="80" cy="72" r="4" fill="#ff9aa2" opacity=".7"/>
+                <path d="M58 76 Q64 82 70 76" stroke="#2d3561" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                <ellipse cx="54" cy="100" rx="8" ry="5" fill="#5fa047"/><ellipse cx="76" cy="100" rx="8" ry="5" fill="#5fa047"/>
               </g>
             </svg>
           </div>
@@ -102,15 +141,14 @@
         </div>
 
         <div class="card specimens-card">
-          <div class="card-head"><span class="card-title">&#128062; Specimens</span><span class="pill yellow" id="specimen-meta">0</span></div>
+          <div class="card-head"><span class="card-title">&#127812; Specimens</span><span class="pill yellow" id="specimen-meta">0</span></div>
           <div class="specimens-body">
             <div class="film" id="samples"></div>
-            <!-- scene mascots -->
             <svg class="m-plane" viewBox="0 0 44 32"><path d="M2 5 L42 2 L22 30 L17 19 Z" fill="#ffd23f" stroke="#eaa800" stroke-width="1.6" stroke-linejoin="round"/><path d="M17 19 L42 2 L22 14 Z" fill="#f0b400"/></svg>
             <svg class="plane-path" viewBox="0 0 300 80" preserveAspectRatio="none"><path d="M4 60 Q90 10 150 45 T296 24" fill="none" stroke="#c9b6ff" stroke-width="2.5" stroke-dasharray="2 8" stroke-linecap="round"/></svg>
             <div class="sign"><svg viewBox="0 0 120 90"><rect x="52" y="46" width="8" height="40" fill="#b07a3c"/><rect x="12" y="14" width="96" height="40" rx="6" fill="#d79a52" stroke="#a8702f" stroke-width="3"/></svg><span class="sign-text">Keep training, champ! &#128170;</span></div>
             <svg class="m-bot" viewBox="0 0 130 140">
-              <ellipse cx="65" cy="130" rx="34" ry="7" fill="rgba(40,50,90,.12)"/>
+              <ellipse cx="65" cy="130" rx="34" ry="7" fill="rgba(20,40,10,.16)"/>
               <g class="bot-body">
                 <rect x="38" y="66" width="54" height="52" rx="22" fill="#fff" stroke="#7d5fff" stroke-width="3"/>
                 <rect x="34" y="24" width="62" height="50" rx="24" fill="#fff" stroke="#7d5fff" stroke-width="3"/>
@@ -125,7 +163,6 @@
         </div>
       </div>
 
-      <!-- RIGHT -->
       <aside class="side">
         <div class="card config-card">
           <div class="card-head"><span class="card-title">&#9881; Config</span>
@@ -134,7 +171,7 @@
           <dl class="kv" id="config"></dl>
         </div>
         <div class="card summary-card">
-          <div class="card-head"><span class="card-title">&#128203; Summary</span></div>
+          <div class="card-head"><span class="card-title">&#128220; Summary</span></div>
           <div class="gate" id="summary"></div>
         </div>
       </aside>

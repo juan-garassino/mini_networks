@@ -10,6 +10,22 @@ import { initSandbox } from './sandbox.js';
 
 const $ = (id) => document.getElementById(id);
 
+/* ----------------------------- fireflies ------------------------------- */
+(function fireflies() {
+  const host = $('fireflies');
+  if (!host) return;
+  let html = '';
+  for (let i = 0; i < 24; i++) {
+    const left = (Math.random() * 100).toFixed(1);
+    const top = (38 + Math.random() * 56).toFixed(1);
+    const dur = (7 + Math.random() * 8).toFixed(1);
+    const size = (4 + Math.random() * 5).toFixed(1);
+    html += `<span class="firefly" style="left:${left}%;top:${top}%;width:${size}px;height:${size}px;` +
+      `--d:${dur}s;animation-delay:${(-Math.random() * dur).toFixed(1)}s,${(-Math.random() * 2).toFixed(1)}s"></span>`;
+  }
+  host.innerHTML = html;
+})();
+
 /* ----------------------------- view router ----------------------------- */
 let activeView = 'observatory';
 function showView(name) {
