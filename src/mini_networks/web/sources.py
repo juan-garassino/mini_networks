@@ -93,6 +93,12 @@ class LocalRunsSource(RunSource):
             return d
         raise RunNotFound(run_id)
 
+    # A local run is only plausibly "live" if its metrics file was touched very
+    # recently; many trainers never write summary.json, so a stale metrics file
+    # without a summary just means the process finished and didn't summarize —
+    # not that it's still running (which is what made old runs show a "REC" dot).
+    _LIVE_WINDOW_S = 120
+
     def _status(self, d: Path) -> str:
         summary_path = d / "summary.json"
         if summary_path.exists():
@@ -103,8 +109,12 @@ class LocalRunsSource(RunSource):
             except Exception:
                 status = "completed"
             return "failed" if status == "failed" else "done"
-        if (d / "metrics.jsonl").exists():
-            return "running"
+        metrics = d / "metrics.jsonl"
+        if metrics.exists():
+            import time
+
+            recent = (time.time() - metrics.stat().st_mtime) < self._LIVE_WINDOW_S
+            return "running" if recent else "done"
         return "unknown"
 
     def _summary_for(self, d: Path) -> RunSummary:

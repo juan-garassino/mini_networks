@@ -45,6 +45,21 @@ def test_artifact_resolution_is_sandboxed(runs_dir):
         src.open_artifact("vae/vae-001", "../../config.yaml")  # path traversal blocked
 
 
+def test_stale_run_without_summary_is_done(tmp_path):
+    import os
+    import time
+
+    base = tmp_path / "runs"
+    d = base / "mamba" / "mamba-old"
+    (d / "artifacts").mkdir(parents=True)
+    (d / "metrics.jsonl").write_text('{"step": 0, "key": "loss", "value": 1.0}\n')
+    old = time.time() - 3600
+    os.utime(d / "metrics.jsonl", (old, old))
+
+    r = next(x for x in LocalRunsSource(str(base)).list_runs() if x.id == "mamba/mamba-old")
+    assert r.status == "done"  # not "running" — process is long gone
+
+
 def test_local_mlflow_parity(monkeypatch, tmp_path):
     """A run logged through the Logger MLflow sink reads back identically."""
     pytest.importorskip("mlflow")
