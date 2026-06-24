@@ -4,6 +4,8 @@ import { listRuns, getMetrics, getConfig, getSummary } from './api.js';
 import { makeChart } from './chart.js';
 import { renderSamples } from './samples.js';
 import { fmtNum, statusMeta, primaryMetric, relTime } from './format.js';
+import { initLab } from './lab.js';
+import { initLessons } from './lessons.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -14,6 +16,8 @@ function showView(name) {
   document.querySelectorAll('.view-tab').forEach((t) => t.classList.toggle('is-active', t.dataset.view === name));
   document.querySelectorAll('.view').forEach((v) => v.classList.toggle('is-active', v.id === `view-${name}`));
   if (name === 'observatory') refreshDetail(); // redraw chart at correct size
+  if (name === 'lab') initLab();
+  if (name === 'lessons') initLessons();
 }
 $('viewnav').addEventListener('click', (e) => {
   const t = e.target.closest('.view-tab');

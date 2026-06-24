@@ -16,6 +16,7 @@ from mini_networks.api.schemas.web import (
     RunListResponse,
     SummaryResponse,
 )
+from mini_networks.web.lessons import list_lessons, read_lesson
 from mini_networks.web.model_catalog import list_model_infos
 from mini_networks.web.sources import RunNotFound, RunSource, get_run_source
 
@@ -63,3 +64,16 @@ async def run_artifact(run_id: str, name: str, source: RunSource = Depends(get_r
 @router.get("/models", response_model=list[ModelInfo])
 async def models():
     return list_model_infos()
+
+
+@router.get("/lessons")
+async def lessons():
+    return list_lessons()
+
+
+@router.get("/lessons/{lesson_id}")
+async def lesson(lesson_id: str):
+    try:
+        return {"id": lesson_id, "markdown": read_lesson(lesson_id)}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Lesson not found: {lesson_id}")

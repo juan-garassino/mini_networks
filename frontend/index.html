@@ -99,24 +99,43 @@
 
   <!-- ===================== LAB ===================== -->
   <section class="view" id="view-lab">
-    <div class="panel" style="height:100%">
-      <div class="coming">
-        <svg class="coin-spin" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="2" y="2" width="12" height="12" fill="#3ec33e"/><rect x="2" y="2" width="12" height="3" fill="#7ee87e"/></svg>
-        <div class="big">LAB</div>
-        <div class="sub">pick a model · set the tier · launch</div>
-        <p class="hint">A launch console wired to <code>POST /train</code> (local or GCP cloud dispatch) with a run-compare overlay. Coming in this build.</p>
+    <div class="lab-grid">
+      <div class="panel lab-form-panel">
+        <div class="rail-head"><span class="label">Launch</span></div>
+        <form class="lab" id="lab-form">
+          <div class="field"><span class="flabel">Model</span>
+            <div class="select-wrap"><select id="lab-model"></select></div>
+          </div>
+          <div class="field"><span class="flabel">Tier</span>
+            <div class="seg" id="lab-tier">
+              <button type="button" data-tier="S" class="is-on">S</button>
+              <button type="button" data-tier="M">M</button>
+              <button type="button" data-tier="L">L</button>
+            </div>
+          </div>
+          <div class="field"><span class="flabel">Epochs</span><input id="lab-epochs" type="number" min="1" value="3" /></div>
+          <div class="field"><span class="flabel">Batch</span><input id="lab-batch" type="number" min="1" value="32" /></div>
+          <button class="btn-go" type="submit">&#9654; START</button>
+        </form>
+        <div class="lab-result" id="lab-result"></div>
       </div>
+      <aside class="panel lab-recent">
+        <div class="rail-head"><span class="label">Recent Launches</span></div>
+        <ul class="runs" id="lab-runs"></ul>
+      </aside>
     </div>
   </section>
 
   <!-- ===================== LESSONS (Quest) ===================== -->
   <section class="view" id="view-lessons">
-    <div class="panel" style="height:100%">
-      <div class="coming">
-        <svg class="coin-spin" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="6" y="1" width="4" height="3" fill="#e52521"/><rect x="3" y="4" width="10" height="6" fill="#e52521"/><rect x="5" y="6" width="2" height="2" fill="#fff"/><rect x="9" y="6" width="2" height="2" fill="#fff"/><rect x="6" y="10" width="4" height="5" fill="#f8d8b0"/></svg>
-        <div class="big">QUEST · LESSONS</div>
-        <div class="sub">the curriculum as a world map</div>
-        <p class="hint">Pick a chapter, read it, run the model it teaches. Built from <code>docs/</code>. Coming next.</p>
+    <div class="quest-grid">
+      <div class="panel world-panel">
+        <div class="rail-head"><span class="label">World Map</span><span class="count" id="lesson-count">0</span></div>
+        <div class="world" id="lesson-map"></div>
+      </div>
+      <div class="panel">
+        <div class="rail-head"><span class="label" id="lesson-title">Select a chapter</span></div>
+        <div class="lesson-body" id="lesson-body"><div class="empty" style="height:200px"><p>Pick a level from the map &#9664;</p></div></div>
       </div>
     </div>
   </section>
@@ -128,6 +147,7 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.iife.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
   <script type="module" src="/main.js"></script>
 </body>
 </html>

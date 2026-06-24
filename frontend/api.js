@@ -14,3 +14,14 @@ export const getConfig = (id) => getJSON(`/web/runs/${id}/config`);
 export const getSummary = (id) => getJSON(`/web/runs/${id}/summary`);
 export const listModels = () => getJSON('/web/models');
 export const artifactUrl = (id, name) => `/web/runs/${id}/artifacts/${name}`;
+export const listLessons = () => getJSON('/web/lessons');
+export const getLesson = (id) => getJSON(`/web/lessons/${id}`);
+export const startTrain = (model, body) =>
+  fetch(`/train/${model}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(async (r) => {
+    if (!r.ok) throw new Error(`${r.status} ${(await r.text()).slice(0, 140)}`);
+    return r.json();
+  });
