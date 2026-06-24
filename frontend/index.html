@@ -1,45 +1,110 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="observatory">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>mini_networks · playground</title>
+  <title>mini_networks · observatory</title>
+  <meta name="description" content="Watch neural networks learn — live training telemetry." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Saira:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css" />
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <header>
-    <span class="brand">mini_networks · playground</span>
-    <nav class="tabs">
-      <span class="tab active">◉ Observatory</span>
-      <span class="tab disabled" title="Plan B">✎ Sandbox</span>
-      <span class="tab disabled" title="Plan B">⚙ Lab</span>
-      <span class="tab disabled" title="Plan B">📖 Lessons</span>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="masthead">
+    <div class="brand">
+      <svg class="brand-glyph" viewBox="0 0 28 28" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="1.4">
+          <line x1="5" y1="6" x2="14" y2="14" /><line x1="14" y1="14" x2="23" y2="7" />
+          <line x1="14" y1="14" x2="6" y2="22" /><line x1="14" y1="14" x2="22" y2="21" />
+        </g>
+        <g fill="currentColor">
+          <circle cx="5" cy="6" r="2.2" /><circle cx="23" cy="7" r="2.2" />
+          <circle cx="6" cy="22" r="2.2" /><circle cx="22" cy="21" r="2.2" />
+          <circle cx="14" cy="14" r="3" class="glyph-core" />
+        </g>
+      </svg>
+      <div class="brand-text">
+        <span class="brand-name">mini_networks</span>
+        <span class="brand-sub">observatory</span>
+      </div>
+    </div>
+
+    <nav class="viewnav" aria-label="Views">
+      <button class="view is-active" aria-current="page">Observatory</button>
+      <button class="view" disabled title="Coming in Plan B">Sandbox</button>
+      <button class="view" disabled title="Coming in Plan B">Lab</button>
+      <button class="view" disabled title="Coming in Plan B">Lessons</button>
     </nav>
+
+    <div class="telemetry">
+      <span class="tlm"><span class="tlm-k">src</span><span class="tlm-v" id="tlm-source">—</span></span>
+      <span class="tlm"><span class="tlm-k">utc</span><span class="tlm-v" id="tlm-clock">--:--:--</span></span>
+      <span class="conn" id="conn"><span class="led" data-state="unknown"></span><span id="conn-label">link</span></span>
+    </div>
   </header>
 
-  <main>
-    <aside id="run-list">
-      <div class="label">RUNS</div>
-      <ul id="runs"></ul>
+  <main class="console">
+    <!-- LEFT: run registry -->
+    <aside class="rail registry panel" style="--reveal: 1">
+      <div class="rail-head">
+        <span class="label">Registry</span>
+        <span class="count" id="run-count">0</span>
+      </div>
+      <div class="filters" id="filters" role="group" aria-label="Filter runs">
+        <button class="chip is-active" data-filter="all">all</button>
+        <button class="chip" data-filter="running">live</button>
+        <button class="chip" data-filter="done">done</button>
+        <button class="chip" data-filter="failed">failed</button>
+      </div>
+      <ul class="runs" id="runs"></ul>
     </aside>
 
-    <section id="center">
-      <div id="run-title" class="run-title">Select a run</div>
-      <div id="chart"></div>
-      <div class="label">SAMPLES</div>
-      <div id="samples"></div>
+    <!-- CENTER: scope + specimens -->
+    <section class="stage">
+      <div class="scope panel" style="--reveal: 2">
+        <svg class="ticks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2,12 V2 H12 M88,2 H98 V12 M98,88 V98 H88 M12,98 H2 V88" />
+        </svg>
+        <div class="scope-head">
+          <div class="scope-title">
+            <span class="label">Scope</span>
+            <h1 id="run-title">— select a run —</h1>
+          </div>
+          <div class="scope-chips" id="run-chips"></div>
+          <div class="rec" id="rec" hidden><span class="led" data-state="running"></span>rec</div>
+        </div>
+        <div class="scope-screen" id="chart" role="img" aria-label="Loss curves"></div>
+        <div class="series-readout" id="series-readout"></div>
+      </div>
+
+      <div class="specimens panel" style="--reveal: 3">
+        <div class="rail-head">
+          <span class="label">Specimens</span>
+          <span class="count" id="specimen-meta"></span>
+        </div>
+        <div class="film" id="samples"></div>
+      </div>
     </section>
 
-    <aside id="meta">
-      <div class="label">RUN INFO</div>
-      <pre id="config"></pre>
-      <div class="label">SUMMARY / GATE</div>
-      <pre id="summary"></pre>
+    <!-- RIGHT: readout -->
+    <aside class="rail readout panel" style="--reveal: 4">
+      <div class="rail-head"><span class="label">Config</span></div>
+      <dl class="kv" id="config"></dl>
+      <div class="rail-head"><span class="label">Summary</span></div>
+      <div class="gate" id="summary"></div>
     </aside>
   </main>
 
-  <footer id="status">idle</footer>
+  <footer class="statusbar">
+    <span id="status">initializing…</span>
+    <span class="spacer"></span>
+    <span class="build">v0.1 · observatory</span>
+  </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.iife.min.js"></script>
   <script type="module" src="/app.js"></script>
