@@ -1,14 +1,12 @@
 <!doctype html>
-<html lang="en" data-theme="observatory">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>mini_networks · observatory</title>
-  <meta name="description" content="Watch neural networks learn — live training telemetry." />
-
+  <title>mini_networks · playground</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Saira:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.min.css" />
   <link rel="stylesheet" href="/style.css" />
 </head>
@@ -17,96 +15,119 @@
 
   <header class="masthead">
     <div class="brand">
-      <svg class="brand-glyph" viewBox="0 0 28 28" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="1.4">
-          <line x1="5" y1="6" x2="14" y2="14" /><line x1="14" y1="14" x2="23" y2="7" />
-          <line x1="14" y1="14" x2="6" y2="22" /><line x1="14" y1="14" x2="22" y2="21" />
-        </g>
-        <g fill="currentColor">
-          <circle cx="5" cy="6" r="2.2" /><circle cx="23" cy="7" r="2.2" />
-          <circle cx="6" cy="22" r="2.2" /><circle cx="22" cy="21" r="2.2" />
-          <circle cx="14" cy="14" r="3" class="glyph-core" />
+      <!-- pixel "?" block -->
+      <svg class="brand-glyph" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+        <rect width="16" height="16" fill="#0a0918"/>
+        <rect x="1" y="1" width="14" height="14" fill="#fbd000"/>
+        <rect x="1" y="1" width="14" height="2" fill="#ffe55c"/>
+        <rect x="1" y="13" width="14" height="2" fill="#c98a00"/>
+        <g fill="#0a0918">
+          <rect x="5" y="4" width="6" height="2"/><rect x="9" y="5" width="2" height="2"/>
+          <rect x="7" y="7" width="2" height="2"/><rect x="7" y="10" width="2" height="2"/>
         </g>
       </svg>
       <div class="brand-text">
         <span class="brand-name">mini_networks</span>
-        <span class="brand-sub">observatory</span>
+        <span class="brand-sub">playground</span>
       </div>
     </div>
 
-    <nav class="viewnav" aria-label="Views">
-      <button class="view is-active" aria-current="page">Observatory</button>
-      <button class="view" disabled title="Coming in Plan B">Sandbox</button>
-      <button class="view" disabled title="Coming in Plan B">Lab</button>
-      <button class="view" disabled title="Coming in Plan B">Lessons</button>
+    <nav class="viewnav" id="viewnav" aria-label="Views">
+      <button class="view-tab is-active" data-view="observatory">Watch</button>
+      <button class="view-tab" data-view="sandbox">Play</button>
+      <button class="view-tab" data-view="lab">Lab</button>
+      <button class="view-tab" data-view="lessons">Quest</button>
     </nav>
 
     <div class="telemetry">
-      <span class="tlm"><span class="tlm-k">src</span><span class="tlm-v" id="tlm-source">—</span></span>
-      <span class="tlm"><span class="tlm-k">utc</span><span class="tlm-v" id="tlm-clock">--:--:--</span></span>
-      <span class="conn" id="conn"><span class="led" data-state="unknown"></span><span id="conn-label">link</span></span>
+      <span class="tlm"><span class="tlm-k">SRC</span><span class="tlm-v" id="tlm-source">--</span></span>
+      <span class="tlm"><span class="tlm-k">UTC</span><span class="tlm-v" id="tlm-clock">--:--:--</span></span>
+      <span class="conn" id="conn"><span class="led" data-state="unknown"></span></span>
     </div>
   </header>
 
-  <main class="console">
-    <!-- LEFT: run registry -->
-    <aside class="rail registry panel" style="--reveal: 1">
-      <div class="rail-head">
-        <span class="label">Registry</span>
-        <span class="count" id="run-count">0</span>
-      </div>
-      <div class="filters" id="filters" role="group" aria-label="Filter runs">
-        <button class="chip is-active" data-filter="all">all</button>
-        <button class="chip" data-filter="running">live</button>
-        <button class="chip" data-filter="done">done</button>
-        <button class="chip" data-filter="failed">failed</button>
-      </div>
-      <ul class="runs" id="runs"></ul>
-    </aside>
+  <!-- ===================== OBSERVATORY (Watch) ===================== -->
+  <section class="view is-active" id="view-observatory">
+    <div class="console">
+      <aside class="rail registry panel">
+        <div class="rail-head"><span class="label">Runs</span><span class="count" id="run-count">0</span></div>
+        <div class="filters" id="filters">
+          <button class="chip is-active" data-filter="all">ALL</button>
+          <button class="chip" data-filter="running">LIVE</button>
+          <button class="chip" data-filter="done">DONE</button>
+          <button class="chip" data-filter="failed">FAIL</button>
+        </div>
+        <ul class="runs" id="runs"></ul>
+      </aside>
 
-    <!-- CENTER: scope + specimens -->
-    <section class="stage">
-      <div class="scope panel" style="--reveal: 2">
-        <svg class="ticks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M2,12 V2 H12 M88,2 H98 V12 M98,88 V98 H88 M12,98 H2 V88" />
-        </svg>
-        <div class="scope-head">
-          <div class="scope-title">
-            <span class="label">Scope</span>
-            <h1 id="run-title">— select a run —</h1>
+      <div class="stage">
+        <div class="scope panel">
+          <div class="scope-head">
+            <div class="scope-title"><span class="label">Scope</span><h1 id="run-title">SELECT A RUN</h1></div>
+            <div class="scope-chips" id="run-chips"></div>
+            <div class="rec" id="rec" hidden><span class="led" data-state="running"></span>REC</div>
           </div>
-          <div class="scope-chips" id="run-chips"></div>
-          <div class="rec" id="rec" hidden><span class="led" data-state="running"></span>rec</div>
+          <div class="scope-screen" id="chart"></div>
+          <div class="series-readout" id="series-readout"></div>
         </div>
-        <div class="scope-screen" id="chart" role="img" aria-label="Loss curves"></div>
-        <div class="series-readout" id="series-readout"></div>
+        <div class="specimens panel">
+          <div class="rail-head"><span class="label">Specimens</span><span class="count" id="specimen-meta">0</span></div>
+          <div class="film" id="samples"></div>
+        </div>
       </div>
 
-      <div class="specimens panel" style="--reveal: 3">
-        <div class="rail-head">
-          <span class="label">Specimens</span>
-          <span class="count" id="specimen-meta"></span>
-        </div>
-        <div class="film" id="samples"></div>
-      </div>
-    </section>
+      <aside class="rail readout panel">
+        <div class="rail-head"><span class="label">Config</span></div>
+        <dl class="kv" id="config"></dl>
+        <div class="rail-head"><span class="label">Summary</span></div>
+        <div class="gate" id="summary"></div>
+      </aside>
+    </div>
+  </section>
 
-    <!-- RIGHT: readout -->
-    <aside class="rail readout panel" style="--reveal: 4">
-      <div class="rail-head"><span class="label">Config</span></div>
-      <dl class="kv" id="config"></dl>
-      <div class="rail-head"><span class="label">Summary</span></div>
-      <div class="gate" id="summary"></div>
-    </aside>
-  </main>
+  <!-- ===================== SANDBOX (Play) ===================== -->
+  <section class="view" id="view-sandbox">
+    <div class="panel" style="height:100%">
+      <div class="coming">
+        <svg class="coin-spin" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="3" width="10" height="16" fill="#fbd000"/><rect x="5" width="6" height="16" fill="#ffe55c"/><rect x="6" y="3" width="4" height="10" fill="#c98a00"/></svg>
+        <div class="big">PLAY · SANDBOX</div>
+        <div class="sub">draw a digit → the net guesses · type a prompt → it writes</div>
+        <p class="hint">Interactive inference on your trained models. Wiring this view to <code>/infer</code> next.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LAB ===================== -->
+  <section class="view" id="view-lab">
+    <div class="panel" style="height:100%">
+      <div class="coming">
+        <svg class="coin-spin" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="2" y="2" width="12" height="12" fill="#3ec33e"/><rect x="2" y="2" width="12" height="3" fill="#7ee87e"/></svg>
+        <div class="big">LAB</div>
+        <div class="sub">pick a model · set the tier · launch</div>
+        <p class="hint">A launch console wired to <code>POST /train</code> (local or GCP cloud dispatch) with a run-compare overlay. Coming in this build.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LESSONS (Quest) ===================== -->
+  <section class="view" id="view-lessons">
+    <div class="panel" style="height:100%">
+      <div class="coming">
+        <svg class="coin-spin" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="6" y="1" width="4" height="3" fill="#e52521"/><rect x="3" y="4" width="10" height="6" fill="#e52521"/><rect x="5" y="6" width="2" height="2" fill="#fff"/><rect x="9" y="6" width="2" height="2" fill="#fff"/><rect x="6" y="10" width="4" height="5" fill="#f8d8b0"/></svg>
+        <div class="big">QUEST · LESSONS</div>
+        <div class="sub">the curriculum as a world map</div>
+        <p class="hint">Pick a chapter, read it, run the model it teaches. Built from <code>docs/</code>. Coming next.</p>
+      </div>
+    </div>
+  </section>
 
   <footer class="statusbar">
-    <span id="status">initializing…</span>
+    <span id="status">INSERT COIN…</span>
     <span class="spacer"></span>
-    <span class="build">v0.1 · observatory</span>
+    <span>v0.2 · 1UP</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/uplot@1.6.31/dist/uPlot.iife.min.js"></script>
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="/main.js"></script>
 </body>
 </html>

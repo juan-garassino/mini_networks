@@ -3,11 +3,11 @@
 // the readout strip stays colour-matched.
 import { SKIP_KEYS } from './format.js';
 
-const css = getComputedStyle(document.documentElement);
-const cv = (n, fb) => (css.getPropertyValue(n).trim() || fb);
-const PALETTE = ['--c-1', '--c-2', '--c-3', '--c-4', '--c-5', '--c-6'].map((n) => cv(n, '#5ef2a8'));
-const GRID = 'rgba(94,242,168,0.07)';
-const AXIS = cv('--ink-faint', '#4b605c');
+// NES palette — coin gold, pipe green, mario red, sky, plum, white.
+const PALETTE = ['#fbd000', '#3ec33e', '#e52521', '#5c94fc', '#b04bd6', '#ffffff'];
+const GRID = 'rgba(94,148,252,0.14)';
+const AXIS = '#9b95c9';
+const AXIS_FONT = '13px "VT323", monospace';
 
 export function plottableSeries(series) {
   return series
@@ -42,10 +42,13 @@ class UplotChart {
       cursor: { points: { size: 5 }, focus: { prox: 18 }, drag: { x: true, y: false } },
       scales: { x: { time: false } },
       axes: [
-        { stroke: AXIS, grid: { stroke: GRID, width: 1 }, ticks: { stroke: GRID, size: 4 }, font: '10px "IBM Plex Mono"', gap: 6 },
-        { stroke: AXIS, grid: { stroke: GRID, width: 1 }, ticks: { stroke: GRID, size: 4 }, font: '10px "IBM Plex Mono"', size: 48 },
+        { stroke: AXIS, grid: { stroke: GRID, width: 1 }, ticks: { stroke: GRID, size: 4 }, font: AXIS_FONT, gap: 6 },
+        { stroke: AXIS, grid: { stroke: GRID, width: 1 }, ticks: { stroke: GRID, size: 4 }, font: AXIS_FONT, size: 48 },
       ],
-      series: [{}, ...list.map((s) => ({ stroke: s.color, width: 1.75, points: { show: false } }))],
+      series: [{}, ...list.map((s) => ({
+        stroke: s.color, width: 3, points: { show: true, size: 6, fill: s.color },
+        paths: window.uPlot.paths && window.uPlot.paths.stepped ? window.uPlot.paths.stepped({ align: 1 }) : undefined,
+      }))],
     };
     this.u = new window.uPlot(opts, [xs, ...cols], this.el);
     this.ro = new ResizeObserver(() => {
@@ -69,13 +72,17 @@ class SvgChart {
     const sx = (x) => pad + ((x - x0) / ((x1 - x0) || 1)) * (W - 2 * pad);
     const sy = (y) => H - pad - ((y - y0) / ((y1 - y0) || 1)) * (H - 2 * pad);
     const paths = list.map((s) => {
-      const d = s.points.map((p, j) => `${j ? 'L' : 'M'}${sx(p[0]).toFixed(1)},${sy(p[1]).toFixed(1)}`).join(' ');
-      return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="1.75" filter="url(#glow)"/>`;
+      let d = '';
+      s.points.forEach((p, j) => {
+        const x = sx(p[0]).toFixed(0), y = sy(p[1]).toFixed(0);
+        if (j === 0) d += `M${x},${y}`;
+        else d += ` L${x},${sy(s.points[j - 1][1]).toFixed(0)} L${x},${y}`; // stepped
+      });
+      const dots = s.points.map((p) => `<rect x="${(sx(p[0]) - 2).toFixed(0)}" y="${(sy(p[1]) - 2).toFixed(0)}" width="4" height="4" fill="${s.color}"/>`).join('');
+      return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="3"/>${dots}`;
     }).join('');
     this.el.innerHTML =
-      `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="none">` +
-      `<defs><filter id="glow"><feGaussianBlur stdDeviation="1.1" result="b"/>` +
-      `<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${paths}</svg>`;
+      `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="none" shape-rendering="crispEdges">${paths}</svg>`;
     return list;
   }
 }
