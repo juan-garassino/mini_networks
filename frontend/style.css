@@ -69,21 +69,9 @@ body {
   position: relative;
   background: var(--panel);
   border: 0;
-  /* white frame, black frame, hard drop shadow — the classic NES box */
-  box-shadow:
-    0 0 0 4px var(--ink-0),
-    0 0 0 8px var(--white),
-    0 0 0 12px var(--ink-0),
-    10px 12px 0 12px rgba(0,0,0,0.35);
+  /* one clean pixel border + a soft drop shadow — calmer, more room to breathe */
+  box-shadow: 0 0 0 3px var(--white), 6px 6px 0 rgba(0, 0, 0, 0.28);
   min-height: 0;
-}
-.panel::before {  /* corner rivets */
-  content: ""; position: absolute; inset: 4px; pointer-events: none;
-  background:
-    radial-gradient(var(--coin) 40%, transparent 42%) 4px 4px / 8px 8px no-repeat,
-    radial-gradient(var(--coin) 40%, transparent 42%) calc(100% - 4px) 4px / 8px 8px no-repeat,
-    radial-gradient(var(--coin) 40%, transparent 42%) 4px calc(100% - 4px) / 8px 8px no-repeat,
-    radial-gradient(var(--coin) 40%, transparent 42%) calc(100% - 4px) calc(100% - 4px) / 8px 8px no-repeat;
 }
 
 .label {
@@ -142,13 +130,13 @@ body {
 .led[data-state="unknown"] { background: var(--ink-dim); }
 
 /* ============================ VIEWS ====================================== */
-.view { display: none; min-height: 0; height: 100%; padding: 0 18px 8px; }
+.view { display: none; min-height: 0; height: 100%; padding: 6px 30px 20px; }
 .view.is-active { display: block; }
 
 /* Observatory console grid */
 .console {
   display: grid; grid-template-columns: 300px minmax(0, 1fr) 300px;
-  gap: 26px; height: 100%; min-height: 0;
+  gap: 34px; height: 100%; min-height: 0;
 }
 .rail { display: flex; flex-direction: column; overflow: hidden; }
 .rail-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px 10px; }
@@ -178,7 +166,7 @@ body {
 .run-val .k { font-family: var(--press); font-size: 6px; color: var(--ink-dim); display: block; }
 
 /* stage */
-.stage { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 26px; min-height: 0; }
+.stage { display: grid; grid-template-rows: auto auto; align-content: start; gap: 28px; min-height: 0; }
 .scope { display: flex; flex-direction: column; overflow: hidden; }
 .scope-head { display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px 8px; flex-wrap: wrap; }
 .scope-title h1 { margin: 6px 0 0; font-family: var(--press); font-size: 16px; color: var(--white); text-shadow: 3px 3px 0 var(--ink-0); }
@@ -187,7 +175,7 @@ body {
 .tag.accent { background: var(--pipe); }
 .rec { margin-left: auto; display: flex; align-items: center; gap: 7px; font-family: var(--press); font-size: 9px; color: var(--red); text-shadow: 2px 2px 0 var(--ink-0); }
 
-.scope-screen { flex: 1; min-height: 200px; margin: 0 16px; background: #060615; box-shadow: inset 0 0 0 3px var(--ink-0); position: relative; overflow: hidden; }
+.scope-screen { flex: none; height: clamp(240px, 32vh, 360px); margin: 0 18px; background: #060615; box-shadow: inset 0 0 0 3px var(--ink-0); position: relative; overflow: hidden; }
 .scope-screen .uplot, .scope-screen canvas { image-rendering: pixelated; }
 .scope-screen.is-svg { background:
   linear-gradient(rgba(94,148,252,.10) 2px, transparent 2px) 0 0 / 100% 24px,
