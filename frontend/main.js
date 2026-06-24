@@ -6,6 +6,7 @@ import { renderSamples } from './samples.js';
 import { fmtNum, statusMeta, primaryMetric, relTime } from './format.js';
 import { initLab } from './lab.js';
 import { initLessons } from './lessons.js';
+import { initSandbox } from './sandbox.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -18,6 +19,7 @@ function showView(name) {
   if (name === 'observatory') refreshDetail(); // redraw chart at correct size
   if (name === 'lab') initLab();
   if (name === 'lessons') initLessons();
+  if (name === 'sandbox') initSandbox();
 }
 $('viewnav').addEventListener('click', (e) => {
   const t = e.target.closest('.view-tab');

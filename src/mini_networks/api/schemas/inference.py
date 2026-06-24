@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 class InferRequest(BaseModel):
     checkpoint: Optional[str] = None
+    run_id: Optional[str] = None  # resolve a local run's artifacts/ as the checkpoint
     inputs: dict[str, Any] = {}
     # Optional model-specific params
     n_samples: int = 4

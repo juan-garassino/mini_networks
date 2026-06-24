@@ -87,12 +87,18 @@
 
   <!-- ===================== SANDBOX (Play) ===================== -->
   <section class="view" id="view-sandbox">
-    <div class="panel" style="height:100%">
-      <div class="coming">
-        <svg class="coin-spin" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect x="3" width="10" height="16" fill="#fbd000"/><rect x="5" width="6" height="16" fill="#ffe55c"/><rect x="6" y="3" width="4" height="10" fill="#c98a00"/></svg>
-        <div class="big">PLAY · SANDBOX</div>
-        <div class="sub">draw a digit → the net guesses · type a prompt → it writes</div>
-        <p class="hint">Interactive inference on your trained models. Wiring this view to <code>/infer</code> next.</p>
+    <div class="sandbox-grid">
+      <div class="panel pad-panel">
+        <div class="rail-head"><span class="label">Draw a Digit</span><span class="count" id="sb-model">—</span></div>
+        <div class="pad-wrap"><canvas id="pad" width="280" height="280"></canvas></div>
+        <div class="pad-btns">
+          <button class="btn-go" id="sb-guess">&#9654; GUESS</button>
+          <button class="btn-clear" id="sb-clear">CLEAR</button>
+        </div>
+      </div>
+      <div class="panel guess-panel">
+        <div class="rail-head"><span class="label">Prediction</span></div>
+        <div class="predictions" id="predictions"><p class="hint">Draw a digit 0&ndash;9, then press GUESS.</p></div>
       </div>
     </div>
   </section>
