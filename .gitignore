@@ -21,3 +21,6 @@ legacy/data/
 *.gz
 *.idx
 *-ubyte
+
+# brainstorming visual companion
+.superpowers/
