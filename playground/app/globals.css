@@ -239,3 +239,14 @@ body {
 .lesson strong { color: #3a3152; }
 .lesson table { border-collapse: collapse; margin: 10px 0; }
 .lesson th, .lesson td { border: 1px solid #efe7d8; padding: 5px 10px; }
+
+/* ---- Fluent 3D image mascots ---- */
+.m-asset { display: block; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 8px 10px rgba(60,50,30,.18)); }
+.dragon-bob { animation: bob 2.8s ease-in-out infinite; }
+.celebrate .dragon-bob { animation: celebrate 0.9s cubic-bezier(.3,1.4,.5,1); }
+.bot-bob { animation: bob 3.2s ease-in-out infinite; }
+.m-sway { animation: sway2 3.6s ease-in-out infinite; transform-origin: bottom center; }
+.m-twinkle { animation: twinkle 2.6s ease-in-out infinite; }
+.m-float { animation: floaty 6s ease-in-out infinite; }
+.m-bobimg { animation: bob 3.4s ease-in-out infinite; }
+@keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }

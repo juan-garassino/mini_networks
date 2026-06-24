@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Play, Gamepad2, FlaskConical, Trophy } from "lucide-react";
+import { Planet } from "@/components/mascots";
 
 export type ViewId = "observatory" | "sandbox" | "lab" | "quest";
 
@@ -51,6 +52,7 @@ export function TopBar({ view, setView, src, ok }: { view: ViewId; setView: (v: 
       </nav>
 
       <div className="ml-auto flex items-center gap-4 font-extrabold text-white">
+        <Planet size={46} />
         <span className="hidden items-center gap-1.5 text-[13px] sm:flex"><span className="text-[#ffd23f]">SRC</span>{src.toUpperCase()}</span>
         <span className="hidden items-center gap-1.5 text-[13px] tabular-nums sm:flex"><span className="text-[#ffd23f]">UTC</span>{clock}</span>
         <span className={`h-2.5 w-2.5 rounded-full ${ok ? "bg-[#2ecc71] shadow-[0_0_0_4px_rgba(46,204,113,.22)]" : "bg-[#ff6b6b]"}`} />

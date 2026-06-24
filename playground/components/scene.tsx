@@ -20,14 +20,6 @@ const Cloud = ({ cls }: { cls: string }) => (
   </svg>
 );
 
-const Butterfly = ({ cls, a, b }: { cls: string; a: string; b: string }) => (
-  <svg className={`bfly ${cls}`} viewBox="0 0 40 34">
-    <g className="bw"><path d="M20 17 C6 0 -4 8 6 18 C-2 26 10 30 20 17Z" fill={a} /></g>
-    <g className="bw r"><path d="M20 17 C6 0 -4 8 6 18 C-2 26 10 30 20 17Z" fill={b} /></g>
-    <rect x="18.5" y="6" width="3" height="22" rx="1.5" fill="#3a2c4a" />
-  </svg>
-);
-
 export function Scene() {
   const reduce = useReducedMotion();
   const mx = useMotionValue(0), my = useMotionValue(0);
@@ -112,8 +104,10 @@ export function Scene() {
         <span key={i} className="spore" style={{ left: `${s.l}%`, ["--d" as string]: `${s.d}s`, animationDelay: `${s.delay}s` }} />
       ))}</div>
 
-      <Butterfly cls="b1" a="#b98bff" b="#8ad6ff" />
-      <Butterfly cls="b2" a="#ffb1d8" b="#ffd27a" />
+      {/* eslint-disable @next/next/no-img-element */}
+      <img className="bfly b1" src="/mascots/butterfly.png" alt="" width={40} draggable={false} style={{ height: "auto" }} />
+      <img className="bfly b2" src="/mascots/butterfly.png" alt="" width={34} draggable={false} style={{ height: "auto" }} />
+      {/* eslint-enable @next/next/no-img-element */}
 
       <svg className="vine vine-l" viewBox="0 0 160 160"><g fill="#4e8c3a"><path d="M0 0 Q60 10 70 60 Q40 40 0 40Z" /><path d="M0 30 Q40 44 44 84 Q22 64 0 64Z" opacity=".9" /></g><g fill="#6fae4f"><circle cx="66" cy="58" r="9" /><circle cx="40" cy="80" r="7" /></g></svg>
       <svg className="vine vine-r" viewBox="0 0 160 160"><g fill="#4e8c3a"><path d="M160 0 Q100 10 90 60 Q120 40 160 40Z" /><path d="M160 30 Q120 44 116 84 Q138 64 160 64Z" opacity=".9" /></g><g fill="#6fae4f"><circle cx="94" cy="58" r="9" /><circle cx="120" cy="80" r="7" /></g></svg>
