@@ -15,7 +15,7 @@ TRAINING_TIER="${TRAINING_TIER:-M}"
 DEVICE="${DEVICE:-cpu}"
 CHECKPOINT_ROOT="${CHECKPOINT_ROOT:-/tmp/runs}"
 RUN_NAME="${RUN_NAME:-${MODEL}-$(date -u +%Y%m%d-%H%M%S)}"
-HPARAMS="${HPARAMS:-{}}"
+HPARAMS="${HPARAMS:-}"   # default empty; the JSON parse below treats empty as {}
 
 echo "=== mini_networks train ==="
 echo "model=${MODEL} tier=${TRAINING_TIER} device=${DEVICE} run=${RUN_NAME}"
@@ -36,12 +36,12 @@ if [ -n "${EPOCHS:-}" ]; then
   ARGS+=(--epochs "$EPOCHS")
 fi
 
-BATCH_SIZE="$(python -c "import json,os,sys; print(json.loads(os.environ.get('HPARAMS','{}')).get('batch_size',''))")"
+BATCH_SIZE="$(python -c "import json,os; print(json.loads(os.environ.get('HPARAMS') or '{}').get('batch_size',''))")"
 if [ -n "$BATCH_SIZE" ]; then
   ARGS+=(--batch_size "$BATCH_SIZE")
 fi
 
-EPOCHS_HP="$(python -c "import json,os; print(json.loads(os.environ.get('HPARAMS','{}')).get('epochs',''))")"
+EPOCHS_HP="$(python -c "import json,os; print(json.loads(os.environ.get('HPARAMS') or '{}').get('epochs',''))")"
 if [ -z "${EPOCHS:-}" ] && [ -n "$EPOCHS_HP" ]; then
   ARGS+=(--epochs "$EPOCHS_HP")
 fi
