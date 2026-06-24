@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Settings, ClipboardList, PawPrint } from "lucide-react";
 import { Panel, PanelHead, Chip } from "@/components/panel";
-import { Avatar, Dragon, Bot, Sprout, Star, Plane } from "@/components/mascots";
+import { Avatar, Sprout, Star, Plane } from "@/components/mascots";
+import { HeroMascot, runEmotion } from "@/components/hero-mascot";
 import { LossChart, plottable } from "@/components/loss-chart";
 import { getMetrics, getConfig, getSummary, artifactUrl } from "@/lib/api";
 import { fmtNum, statusMeta, primaryMetric, relTime } from "@/lib/format";
@@ -26,6 +27,7 @@ export function Observatory({ runs }: { runs: RunSummary[] }) {
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [summary, setSummary] = useState<Record<string, unknown>>({});
+  const [justFinished, setJustFinished] = useState(false);
   const dragonRef = useRef<HTMLDivElement>(null);
   const prevStatus = useRef<string | null>(null);
 
@@ -58,12 +60,19 @@ export function Observatory({ runs }: { runs: RunSummary[] }) {
     if (!sel) return;
     if (prevStatus.current && prevStatus.current !== sel.status && sel.status === "done") {
       const el = dragonRef.current;
-      if (el) { el.classList.add("celebrate"); sparkleAt(el.querySelector("svg")); setTimeout(() => el.classList.remove("celebrate"), 950); }
+      if (el) { el.classList.add("celebrate"); sparkleAt(el); setTimeout(() => el.classList.remove("celebrate"), 950); }
+      setJustFinished(true); setTimeout(() => setJustFinished(false), 2600);
     }
     prevStatus.current = sel.status;
   }, [sel?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = metrics ? plottable(metrics.series).map((s) => ({ key: s.key, color: s.color, val: s.points.at(-1)?.[1] })) : [];
+  const emotion = runEmotion(runs.length > 0, sel?.status ?? null, justFinished);
+  const bubble = !runs.length ? "zZ… plant a seed in Lab"
+    : justFinished ? "Done! 🎉"
+    : running ? "Learning… 🚀"
+    : sel?.status === "failed" ? "Oops — that one failed"
+    : "All good! ✨";
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[310px_minmax(0,1fr)_300px] gap-5 px-6 py-5 max-[1240px]:grid-cols-[270px_minmax(0,1fr)]">
@@ -116,9 +125,9 @@ export function Observatory({ runs }: { runs: RunSummary[] }) {
           <div className="mx-[18px] mt-1.5 h-[clamp(220px,30vh,320px)]">
             {metrics ? <LossChart series={metrics.series} /> : <div className="grid h-full place-content-center text-sm text-[#a59cc0]">{runs.length ? "Loading…" : "No runs yet — plant a seed in Lab 🌱"}</div>}
           </div>
-          <div ref={dragonRef} className="pointer-events-none absolute bottom-[88px] right-6 z-[2] w-[118px] text-center">
-            <div className="absolute -top-9 right-14 animate-[bob_2.8s_ease-in-out_infinite] whitespace-nowrap rounded-2xl bg-white px-3 py-2 font-display text-[13px] font-semibold text-[#7d5fff] shadow-[0_6px_18px_rgba(74,60,40,.16)]">Learning in progress! 🚀</div>
-            <Dragon />
+          <div ref={dragonRef} className="pointer-events-none absolute bottom-[76px] right-4 z-[2] w-[142px] text-center">
+            <div className="absolute -top-9 right-20 animate-[bob_2.8s_ease-in-out_infinite] whitespace-nowrap rounded-2xl bg-white px-3 py-2 font-display text-[13px] font-semibold text-[#7d5fff] shadow-[0_6px_18px_rgba(74,60,40,.16)]">{bubble}</div>
+            <HeroMascot hero="dragon" emotion={emotion} size={142} className="bobbing" />
           </div>
           <div className="flex flex-wrap gap-3.5 px-5 pb-4 pt-3.5">
             {stats.map((s) => (
@@ -147,7 +156,7 @@ export function Observatory({ runs }: { runs: RunSummary[] }) {
                   })
                 : <div className="px-3 py-6 text-sm text-[#a59cc0]">no specimens yet</div>}
             </div>
-            <div className="pointer-events-none absolute -bottom-2 right-6 z-[2]"><Bot /></div>
+            <div className="pointer-events-none absolute -bottom-3 right-6 z-[2]"><HeroMascot hero="robot" emotion="idle" size={116} className="bobbing" /></div>
             <div className="pointer-events-none absolute bottom-[70px] left-[200px] z-[2]"><Plane /></div>
           </div>
         </Panel>
