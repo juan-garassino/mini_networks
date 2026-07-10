@@ -326,6 +326,11 @@ class IrisDataset(Dataset):
             X = X[:50]
             y = y[:50]
         self._X = torch.tensor(X, dtype=torch.float32)
+        # Standardize with DATASET-global stats at load. Per-batch normalization
+        # downstream broke eval: iris.data is class-sorted, so unshuffled eval
+        # batches are near-single-class and batch stats erase the class signal
+        # (accuracy pinned at 0.55 regardless of training — m-triage-3).
+        self._X = (self._X - self._X.mean(dim=0)) / (self._X.std(dim=0) + 1e-6)
         self._y = torch.tensor(y, dtype=torch.long)
 
     def __len__(self) -> int:

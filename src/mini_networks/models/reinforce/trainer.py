@@ -20,7 +20,8 @@ def _make_env(config: ReinforceConfig) -> MazeEnv:
     h = 5 if config.effective_tier == "S" else config.maze_height
     # m_cap 50->100 steps/episode (same rationale as rl_maze).
     steps = config.limit_steps(config.max_steps, s_cap=12, m_cap=100)
-    return MazeEnv(width=w, height=h, density=config.maze_density, max_steps=steps)
+    return MazeEnv(width=w, height=h, density=config.maze_density, max_steps=steps,
+                   seed=config.seed)  # fixed maze: train and the round-tripped eval must see the SAME maze (unseeded envs gave a different maze per instance -> success_rate 0.0, m-triage-3)
 
 
 class ReinforceTrainer(BaseTrainer):

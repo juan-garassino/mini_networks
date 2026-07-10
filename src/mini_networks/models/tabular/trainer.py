@@ -11,7 +11,6 @@ from mini_networks.core.config import BaseConfig
 from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
 from mini_networks.core.runtime import BaseTrainer, SupervisedTrainer
-from mini_networks.core.data.tabular import normalize_batch
 from mini_networks.models.tabular.config import TabularClassifierConfig
 from mini_networks.models.tabular.model import TabularMLP, TabularLinear, TabularTransformer
 
@@ -36,9 +35,11 @@ class TabularClassifierTrainer(SupervisedTrainer):
         ).to(config.device)
 
     def _forward(self, model, batch, config: TabularClassifierConfig):
+        # Features arrive dataset-standardized (IrisDataset). Do NOT re-normalize
+        # per batch: class-sorted eval batches made batch stats collapse the
+        # class signal (accuracy pinned at 0.55 — m-triage-3).
         x, y = batch
-        x = normalize_batch(x.to(config.device))
-        return model(x), y
+        return model(x.to(config.device)), y
 
     def infer(self, config: BaseConfig, inputs: Any) -> Any:
         assert isinstance(config, TabularClassifierConfig)
