@@ -5,7 +5,9 @@
 # lock over a transitive picomatch pin that npm 10.9 accepts).
 FROM node:22-slim AS ui
 WORKDIR /ui
-COPY playground/package.json playground/package-lock.json ./
+# .npmrc must ride along: the lockfile was authored with legacy-peer-deps
+# and a clean npm rejects it without the flag.
+COPY playground/package.json playground/package-lock.json playground/.npmrc ./
 RUN npm ci
 COPY playground/ .
 RUN npm run build
