@@ -21,6 +21,21 @@ resource "google_storage_bucket_iam_member" "runtime_objects" {
   }
 }
 
+# Runtime SA writes run artifacts + registry checkpoints to the tracker's
+# bucket (direct gs:// artifact URIs — see gcs.tf). Scoped by IAM condition to
+# the mini-networks EXPERIMENT prefix (id 10 on the shared tracker) so this SA
+# can never touch the desktop projects' artifacts. If the experiment is ever
+# recreated it gets a new id — update the prefix here.
+resource "google_storage_bucket_iam_member" "runtime_mlflow_objects" {
+  bucket = data.google_storage_bucket.mlflow_artifacts.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.runtime.email}"
+  condition {
+    title      = "mini-networks-experiment-prefix"
+    expression = "resource.name.startsWith(\"projects/_/buckets/garassino-ml-mlflow-artifacts/objects/10/\")"
+  }
+}
+
 # Trigger SA: launch Cloud Run Jobs WITH OVERRIDES — needs run.developer
 # (run.invoker is NOT sufficient for runJob-with-overrides).
 resource "google_project_iam_member" "trigger_run_developer" {
