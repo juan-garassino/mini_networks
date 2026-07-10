@@ -750,15 +750,22 @@ def _ensure_iris(data_root: str, require_downloads: bool = True):
 
 
 class _Subset(Dataset):
-    def __init__(self, dataset: Dataset, limit: int):
+    """Seeded RANDOM subset — not a head-slice. Head-slicing biased
+    class-sorted datasets: FSDD's first ~512 files are almost all digits 0-1,
+    which let the audio classifiers score a fake 1.0 at the old M sample
+    budget and collapse on the honest full set (m-full-2)."""
+
+    def __init__(self, dataset: Dataset, limit: int, seed: int = 123):
         self._dataset = dataset
         self._limit = min(limit, len(dataset))
+        g = torch.Generator().manual_seed(seed)
+        self._indices = torch.randperm(len(dataset), generator=g)[: self._limit].tolist()
 
     def __len__(self) -> int:
         return self._limit
 
     def __getitem__(self, idx: int):
-        return self._dataset[idx]
+        return self._dataset[self._indices[idx]]
 
     def __getattr__(self, name: str):
         return getattr(self._dataset, name)

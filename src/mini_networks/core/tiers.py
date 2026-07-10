@@ -21,9 +21,19 @@ DEFAULTS: dict[str, dict[str, int | None]] = {
 
 # model_name -> tier -> partial budget override (merged over DEFAULTS)
 MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
-    # judge_score trajectory: 0.023 @ 24 steps, 0.048 @ 500, 0.139 @ 2k —
-    # still climbing with steps; 3.5k should clear the 0.15 bar (m-triage-3).
-    "gan": {"M": {"epochs": 35}},
+    # judge trajectory without EMA: 0.023 @ 24 steps, 0.048 @ 500, 0.139 @ 2k,
+    # 0.049 @ 3.5k (non-monotone). With generator EMA, run long and let the
+    # slow average ride out the oscillations (m-full-2).
+    "gan": {"M": {"epochs": 50}},
+    # judge 0.31 and 0.18 on identical configs @ 5 epochs — the metric sits ON
+    # the 0.25 bar; double the steps for margin (m-full-2).
+    "diffusion": {"M": {"epochs": 10}},
+    # Honest FSDD (random subset, all 10 classes) needs real training: the old
+    # 1.0 came from a head-sliced 2-class subset (m-full-2).
+    "audio_classifier": {"M": {"epochs": 15}},
+    "audio_spectrogram": {"M": {"epochs": 15}},
+    "audio_melspectrogram": {"M": {"epochs": 15}},
+    "audio_transformer": {"M": {"epochs": 15}},
     # 0.71 accuracy @ 5 epochs: depthwise-separable blocks train slower than
     # plain convs; double the epochs.
     "mobilenet": {"M": {"epochs": 10}},
