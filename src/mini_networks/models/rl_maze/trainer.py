@@ -20,7 +20,8 @@ from mini_networks.models.rl_maze.agents import QAgent, DQNAgent, PPOAgent
 def _make_env(config: RLMazeConfig) -> MazeEnv:
     w = 5 if config.effective_tier == "S" else config.maze_width
     h = 5 if config.effective_tier == "S" else config.maze_height
-    steps = config.limit_steps(config.max_steps, s_cap=12, m_cap=50)
+    # m_cap 50->100 steps/episode: 50 is barely the optimal path length on 8x8.
+    steps = config.limit_steps(config.max_steps, s_cap=12, m_cap=100)
     return MazeEnv(width=w, height=h, density=config.maze_density, max_steps=steps)
 
 
@@ -96,7 +97,9 @@ class RLMazeTrainer(BaseTrainer):
         agent = _make_agent(config, state_size=len(state))
         self.agent = agent
 
-        n_episodes = config.limit_steps(config.n_episodes, s_cap=2, m_cap=20)
+        # m_cap raised 20->300 (m-triage-2): no agent learns an 8x8 maze in
+        # 20 episodes — success_rate sat at 0.0; episodes are cheap (<1s each).
+        n_episodes = config.limit_steps(config.n_episodes, s_cap=2, m_cap=300)
         logger.log_config(config.model_dump())
 
         for ep in range(n_episodes):

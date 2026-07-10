@@ -18,7 +18,8 @@ from mini_networks.models.rl_maze.env import MazeEnv
 def _make_env(config: ReinforceConfig) -> MazeEnv:
     w = 5 if config.effective_tier == "S" else config.maze_width
     h = 5 if config.effective_tier == "S" else config.maze_height
-    steps = config.limit_steps(config.max_steps, s_cap=12, m_cap=50)
+    # m_cap 50->100 steps/episode (same rationale as rl_maze).
+    steps = config.limit_steps(config.max_steps, s_cap=12, m_cap=100)
     return MazeEnv(width=w, height=h, density=config.maze_density, max_steps=steps)
 
 
@@ -40,7 +41,9 @@ class ReinforceTrainer(BaseTrainer):
         optimizer = torch.optim.Adam(policy.parameters(), lr=config.learning_rate)
         logger.log_config(config.model_dump())
 
-        n_episodes = config.limit_steps(config.n_episodes, s_cap=2, m_cap=20)
+        # m_cap raised 20->300 (m-triage-2): success_rate sat at 0.0 — REINFORCE
+        # needs hundreds of episodes of exploration on the maze.
+        n_episodes = config.limit_steps(config.n_episodes, s_cap=2, m_cap=300)
         for ep in range(n_episodes):
             state = env.reset()
             done = False

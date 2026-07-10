@@ -20,7 +20,17 @@ DEFAULTS: dict[str, dict[str, int | None]] = {
 }
 
 # model_name -> tier -> partial budget override (merged over DEFAULTS)
-MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {}
+MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
+    # m-triage-2 evidence: judge_score 0.048 @ 500 steps (was 0.023 @ 24) —
+    # adversarial training needs ~2k steps before samples look digit-like.
+    "gan": {"M": {"epochs": 20}},
+    # 0.71 accuracy @ 5 epochs: depthwise-separable blocks train slower than
+    # plain convs; double the epochs.
+    "mobilenet": {"M": {"epochs": 10}},
+    # 0.55 accuracy @ 5 epochs on a tiny tabular set where epochs cost
+    # milliseconds — let it actually converge.
+    "tabular_classifier": {"M": {"epochs": 40}},
+}
 
 
 def budget(model_name: str, tier: str, key: str) -> int | None:
