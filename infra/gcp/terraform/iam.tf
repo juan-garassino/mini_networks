@@ -31,8 +31,13 @@ resource "google_storage_bucket_iam_member" "runtime_mlflow_objects" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.runtime.email}"
   condition {
-    title      = "mini-networks-experiment-prefix"
-    expression = "resource.name.startsWith(\"projects/_/buckets/garassino-ml-mlflow-artifacts/objects/10/\")"
+    title = "mini-networks-experiment-prefix"
+    # Two resource shapes: objects under the experiment prefix (read/write
+    # content) and the bucket itself — storage.objects.list is authorized
+    # against the BUCKET resource, so without that arm the prefix-scoped
+    # grant can't list (champion pulls + the /web read-layer both 403'd).
+    # List exposes object NAMES bucket-wide; content stays 10/-only.
+    expression = "resource.name.startsWith(\"projects/_/buckets/garassino-ml-mlflow-artifacts/objects/10/\") || resource.name == \"projects/_/buckets/garassino-ml-mlflow-artifacts\""
   }
 }
 

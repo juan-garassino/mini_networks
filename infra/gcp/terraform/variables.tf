@@ -56,13 +56,13 @@ variable "trigger_sa_id" {
 # name and the GitHub repo that may impersonate the runtime SA for CI image push.
 variable "wif_provider" {
   type        = string
-  default     = ""
-  description = "projects/<op-number>/locations/global/workloadIdentityPools/gh-actions/providers/github"
+  default     = "projects/634336216563/locations/global/workloadIdentityPools/gh-actions/providers/github"
+  description = "garassino-op's gh-actions pool (project number 634336216563)"
 }
 
 variable "github_repo" {
   type        = string
-  default     = "juan-garassino/mini-networks"
+  default     = "juan-garassino/mini_networks" # underscore — the actual GitHub repo name
   description = "owner/repo allowed to impersonate the runtime SA via WIF"
 }
 
