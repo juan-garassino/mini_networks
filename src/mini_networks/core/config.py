@@ -21,6 +21,9 @@ class BaseConfig(BaseModel):
     device: str = "cpu"
     seed: int = 42
     fast_demo: bool = False
+    # Optional global gradient clipping (None = off). Stability knob for M/L
+    # triage; per-model defaults belong in the model's Config subclass.
+    max_grad_norm: float | None = None
 
     @property
     def effective_tier(self) -> Literal["S", "M", "L"]:

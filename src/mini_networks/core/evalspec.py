@@ -61,6 +61,7 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "lora":                  _acc(0.60, 0.80, loss_keys=("loss", "pretrain_loss", "finetune_loss")),
     "clip":                  _loss(2.5, 1.5, loss_keys=("clip_loss", "loss")),
     "simclr":                _loss(4.0, 3.0),
+    "dino":                  _loss(4.2, 3.5),   # uniform baseline is ln(64)≈4.16; conservative first guess, tune after first M sweep
     "vision_embed":          _loss(4.0, 3.0),
     "transformer":           _loss(2.6, 2.0),    # char-level Shakespeare CE
     "mamba":                 _loss(2.8, 2.2),
