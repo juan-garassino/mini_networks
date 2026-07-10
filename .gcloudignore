@@ -1,15 +1,17 @@
 # Cloud Build upload context — keep it to what Dockerfile.train COPYs
 # (pyproject.toml, uv.lock, src/, main.py, infra/gcp/entrypoint.sh).
-.git
-.venv
-node_modules
-playground/node_modules
-playground/out
-playground/.next
-runs/
-data/
-legacy/
-mlruns/
-infra/gcp/terraform/.terraform/
-**/__pycache__/
+# Patterns are ANCHORED with a leading slash: an unanchored `data/` would also
+# exclude src/mini_networks/core/data/ (it did — broken image, 2026-07-10).
+/.git
+/.venv
+/node_modules
+/playground/node_modules
+/playground/out
+/playground/.next
+/runs/
+/data/
+/legacy/
+/mlruns/
+/infra/gcp/terraform/.terraform/
+__pycache__/
 *.pt
