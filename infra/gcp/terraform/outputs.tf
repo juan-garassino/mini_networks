@@ -2,6 +2,10 @@ output "train_job" {
   value = google_cloud_run_v2_job.train.name
 }
 
+output "app_url" {
+  value = google_cloud_run_v2_service.app.uri
+}
+
 output "topic" {
   value = google_pubsub_topic.train_requests.id
 }

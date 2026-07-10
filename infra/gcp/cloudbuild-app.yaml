@@ -1,0 +1,16 @@
+# Builds the public showcase image (playground + API + champions).
+# Submit from the repo root: gcloud builds submit --config infra/gcp/cloudbuild-app.yaml .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - infra/gcp/Dockerfile.app
+      - -t
+      - europe-west1-docker.pkg.dev/$PROJECT_ID/ml-images/mini-networks-app:latest
+      - .
+images:
+  - europe-west1-docker.pkg.dev/$PROJECT_ID/ml-images/mini-networks-app:latest
+timeout: 1800s
+options:
+  machineType: E2_HIGHCPU_8
