@@ -157,10 +157,11 @@ that line when it does.
 ## Working state
 
 - Phase 0 (foundation) + Phase 1 (quality gate) + Phase 3 (docs) done.
-- Phase 2: M-tier stabilization until all 51 items pass — driver is now the
-  **parallel cloud sweep** (`make -C infra/gcp sweep TIER=M` → `sweep-report`
-  → triage worst-first; rerun failures with `ITEMS=…`). Colab notebook
-  (`colab/notebooks/00_sweep.ipynb`) remains a fallback.
+- **Phase 2 M-tier: 51/51 green (2026-07-10)** via 6 rounds of the parallel
+  cloud sweep (`make -C infra/gcp sweep TIER=M` → `sweep-report` → triage;
+  rerun failures with `ITEMS=…`). Thresholds carry evidence comments from
+  those rounds. CI's `sweep-s` should now be green — remove its
+  `continue-on-error` once confirmed.
 - Playground + GCP training landed: MLflow sink → global `garassino-mlflow`
   tracker (Cloud SQL; Neon plan superseded), champion/challenger Model
   Registry (`mini-<model>`), `/web` read-layer, Observatory SPA,
