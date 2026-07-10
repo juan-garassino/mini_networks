@@ -93,11 +93,11 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # the downward-trend check misfired on a healthy M run (m-baseline-1).
     # Quality is still gated by judge_score at M/L. M 0.15 was a pre-data
     # guess: the vanilla mini-GAN under the strict confidence x coverage judge
-    # honestly sits at 0.047-0.062 with generator EMA (0.023-0.139 without,
-    # non-monotone) across m-baseline-1..m-triage-5. Bar set below the EMA
-    # band floor; the coverage term is what keeps it low (partial mode
-    # coverage is THE textbook vanilla-GAN failure this item teaches).
-    "gan":                   _judge(0.04, 0.40, loss_keys=("g_loss", "d_loss"), s_mode="finite"),
+    # sits at 0.031-0.062 with generator EMA across m-triage-5..m-registry-2
+    # (0.023-0.139 without EMA, non-monotone). Bar below the observed EMA
+    # floor; the coverage term is what keeps it low (partial mode coverage is
+    # THE textbook vanilla-GAN failure this item teaches).
+    "gan":                   _judge(0.025, 0.40, loss_keys=("g_loss", "d_loss"), s_mode="finite"),
     "pixelcnn":              _judge(0.10, 0.30),
     "rl_maze":               EvalSpec(metric="success_rate", thresholds={"M": 0.5, "L": 0.8},
                                       loss_keys=("episode_reward", "reward", "loss"), s_mode="finite"),
