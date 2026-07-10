@@ -51,17 +51,16 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "vit":                   _acc(0.75, 0.90),   # ViTs need more data; lower bar at M
     "mobilenet":             _acc(0.80, 0.93),
     "convnext":              _acc(0.80, 0.93),
-    "tabular_classifier":    _acc(0.80, 0.90),
-    # Raw-waveform 1D CNN plateaus at ~0.37 on honest 10-class FSDD
-    # (0.36 @ 40 epochs vs 0.38 @ 15, m-full-3) — the point of this item is
-    # that raw waveforms are the WRONG representation; its spectrogram
-    # siblings score 0.45-0.99. Bar set below the plateau.
-    "audio_classifier":      _acc(0.30, 0.60),
-    # Observed 0.45/0.56 across M runs at 15 epochs — the 0.50 bar sat
-    # mid-band and flapped; aligned with audio_transformer's 0.40 bar.
-    "audio_spectrogram":     _acc(0.40, 0.80),
-    "audio_transformer":     _acc(0.40, 0.75),
-    "audio_melspectrogram":  _acc(0.50, 0.80),
+    "tabular_classifier":    _acc(0.75, 0.90),   # provisional post-split-fix: 30-row honest eval, 1 miss = -3.3%
+    # PROVISIONAL (2026-07-11): every pre-split-fix audio number was TRAINING
+    # accuracy (FSDD ignored `split` — train==eval; gate audit). Bars below
+    # are placed under the expected honest-eval bands and must be re-derived
+    # from the first post-fix sweep. audio_classifier's raw-waveform lesson
+    # (wrong representation vs spectrograms) still holds.
+    "audio_classifier":      _acc(0.20, 0.50),
+    "audio_spectrogram":     _acc(0.35, 0.70),
+    "audio_transformer":     _acc(0.40, 0.75),   # provisional post-split-fix (0.99 was memorized train acc)
+    "audio_melspectrogram":  _acc(0.40, 0.70),   # provisional post-split-fix (was 0.50 on leaked eval)
     "segmentation":          EvalSpec(metric="eval_iou", thresholds={"M": 0.55, "L": 0.75}),
     "detection":             EvalSpec(metric="eval_accuracy", thresholds={"M": 0.55, "L": 0.80}),
     "lora":                  _acc(0.60, 0.80, loss_keys=("loss", "pretrain_loss", "finetune_loss")),
@@ -81,7 +80,12 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),
     "text_seq2seq":          _loss(2.5, 1.8),
     "text_token_classifier": _loss(1.5, 0.8),
-    "vae":                   _loss(220.0, 160.0),  # ELBO-ish recon+KL per image
+    # Units fixed 2026-07-11: the model returns mean-reduced per-PIXEL
+    # recon+KL, so the old 220 "per image" bar passed anything (observed band
+    # 0.066-0.097 — ~3000x under it; gate audit). Collapse detector only: a
+    # mean-image decoder scores ~0.05-0.06, inside the band, so this bar
+    # can't catch that — sample quality is judged visually in the showcase.
+    "vae":                   _loss(0.12, 0.08),
     "unet_ae":               _loss(0.08, 0.03),
     "tabular_diffusion":     _loss(1.0, 0.6),
     # M 0.25 was a pre-data guess. Observed honest band across 4 independent
@@ -98,7 +102,11 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # floor; the coverage term is what keeps it low (partial mode coverage is
     # THE textbook vanilla-GAN failure this item teaches).
     "gan":                   _judge(0.025, 0.40, loss_keys=("g_loss", "d_loss"), s_mode="finite"),
-    "pixelcnn":              _judge(0.10, 0.30),
+    # Raised 0.10 -> 0.5 (2026-07-11 audit): honest band 0.71-0.77 across 3
+    # post-fix runs — the old bar was a stale pre-data guess 7x below it.
+    # Caveat in the audit: judges are overconfident on binary noise, so this
+    # number flatters pixelcnn vs the continuous samplers; still a real bar.
+    "pixelcnn":              _judge(0.5, 0.6),
     "rl_maze":               EvalSpec(metric="success_rate", thresholds={"M": 0.5, "L": 0.8},
                                       loss_keys=("episode_reward", "reward", "loss"), s_mode="finite"),
     "reinforce":             EvalSpec(metric="success_rate", thresholds={"M": 0.4, "L": 0.7},
