@@ -262,6 +262,27 @@ def cmd_sweep_samples(args: argparse.Namespace) -> None:
     sys.exit(download_sweep_samples(args))
 
 
+def cmd_pull_champions(args: argparse.Namespace) -> None:
+    """Pull every Production mini-<model> checkpoint for local inference."""
+    from rich.console import Console
+    from rich.table import Table
+    from mini_networks.cloud.champions import pull_champions
+
+    models = [m.strip() for m in args.models.split(",") if m.strip()] if args.models else None
+    status = pull_champions(models, checkpoint_root=args.checkpoint_root)
+
+    table = Table(title="Registry champions")
+    table.add_column("Model")
+    table.add_column("Status")
+    for name, s in status.items():
+        style = "green" if s.startswith("v") else ("yellow" if s == "no champion" else "red")
+        table.add_row(name, f"[{style}]{s}[/{style}]")
+    Console().print(table)
+    pulled = sum(1 for s in status.values() if s.startswith("v"))
+    print(f"{pulled}/{len(status)} champions in {args.checkpoint_root}/champions/")
+    sys.exit(0 if pulled else 1)
+
+
 def _run_checked_sweep(console, models: list[str], compositions: list[str],
                        args: argparse.Namespace) -> None:
     """Quality-gate mode: per-item EvalSpec checks + report.{md,json}."""
@@ -396,6 +417,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_smp.add_argument("--prefix", default=os.environ.get("MN_SWEEP_PREFIX", "mini-networks"))
     p_smp.add_argument("--dest", default="~/Downloads")
 
+    # pull-champions — registry champions -> local checkpoints for /infer
+    p_ch = sub.add_parser("pull-champions", help="Download Production mini-<model> checkpoints")
+    p_ch.add_argument("--models", default=None, help="Comma list (default: all models)")
+    p_ch.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
+
     # list
     sub.add_parser("list", help="List all models and compositions")
 
@@ -428,9 +454,10 @@ def main() -> None:
         "train":        cmd_train,
         "compose":      cmd_compose,
         "sweep":        cmd_sweep,
-        "sweep-task":    cmd_sweep_task,
-        "sweep-report":  cmd_sweep_report,
-        "sweep-samples": cmd_sweep_samples,
+        "sweep-task":      cmd_sweep_task,
+        "sweep-report":    cmd_sweep_report,
+        "sweep-samples":   cmd_sweep_samples,
+        "pull-champions":  cmd_pull_champions,
         "evaluate":     cmd_evaluate,
         "menu":         cmd_menu,
         "list":         cmd_list,

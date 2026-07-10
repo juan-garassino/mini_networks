@@ -39,6 +39,9 @@ web/                 read-layer: metrics.py (pivot) + sources.py (Local/MLflow/
 cloud/               publisher.py: JobSpec + Pub/Sub publisher (cloud train dispatch)
                      sweep_shard.py: task-index→item sharding for the parallel
                      sweep job + GCS shard upload + report merge
+                     champions.py: pull Production mini-<model> checkpoints to
+                     runs/champions/<model>/artifacts (POST /infer falls back
+                     to these when no run/checkpoint is named)
 playground/ (repo root)  Next.js 16 + React 19 + TS + Tailwind v4 + shadcn/ui +
                      Recharts + Motion + Lucide. Toy/storybook "enchanted grove"
                      UI (4 views: Watch/Play/Lab/Quest). Static-exported
@@ -114,6 +117,7 @@ Writes `runs/sweep/<ts>/report.{md,json}`; non-zero exit on any non-pass.
 - `python main.py train --model <name> --fast_demo` — one nano training
 - `python main.py sweep --check --fast_demo --models clip,gan --skip-compositions` — targeted gate
 - `python main.py serve` — FastAPI on :8000; playground at `/` (serves `playground/out`), API docs at `/docs`
+- `MN_MLFLOW_TRACKING_URI=<tracker> python main.py pull-champions [--models a,b]` — download every Production `mini-<model>` checkpoint to `runs/champions/`; `/infer/<model>` then serves them by default (needs the `cloud` extra + GCS read access)
 - `make playground` — build the Next.js UI to `playground/out` (rebuild after UI changes; CI builds it for deploy)
 - `make playground-dev` — Next dev server on :3000 with hot reload (proxies API to :8000 via `NEXT_PUBLIC_API_BASE`)
 - `make -C infra/gcp validate` — terraform fmt-check + validate (static, no cloud)
@@ -136,9 +140,8 @@ Writes `runs/sweep/<ts>/report.{md,json}`; non-zero exit on any non-pass.
 ## CI (.github/workflows/ci.yml)
 
 Jobs: `smoke-import` (imports every module), `test` (`make test-ci`), `sweep-s`
-(full S-tier check sweep, report uploaded as artifact). `sweep-s` is
-`continue-on-error: true` until Phase 2 stabilization makes it green — remove
-that line when it does.
+(full S-tier check sweep, report uploaded as artifact). All blocking and green
+as of 2026-07-10 (PR #1).
 
 ## Conventions
 
@@ -160,8 +163,8 @@ that line when it does.
 - **Phase 2 M-tier: 51/51 green (2026-07-10)** via 6 rounds of the parallel
   cloud sweep (`make -C infra/gcp sweep TIER=M` → `sweep-report` → triage;
   rerun failures with `ITEMS=…`). Thresholds carry evidence comments from
-  those rounds. CI's `sweep-s` should now be green — remove its
-  `continue-on-error` once confirmed.
+  those rounds. All 32 models have Production `mini-<model>` registry
+  champions; `pull-champions` + the `/infer` fallback serve them locally.
 - Playground + GCP training landed: MLflow sink → global `garassino-mlflow`
   tracker (Cloud SQL; Neon plan superseded), champion/challenger Model
   Registry (`mini-<model>`), `/web` read-layer, Observatory SPA,

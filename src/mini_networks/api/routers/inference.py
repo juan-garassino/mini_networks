@@ -44,6 +44,17 @@ async def run_inference(model_name: str, request: InferRequest):
         except RunNotFound:
             raise HTTPException(status_code=404, detail=f"Run not found: {request.run_id}")
 
+    # No run named at all → serve the registry champion when one was pulled
+    # (`python main.py pull-champions`), instead of an untrained model.
+    if not checkpoint and not request.run_id:
+        import os
+
+        from mini_networks.cloud.champions import champion_artifacts_dir, has_champion
+
+        root = os.path.join(os.getcwd(), "runs")
+        if has_champion(model_name, root):
+            checkpoint = str(champion_artifacts_dir(model_name, root))
+
     # Load or reuse trainer
     cache_key = f"{model_name}:{checkpoint or 'new'}"
     if cache_key not in _loaded_trainers:
