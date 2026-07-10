@@ -1,7 +1,9 @@
 # Public showcase image: static playground + API + champions inference.
 # Stage 1 builds the Next.js static export; stage 2 is the Python serve image
 # with the `cloud` extra (MLflow read-layer + champion pulls at startup).
-FROM node:20-slim AS ui
+# node 22 to match the lockfile's npm semantics (node:20's npm rejected the
+# lock over a transitive picomatch pin that npm 10.9 accepts).
+FROM node:22-slim AS ui
 WORKDIR /ui
 COPY playground/package.json playground/package-lock.json ./
 RUN npm ci
