@@ -1,0 +1,28 @@
+# Ephemeral training image for Cloud Run Jobs. Sibling to the root Dockerfile
+# (which builds the light serve/API image) — this one adds the `cloud` extra
+# (mlflow + Neon pg driver + GCS), so the serve image stays slim.
+FROM python:3.11-slim
+
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+
+RUN pip install --no-cache-dir uv
+
+COPY pyproject.toml uv.lock ./
+COPY src/ src/
+COPY main.py .
+COPY infra/gcp/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Torch wheels by target: CPU wheels for the single-train job (default;
+# PyPI's CUDA torch is ~2GB dead weight there), cu121 wheels for the L4 sweep
+# job image (build with --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu121).
+ARG TORCH_INDEX=https://download.pytorch.org/whl/cpu
+RUN uv pip install --system --index-url ${TORCH_INDEX} \
+        "torch>=2.1,<2.3" "torchvision>=0.16,<0.18"
+# Then the package + cloud extra; torch is already satisfied so it isn't pulled
+# again. Installed into the system interpreter so the entrypoint's `python` works.
+RUN uv pip install --system ".[cloud]"
+
+# One-shot: entrypoint runs the train CLI and exits. No EXPOSE, no server.
+ENTRYPOINT ["/app/entrypoint.sh"]

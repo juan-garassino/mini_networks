@@ -19,6 +19,7 @@ MODEL_NAMES: list[str] = [
     "vae",
     "unet_ae",
     "simclr",
+    "dino",
     "transformer",
     "mamba",
     "gan",
@@ -80,6 +81,8 @@ def get_model_registry() -> dict:
     from mini_networks.models.vit.trainer import ViTTrainer, make_vit_dataloader
     from mini_networks.models.simclr.config import SimCLRConfig
     from mini_networks.models.simclr.trainer import SimCLRTrainer, make_simclr_dataloader
+    from mini_networks.models.dino.config import DINOConfig
+    from mini_networks.models.dino.trainer import DINOTrainer, make_dino_dataloader
     from mini_networks.models.unet_ae.config import UNetAEConfig
     from mini_networks.models.unet_ae.trainer import UNetAETrainer, make_unet_ae_dataloader
     from mini_networks.models.reinforce.config import ReinforceConfig
@@ -134,6 +137,7 @@ def get_model_registry() -> dict:
         "vae": (VAEConfig, VAETrainer, make_vae_dataloader),
         "unet_ae": (UNetAEConfig, UNetAETrainer, make_unet_ae_dataloader),
         "simclr": (SimCLRConfig, SimCLRTrainer, make_simclr_dataloader),
+        "dino": (DINOConfig, DINOTrainer, make_dino_dataloader),
         "transformer": (TransformerConfig, TransformerTrainer, make_transformer_dataloader),
         "mamba": (MambaConfig, MambaTrainer, make_mamba_dataloader),
         "gan": (GANConfig, GANTrainer, make_gan_dataloader),

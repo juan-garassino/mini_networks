@@ -46,9 +46,10 @@ def cmd_serve(args: argparse.Namespace) -> None:
         sys.exit("uvicorn not installed — run: uv sync")
 
     from rich.console import Console
+    host = "localhost" if args.host in ("0.0.0.0", "127.0.0.1") else args.host
     Console().print(
-        f"[bold green]Starting mini_networks API[/bold green]  "
-        f"http://{args.host}:{args.port}/docs"
+        f"[bold green]mini_networks[/bold green]  "
+        f"playground → http://{host}:{args.port}/   ·   API docs → http://{host}:{args.port}/docs"
     )
     uvicorn.run(
         "mini_networks.api.main:app",
@@ -69,6 +70,8 @@ def cmd_train(args: argparse.Namespace) -> None:
     extra: dict = {}
     if args.epochs is not None:
         extra["epochs"] = args.epochs
+    if getattr(args, "batch_size", None) is not None:
+        extra["batch_size"] = args.batch_size
     if args.device:
         extra["device"] = args.device
     if args.data_root:
@@ -77,6 +80,8 @@ def cmd_train(args: argparse.Namespace) -> None:
         extra["checkpoint_root"] = args.checkpoint_root
     extra["training_tier"] = "S" if args.fast_demo else args.training_tier
     extra["resume"] = args.resume
+    if getattr(args, "run_name", None):
+        extra["run_name"] = args.run_name
 
     logger = run_model(args.model, fast_demo=args.fast_demo, **extra)
     console.print(f"[green]Done.[/green] Artifacts: {logger.artifacts_dir}")
@@ -239,6 +244,24 @@ def cmd_sweep(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def cmd_sweep_task(args: argparse.Namespace) -> None:
+    """Run ONE gate item, sharded by CLOUD_RUN_TASK_INDEX (Cloud Run Job task)."""
+    from mini_networks.cloud.sweep_shard import run_sweep_task
+    sys.exit(run_sweep_task(args))
+
+
+def cmd_sweep_report(args: argparse.Namespace) -> None:
+    """Merge a cloud sweep's GCS shards into one report.{md,json}."""
+    from mini_networks.cloud.sweep_shard import merge_sweep_report
+    sys.exit(merge_sweep_report(args))
+
+
+def cmd_sweep_samples(args: argparse.Namespace) -> None:
+    """Download a cloud sweep's per-item inference showcases."""
+    from mini_networks.cloud.sweep_shard import download_sweep_samples
+    sys.exit(download_sweep_samples(args))
+
+
 def _run_checked_sweep(console, models: list[str], compositions: list[str],
                        args: argparse.Namespace) -> None:
     """Quality-gate mode: per-item EvalSpec checks + report.{md,json}."""
@@ -296,11 +319,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_train.add_argument("--model", required=True)
     p_train.add_argument("--fast_demo", action="store_true", default=False)
     p_train.add_argument("--epochs", type=int, default=None)
+    p_train.add_argument("--batch_size", type=int, default=None)
     p_train.add_argument("--device", default=None)
     p_train.add_argument("--data_root", default=None)
     p_train.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
     p_train.add_argument("--training_tier", choices=["S", "M", "L"], default="M")
     p_train.add_argument("--no-resume", dest="resume", action="store_false")
+    p_train.add_argument("--run_name", default=None,
+                         help="Explicit run name (else timestamp); becomes the MLflow run id")
     p_train.set_defaults(resume=True)
 
     # evaluate
@@ -341,6 +367,35 @@ def build_parser() -> argparse.ArgumentParser:
     p_sweep.add_argument("--no-resume", dest="resume", action="store_false")
     p_sweep.set_defaults(include_models=True, include_compositions=True, resume=True)
 
+    # sweep-task — one Cloud Run Job task = one gate item. Env-first (the job
+    # template sets the envs); flags exist for local dry-runs.
+    p_task = sub.add_parser("sweep-task", help="Gate ONE item (Cloud Run Job task shard)")
+    p_task.add_argument("--index", type=int, default=None,
+                        help="Item index (default: CLOUD_RUN_TASK_INDEX env)")
+    p_task.add_argument("--training_tier", choices=["S", "M", "L"],
+                        default=os.environ.get("TRAINING_TIER", "M"))
+    p_task.add_argument("--epochs", type=int, default=int(os.environ.get("EPOCHS", "10")))
+    p_task.add_argument("--batch_size", type=int, default=int(os.environ.get("BATCH_SIZE", "64")))
+    p_task.add_argument("--device", default=os.environ.get("DEVICE", "cpu"))
+    p_task.add_argument("--data_root", default=os.path.join(os.getcwd(), "data"))
+    p_task.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
+
+    # sweep-report — merge one sweep's shards from GCS
+    p_rep = sub.add_parser("sweep-report", help="Merge cloud sweep shards into report.{md,json}")
+    p_rep.add_argument("--sweep_id", required=True)
+    p_rep.add_argument("--bucket", default=os.environ.get("MN_SWEEP_BUCKET", "garassino-ml-artifacts"))
+    p_rep.add_argument("--prefix", default=os.environ.get("MN_SWEEP_PREFIX", "mini-networks"))
+    p_rep.add_argument("--items", default=os.environ.get("ITEMS"),
+                       help="Expected items (comma list); default = full catalog")
+    p_rep.add_argument("--out_root", default=os.path.join(os.getcwd(), "runs"))
+
+    # sweep-samples — download one sweep's inference showcases
+    p_smp = sub.add_parser("sweep-samples", help="Download a sweep's per-item inference showcases")
+    p_smp.add_argument("--sweep_id", required=True)
+    p_smp.add_argument("--bucket", default=os.environ.get("MN_SWEEP_BUCKET", "garassino-ml-artifacts"))
+    p_smp.add_argument("--prefix", default=os.environ.get("MN_SWEEP_PREFIX", "mini-networks"))
+    p_smp.add_argument("--dest", default="~/Downloads")
+
     # list
     sub.add_parser("list", help="List all models and compositions")
 
@@ -369,13 +424,16 @@ def main() -> None:
             sys.exit(0)
 
     dispatch = {
-        "serve":    cmd_serve,
-        "train":    cmd_train,
-        "compose":  cmd_compose,
-        "sweep":    cmd_sweep,
-        "evaluate": cmd_evaluate,
-        "menu":     cmd_menu,
-        "list":     cmd_list,
+        "serve":        cmd_serve,
+        "train":        cmd_train,
+        "compose":      cmd_compose,
+        "sweep":        cmd_sweep,
+        "sweep-task":    cmd_sweep_task,
+        "sweep-report":  cmd_sweep_report,
+        "sweep-samples": cmd_sweep_samples,
+        "evaluate":     cmd_evaluate,
+        "menu":         cmd_menu,
+        "list":         cmd_list,
     }
 
     handler = dispatch.get(args.command)

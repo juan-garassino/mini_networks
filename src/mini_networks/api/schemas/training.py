@@ -11,6 +11,7 @@ class TrainRequest(BaseModel):
     batch_size: int = 32
     learning_rate: float = 1e-3
     fast_demo: bool = False
+    training_tier: str = "M"  # S|M|L; forwarded as the cloud JobSpec tier
     data_root: str = "/tmp/mini_networks_data"
     device: str = "cpu"
     seed: int = 42
@@ -27,7 +28,7 @@ class TrainResponse(BaseModel):
 class JobStatus(BaseModel):
     job_id: str
     model: str
-    status: Literal["pending", "running", "done", "failed"]
+    status: Literal["pending", "running", "done", "failed", "dispatched"]
     epoch: Optional[int] = None
     loss: Optional[float] = None
     error: Optional[str] = None

@@ -62,6 +62,7 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
         "vae",
         "unet_ae",
         "simclr",
+        "dino",
         "lora",
         "audio_classifier",
         "audio_spectrogram",
@@ -89,7 +90,7 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
         output = trainer.infer(config, {"sample": 1})
     elif model in {"unet_ae", "audio_classifier", "audio_spectrogram", "audio_transformer", "audio_melspectrogram"}:
         output = trainer.infer(config, batch[0][:1])
-    elif model in {"simclr", "vision_embed"}:
+    elif model in {"simclr", "dino", "vision_embed"}:
         output = trainer.infer(config, {"images": batch[0][:1]})
     elif model in {"diffusion", "gan", "pixelcnn", "tabular_diffusion"}:
         output = trainer.infer(config, {"n_samples": 1})

@@ -37,6 +37,7 @@ def run_model(
     checkpoint_root: str = "runs",
     resume: bool = True,
     validate_inference: bool = False,
+    run_name: str | None = None,
 ) -> "Logger":  # noqa: F821
     """Train a single model and return the Logger instance."""
     from mini_networks.core.registry import get_model_registry
@@ -65,7 +66,7 @@ def run_model(
         logger = Logger(output_dir=str(resumable_run), run_name=resumable_run.name)
         output_dir = str(resumable_run)
     else:
-        ts = _ts()
+        ts = run_name or _ts()
         output_dir = os.path.join(model_root, ts)
         config = config.model_copy(update={"run_name": ts, "output_dir": output_dir})
         logger = Logger(output_dir=output_dir, run_name=ts)
@@ -82,16 +83,20 @@ def run_model(
         border_style="cyan",
     ))
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        TimeElapsedColumn(),
-        console=console,
-        transient=True,
-    ) as progress:
-        task = progress.add_task(f"Training {model}…", total=None)
-        trainer.train(config, dataloader, logger)
-        progress.update(task, description=f"[green]Done[/green]")
+    try:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            TimeElapsedColumn(),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task(f"Training {model}…", total=None)
+            trainer.train(config, dataloader, logger)
+            progress.update(task, description=f"[green]Done[/green]")
+    except Exception:
+        logger.close(status="FAILED")
+        raise
 
     metrics = logger.read_metrics()
     _print_metrics_summary(metrics)
@@ -99,6 +104,7 @@ def run_model(
         summary = _run_model_inference_probe(model, trainer, config, dataloader)
         console.print(f"[green]Inference:[/green] {summary}")
     console.print(f"[green]Artifacts:[/green] {logger.artifacts_dir}")
+    logger.close()
     return logger
 
 

@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test test-ci clean list validate-s validate-m validate-l validate-models-s validate-compositions-s
+.PHONY: help install install-dev test test-ci clean list validate-s validate-m validate-l validate-models-s validate-compositions-s playground playground-dev playground-install
 
 UV_RUN = uv run
 PYTHON ?= $(UV_RUN) python
@@ -47,6 +47,16 @@ clean:
 
 list:
 	$(PYTHON) main.py list
+
+# --- playground (Next.js static export served by FastAPI at /) ---
+playground-install:
+	cd playground && npm install
+
+playground:
+	cd playground && npm run build   # → playground/out, served by `python main.py serve`
+
+playground-dev:
+	cd playground && NEXT_PUBLIC_API_BASE=http://localhost:8000 npm run dev  # :3000, hot reload
 
 validate-s:
 	$(PYTHON) main.py sweep --check --training_tier S --batch_size $(BATCH_SIZE) --epochs $(EPOCHS) --device $(DEVICE) --data_root $(DATA_ROOT) --checkpoint_root $(CHECKPOINT_ROOT)

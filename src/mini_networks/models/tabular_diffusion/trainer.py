@@ -24,8 +24,11 @@ class TabularNoiseScheduler:
         self.alphas_cumprod = torch.cumprod(alphas, dim=0)
 
     def add_noise(self, x0: torch.Tensor, noise: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        sqrt_alpha = self.alphas_cumprod[t].sqrt().view(-1, 1).to(x0.device)
-        sqrt_one_minus = (1.0 - self.alphas_cumprod[t]).sqrt().view(-1, 1).to(x0.device)
+        # alphas_cumprod lives on CPU; move it to x0's device BEFORE indexing —
+        # t arrives on cuda during GPU training and cuda-indexing a CPU tensor throws.
+        ac = self.alphas_cumprod.to(x0.device)
+        sqrt_alpha = ac[t].sqrt().view(-1, 1)
+        sqrt_one_minus = (1.0 - ac[t]).sqrt().view(-1, 1)
         return sqrt_alpha * x0 + sqrt_one_minus * noise
 
     @torch.no_grad()

@@ -36,7 +36,8 @@ embedding is closest to this image embedding?".
 
 ## Contrastive cousins
 
-Two single-modality models use the same recipe — same trick, no text:
+Three single-modality models learn without labels — same spirit, three
+different tricks:
 
 - `src/mini_networks/models/simclr/` — `SimCLREncoder` (CNN + projection
   head, normalized output) trained with `info_nce_loss(z1, z2)`: two
@@ -45,8 +46,15 @@ Two single-modality models use the same recipe — same trick, no text:
   partner out of the batch.
 - `src/mini_networks/models/vision_embed/` — `VisionEmbedCNN` with a simpler
   one-directional InfoNCE in `VisionEmbedTrainer._loss()`:
-  `cross_entropy((emb_a @ emb_b.T) / temperature, arange(B))`. Both train on
-  the `task="contrastive"` MNIST mode from the data registry.
+  `cross_entropy((emb_a @ emb_b.T) / temperature, arange(B))`.
+- `src/mini_networks/models/dino/` — `MiniDINO`: no negatives at all.
+  A student ViT matches the output distribution of an EMA *teacher* of
+  itself on the other view (self-distillation); collapse is prevented by
+  centering + a sharper teacher temperature. Reuses the supervised `vit`
+  backbone via `MiniViT.forward_features`.
+
+All three train on the `task="contrastive"` MNIST mode from the data
+registry.
 
 ## Multimodal blocks
 
@@ -81,7 +89,7 @@ uv run python main.py train --model simclr --fast_demo
 
 ## Latest results
 
-<!-- results:start items=clip,simclr,vision_embed -->
+<!-- results:start items=clip,simclr,dino,vision_embed -->
 
 _Latest sweep: tier S on cpu_
 

@@ -326,6 +326,11 @@ class IrisDataset(Dataset):
             X = X[:50]
             y = y[:50]
         self._X = torch.tensor(X, dtype=torch.float32)
+        # Standardize with DATASET-global stats at load. Per-batch normalization
+        # downstream broke eval: iris.data is class-sorted, so unshuffled eval
+        # batches are near-single-class and batch stats erase the class signal
+        # (accuracy pinned at 0.55 regardless of training — m-triage-3).
+        self._X = (self._X - self._X.mean(dim=0)) / (self._X.std(dim=0) + 1e-6)
         self._y = torch.tensor(y, dtype=torch.long)
 
     def __len__(self) -> int:
@@ -745,15 +750,22 @@ def _ensure_iris(data_root: str, require_downloads: bool = True):
 
 
 class _Subset(Dataset):
-    def __init__(self, dataset: Dataset, limit: int):
+    """Seeded RANDOM subset — not a head-slice. Head-slicing biased
+    class-sorted datasets: FSDD's first ~512 files are almost all digits 0-1,
+    which let the audio classifiers score a fake 1.0 at the old M sample
+    budget and collapse on the honest full set (m-full-2)."""
+
+    def __init__(self, dataset: Dataset, limit: int, seed: int = 123):
         self._dataset = dataset
         self._limit = min(limit, len(dataset))
+        g = torch.Generator().manual_seed(seed)
+        self._indices = torch.randperm(len(dataset), generator=g)[: self._limit].tolist()
 
     def __len__(self) -> int:
         return self._limit
 
     def __getitem__(self, idx: int):
-        return self._dataset[idx]
+        return self._dataset[self._indices[idx]]
 
     def __getattr__(self, name: str):
         return getattr(self._dataset, name)

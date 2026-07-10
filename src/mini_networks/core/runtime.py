@@ -48,6 +48,11 @@ class BaseTrainer(ABC):
         """Load resumable training state when available."""
         return logger.load_training_state()
 
+    def _clip_grads(self, model, config: BaseConfig) -> None:
+        """Between backward() and step(): clip when config.max_grad_norm is set."""
+        if config.max_grad_norm:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), config.max_grad_norm)
+
     def _iter_train_batches(self, dataloader: DataLoader, config: BaseConfig):
         limit = config.max_train_batches
         for batch_idx, batch in enumerate(dataloader):
@@ -118,6 +123,7 @@ class SupervisedTrainer(BaseTrainer):
                 loss = self._loss(logits, targets)
                 optimizer.zero_grad()
                 loss.backward()
+                self._clip_grads(model, config)
                 optimizer.step()
                 total_loss += loss.item()
                 preds = logits.argmax(dim=-1)
@@ -184,6 +190,10 @@ class ContrastiveTrainer(BaseTrainer):
     def _optimizer(self, model, config: BaseConfig):
         return torch.optim.Adam(model.parameters(), lr=config.learning_rate)
 
+    def _post_step(self, model) -> None:
+        """Hook after each optimizer step — e.g. DINO's EMA teacher update."""
+        return None
+
     def train(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> None:
         model = self._build(config)
         self.model = model
@@ -206,7 +216,9 @@ class ContrastiveTrainer(BaseTrainer):
                 loss = self._loss(emb_a, emb_b, temperature=getattr(config, "temperature", 0.2))
                 optimizer.zero_grad()
                 loss.backward()
+                self._clip_grads(model, config)
                 optimizer.step()
+                self._post_step(model)
                 total += loss.item()
             logger.log_metrics(epoch, {"loss": total / max(1, len(dataloader)), "epoch": epoch})
             logger.save_training_state({
@@ -273,6 +285,7 @@ class SegmentationTrainerBase(BaseTrainer):
                 loss = self._loss(preds, targets, config)
                 optimizer.zero_grad()
                 loss.backward()
+                self._clip_grads(model, config)
                 optimizer.step()
                 total += loss.item()
             logger.log_metrics(epoch, {"loss": total / max(1, len(dataloader)), "epoch": epoch})
@@ -349,6 +362,7 @@ class DetectionTrainerBase(BaseTrainer):
                 loss = self._loss(class_logits, bbox_pred, labels, target_bbox, config)
                 optimizer.zero_grad()
                 loss.backward()
+                self._clip_grads(model, config)
                 optimizer.step()
                 total += loss.item()
             logger.log_metrics(epoch, {"loss": total / max(1, len(dataloader)), "epoch": epoch})

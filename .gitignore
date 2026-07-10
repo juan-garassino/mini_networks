@@ -21,3 +21,15 @@ legacy/data/
 *.gz
 *.idx
 *-ubyte
+
+# brainstorming visual companion
+.superpowers/
+
+# terraform function build artifact
+infra/gcp/terraform/.build/
+
+# terraform local state/providers — never commit binaries
+**/.terraform/
+
+# local dataset downloads (MNIST/FSDD/iris land here during runs)
+/data/

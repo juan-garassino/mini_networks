@@ -137,15 +137,39 @@ from mini_networks.colab.launcher import interactive_menu
 interactive_menu()
 ```
 
-**API Server**
+**API Server & Playground**
 ```
 python main.py serve --host 0.0.0.0 --port 8000
 ```
-API docs are served at `/docs`.
+- **Playground (Observatory)** at `/` — a no-build SPA that reads the run
+  contract live: pick a run, watch its loss curve animate, see sample artifacts
+  and config/summary. It's a pure reader; training is unchanged.
+- API docs at `/docs`. Read-layer endpoints under `/web` (`/web/runs`,
+  `/web/runs/{id}/metrics`, `/web/models`, …).
 
 Composition endpoints:
 - `POST /compose/{composition_name}` starts training in the background.
 - `POST /compose/{composition_name}/infer` runs inference for a composition.
+
+**GCP ephemeral training (M/L)**
+M/L training runs on GCP Cloud Run Jobs and logs runs + registered models to
+the global `garassino-mlflow` tracker (Cloud Run + Cloud SQL). Two shapes,
+nothing runs at rest:
+- single train: a Pub/Sub message launches one ephemeral job (`MODE=train`);
+- full sweep: `make -C infra/gcp sweep TIER=M` executes ONE parallel L4 job
+  where every model + composition is its own task running the quality gate;
+  `make -C infra/gcp sweep-report SWEEP=<id>` merges the per-item shards into
+  one report. Gate-passing M/L checkpoints become `mini-<model>` registry
+  versions with champion/challenger promotion.
+
+The playground reads MLflow with `MN_RUN_SOURCE=mlflow`. Build/validate
+without touching the cloud:
+```
+make -C infra/gcp validate       # terraform fmt-check + validate
+make -C infra/gcp dry-run        # train image vs a local sqlite MLflow
+make -C infra/gcp dry-run-sweep  # one sweep-task shard, local only
+```
+Provisioning + the env-var contract are documented in `infra/gcp/README.md`.
 
 **Docs**
 Start here:

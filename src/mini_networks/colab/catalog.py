@@ -36,6 +36,7 @@ DESCRIPTIONS = {
     "vae":                           "Conv VAE reconstruction on MNIST/Fashion",
     "unet_ae":                       "UNet autoencoder reconstruction",
     "simclr":                        "SimCLR-lite contrastive vision pretraining",
+    "dino":                          "DINO self-distillation ViT (EMA teacher, no labels)",
     "transformer":                   "Character-level TransformerLM on Shakespeare",
     "mamba":                         "NanoMamba state-space sequence model",
     "gan":                           "Generator + Discriminator trained on MNIST",
@@ -80,7 +81,7 @@ DESCRIPTIONS = {
 
 CATEGORY = {name: "Vision / Multimodal" for name in [
     "clip", "diffusion", "segmentation", "detection", "gan",
-    "classifier", "resnet", "vit", "vae", "unet_ae", "simclr",
+    "classifier", "resnet", "vit", "vae", "unet_ae", "simclr", "dino",
 ]}
 CATEGORY.update({name: "Language" for name in ["transformer", "mamba", "rnn", "lora", "rag", "rlhf"]})
 CATEGORY["rl_maze"] = "Reinforcement Learning"

@@ -62,11 +62,14 @@ class MiniViT(nn.Module):
         self.norm = nn.LayerNorm(d_model)
         self.head = nn.Linear(d_model, num_classes)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward_features(self, x: torch.Tensor) -> torch.Tensor:
+        """Normalised CLS embedding, before the classifier head (DINO reuses this)."""
         x = self.patch_embed(x)  # [B, D, H', W']
         x = x.flatten(2).transpose(1, 2)  # [B, N, D]
         cls = self.cls_token.expand(x.size(0), -1, -1)
         x = torch.cat([cls, x], dim=1) + self.pos_embed
         x = self.encoder(x)
-        x = self.norm(x[:, 0])
-        return self.head(x)
+        return self.norm(x[:, 0])
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.head(self.forward_features(x))

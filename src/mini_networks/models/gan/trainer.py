@@ -12,6 +12,7 @@ from mini_networks.core.config import BaseConfig
 from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
 from mini_networks.core.runtime import BaseTrainer
+from mini_networks.models.diffusion.trainer import EMA
 from mini_networks.models.gan.config import GANConfig
 from mini_networks.models.gan.model import Discriminator, Generator, gan_d_loss, gan_g_loss
 
@@ -47,6 +48,7 @@ class GANTrainer(BaseTrainer):
         criterion = nn.BCELoss()
         opt_g = optim.Adam(G.parameters(), lr=config.lr, betas=(0.5, 0.999))
         opt_d = optim.Adam(D.parameters(), lr=config.lr, betas=(0.5, 0.999))
+        g_ema = EMA(G, decay=config.g_ema_decay) if config.g_ema_decay > 0 else None
         logger.log_config(config.model_dump())
 
         for epoch in range(config.effective_epochs):
@@ -75,6 +77,8 @@ class GANTrainer(BaseTrainer):
                 g_loss = gan_g_loss(D, fake2, criterion)
                 g_loss.backward()
                 opt_g.step()
+                if g_ema is not None:
+                    g_ema.update(G)
 
                 total_d += d_loss.item()
                 total_g += g_loss.item()
@@ -85,8 +89,14 @@ class GANTrainer(BaseTrainer):
             logger.log_metrics(epoch, {"d_loss": avg_d, "g_loss": avg_g, "epoch": epoch})
             log.info(f"  epoch {epoch}  d_loss {avg_d:.4f}  g_loss {avg_g:.4f}")
 
-        torch.save(G.state_dict(), logger.artifact_path("generator.pt"))
+        # Persist the EMA generator: the smoothed weights are what eval/infer
+        # should see — the live generator's sample quality oscillates step to
+        # step (judge 0.139 @ 2k -> 0.049 @ 3.5k without EMA).
+        g_state = g_ema.state_dict() if g_ema is not None else G.state_dict()
+        torch.save(g_state, logger.artifact_path("generator.pt"))
         torch.save(D.state_dict(), logger.artifact_path("discriminator.pt"))
+        if g_ema is not None:
+            G.load_state_dict(g_state)  # in-memory generator matches the checkpoint
 
     def evaluate(self, config: BaseConfig, dataloader: DataLoader, logger: Logger) -> dict:
         """Returns mean discriminator score on real images (should be ~0.5 after training)."""

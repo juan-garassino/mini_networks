@@ -77,7 +77,9 @@ class LoRALM:
 
         model = self._build(config, vocab_size)
         # Replace lm_head with LoRA adapter
-        model.lm_head = LoRALinear(model.lm_head, rank=config.rank, alpha=config.alpha)
+        # .to(device): the adapter's A/B layers are fresh CPU modules while the
+        # wrapped base head already sits on config.device.
+        model.lm_head = LoRALinear(model.lm_head, rank=config.rank, alpha=config.alpha).to(config.device)
         self.model = model
 
         # Freeze base model weights

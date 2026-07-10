@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 
 from mini_networks.api.dependencies import get_model_registry
 from mini_networks.api.schemas.inference import InferRequest, InferResponse
+from mini_networks.web.model_catalog import build_model_info
 
 router = APIRouter()
 
@@ -18,13 +19,8 @@ async def model_info(model_name: str):
     registry = get_model_registry()
     if model_name not in registry:
         raise HTTPException(status_code=404, detail=f"Unknown model: {model_name}")
-    ConfigClass, TrainerClass, _ = registry[model_name]
-    config = ConfigClass()
-    return {
-        "model": model_name,
-        "config_schema": ConfigClass.model_json_schema(),
-        "defaults": config.model_dump(),
-    }
+    info = build_model_info(model_name)
+    return {"model": model_name, "config_schema": info["config_schema"], "defaults": info["defaults"]}
 
 
 @router.post("/{model_name}", response_model=InferResponse)
@@ -38,21 +34,34 @@ async def run_inference(model_name: str, request: InferRequest):
     # Build config (fast_demo=True for inference, small)
     config = ConfigClass(fast_demo=True)
 
+    # A run_id resolves to that local run's artifacts/ checkpoint (Sandbox uses this).
+    checkpoint = request.checkpoint
+    if request.run_id and not checkpoint:
+        from mini_networks.web.sources import LocalRunsSource, RunNotFound
+
+        try:
+            checkpoint = str(LocalRunsSource()._resolve(request.run_id) / "artifacts")
+        except RunNotFound:
+            raise HTTPException(status_code=404, detail=f"Run not found: {request.run_id}")
+
     # Load or reuse trainer
-    cache_key = f"{model_name}:{request.checkpoint or 'new'}"
+    cache_key = f"{model_name}:{checkpoint or 'new'}"
     if cache_key not in _loaded_trainers:
         trainer = TrainerClass()
-        if request.checkpoint:
+        if checkpoint:
             try:
-                trainer.load_checkpoint(config, request.checkpoint)
+                trainer.load_checkpoint(config, checkpoint)
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Failed to load checkpoint: {e}")
         _loaded_trainers[cache_key] = trainer
     else:
         trainer = _loaded_trainers[cache_key]
 
-    # Build inputs dict
+    # Build inputs dict; JSON image/feature arrays -> tensors for the model.
     inputs = dict(request.inputs)
+    for key in ("images", "features"):
+        if isinstance(inputs.get(key), list):
+            inputs[key] = torch.tensor(inputs[key], dtype=torch.float32)
     inputs.setdefault("n_samples", request.n_samples)
     inputs.setdefault("temperature", request.temperature)
     if request.prompt:
