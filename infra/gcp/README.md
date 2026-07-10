@@ -85,6 +85,7 @@ make sweep-report SWEEP=<id> ITEMS=classifier,gan
 # the real thing: full 51-item M sweep on L4 tasks (~1-2h wall, ~€4-7)
 make sweep TIER=M
 make sweep-report SWEEP=<id>
+make sweep-samples SWEEP=<id>   # per-item inference showcases -> ~/Downloads
 
 make destroy        # tear down; images stay in Artifact Registry
 ```

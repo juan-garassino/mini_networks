@@ -256,6 +256,12 @@ def cmd_sweep_report(args: argparse.Namespace) -> None:
     sys.exit(merge_sweep_report(args))
 
 
+def cmd_sweep_samples(args: argparse.Namespace) -> None:
+    """Download a cloud sweep's per-item inference showcases."""
+    from mini_networks.cloud.sweep_shard import download_sweep_samples
+    sys.exit(download_sweep_samples(args))
+
+
 def _run_checked_sweep(console, models: list[str], compositions: list[str],
                        args: argparse.Namespace) -> None:
     """Quality-gate mode: per-item EvalSpec checks + report.{md,json}."""
@@ -383,6 +389,13 @@ def build_parser() -> argparse.ArgumentParser:
                        help="Expected items (comma list); default = full catalog")
     p_rep.add_argument("--out_root", default=os.path.join(os.getcwd(), "runs"))
 
+    # sweep-samples — download one sweep's inference showcases
+    p_smp = sub.add_parser("sweep-samples", help="Download a sweep's per-item inference showcases")
+    p_smp.add_argument("--sweep_id", required=True)
+    p_smp.add_argument("--bucket", default=os.environ.get("MN_SWEEP_BUCKET", "garassino-ml-artifacts"))
+    p_smp.add_argument("--prefix", default=os.environ.get("MN_SWEEP_PREFIX", "mini-networks"))
+    p_smp.add_argument("--dest", default="~/Downloads")
+
     # list
     sub.add_parser("list", help="List all models and compositions")
 
@@ -415,8 +428,9 @@ def main() -> None:
         "train":        cmd_train,
         "compose":      cmd_compose,
         "sweep":        cmd_sweep,
-        "sweep-task":   cmd_sweep_task,
-        "sweep-report": cmd_sweep_report,
+        "sweep-task":    cmd_sweep_task,
+        "sweep-report":  cmd_sweep_report,
+        "sweep-samples": cmd_sweep_samples,
         "evaluate":     cmd_evaluate,
         "menu":         cmd_menu,
         "list":         cmd_list,

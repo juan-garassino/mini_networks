@@ -1,4 +1,4 @@
-.PHONY: help validate fmt plan show destroy build-train build-train-gpu push-images refresh-jobs dry-run dry-run-sweep sweep sweep-report
+.PHONY: help validate fmt plan show destroy build-train build-train-gpu push-images refresh-jobs dry-run dry-run-sweep sweep sweep-report sweep-samples
 
 TF := terraform -chdir=terraform
 
@@ -28,6 +28,7 @@ help:
 	@echo "dry-run-sweep  - run ONE sweep-task shard locally (no cloud)"
 	@echo "sweep          - execute the parallel gate sweep [TIER=M] [ITEMS=a,b,c]"
 	@echo "sweep-report   - merge a sweep's shards: make sweep-report SWEEP=<id>"
+	@echo "sweep-samples  - download per-item inference showcases: make sweep-samples SWEEP=<id> [DEST=~/Downloads]"
 
 validate:
 	terraform -chdir=terraform fmt -check -recursive
@@ -106,3 +107,10 @@ sweep:
 sweep-report:
 	@if [ -z "$(SWEEP)" ]; then echo "Usage: make sweep-report SWEEP=<sweep-id> [ITEMS=a,b,c]"; exit 1; fi
 	cd ../.. && uv run python main.py sweep-report --sweep_id $(SWEEP) --items "$(ITEMS)"
+
+# Pull every item's inference showcase (sample grids, pred-vs-true, generated
+# text) into DEST/mini-networks-<sweep-id>/ so a human can eyeball learning.
+DEST ?= ~/Downloads
+sweep-samples:
+	@if [ -z "$(SWEEP)" ]; then echo "Usage: make sweep-samples SWEEP=<sweep-id> [DEST=~/Downloads]"; exit 1; fi
+	cd ../.. && uv run python main.py sweep-samples --sweep_id $(SWEEP) --dest "$(DEST)"

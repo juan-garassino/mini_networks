@@ -225,6 +225,17 @@ def check_model(name: str, args, judge: JudgeContext) -> CheckResult:
             dl_train = dataloader_fn(config, split="train")
             result.infer_summary = _run_model_inference_probe(name, target, config, dl_train)
 
+        # Optional human-viewable inference showcase (sample grids, pred-vs-true,
+        # generated text). Never affects the verdict.
+        showcase_dir = getattr(args, "showcase_dir", None)
+        if showcase_dir and target is not None:
+            from mini_networks.colab.showcase import save_model_showcase
+            try:
+                save_model_showcase(name, target, config, dataloader_fn,
+                                    Path(showcase_dir) / name)
+            except Exception as exc:
+                log.warning("showcase for %s failed: %s", name, exc)
+
         _decide(result, spec, s_ok, tier)
 
         # Gate-passing M/L checkpoints become registry versions (mini-<name>),
@@ -274,6 +285,14 @@ def check_composition(name: str, args) -> CheckResult:
         s_ok, result.s_check = loss_series_check(metrics, spec)
 
         result.infer_summary = _validate_probe_output(output)
+
+        showcase_dir = getattr(args, "showcase_dir", None)
+        if showcase_dir:
+            from mini_networks.colab.showcase import save_composition_showcase
+            try:
+                save_composition_showcase(name, output, run_dir, Path(showcase_dir) / name)
+            except Exception as exc:
+                log.warning("showcase for %s failed: %s", name, exc)
 
         if spec.metric is not None and isinstance(output, dict):
             result.value = _extract_metric(spec.metric, output, metrics)

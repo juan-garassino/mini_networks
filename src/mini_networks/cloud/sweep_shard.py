@@ -72,6 +72,7 @@ def run_sweep_task(args: argparse.Namespace) -> int:
     sweep_id = os.environ.get("SWEEP_ID", "adhoc")
     log.info("sweep task %d/%d: %s (tier %s, sweep %s)", index, len(items), item, args.training_tier, sweep_id)
 
+    showcase_root = Path(args.checkpoint_root) / "showcase" / sweep_id
     gate_args = argparse.Namespace(
         fast_demo=False,
         training_tier=args.training_tier,
@@ -81,6 +82,7 @@ def run_sweep_task(args: argparse.Namespace) -> int:
         data_root=args.data_root,
         checkpoint_root=args.checkpoint_root,
         fail_fast=False,
+        showcase_dir=str(showcase_root),
     )
     if item in MODELS:
         result = check_model(item, gate_args, JudgeContext(gate_args))
@@ -106,6 +108,12 @@ def run_sweep_task(args: argparse.Namespace) -> int:
         blob_path = f"{_shards_prefix(prefix, sweep_id)}/{item}.json"
         _upload(bucket, blob_path, local)
         log.info("shard uploaded: gs://%s/%s", bucket, blob_path)
+        item_showcase = showcase_root / item
+        if item_showcase.is_dir():
+            for f in sorted(item_showcase.iterdir()):
+                if f.is_file():
+                    _upload(bucket, f"{prefix}/sweeps/{sweep_id}/samples/{item}/{f.name}", f)
+            log.info("showcase uploaded: gs://%s/%s/sweeps/%s/samples/%s/", bucket, prefix, sweep_id, item)
     else:
         log.info("%s unset — shard kept local only: %s", BUCKET_ENV, local)
 
@@ -136,6 +144,28 @@ def build_merged_report(
     md_path, json_path = write_report(ordered, out_dir, meta)
     ok = not missing and all(r.status == "pass" for r in ordered)
     return md_path, json_path, ok
+
+
+def download_sweep_samples(args: argparse.Namespace) -> int:
+    """Pull a sweep's per-item showcases (sample grids, pred-vs-true, generated
+    text) from GCS into a local folder — e.g. ~/Downloads/mini-networks-<id>/."""
+    from google.cloud import storage
+
+    client = storage.Client()
+    prefix = f"{args.prefix}/sweeps/{args.sweep_id}/samples/"
+    dest = Path(args.dest).expanduser() / f"mini-networks-{args.sweep_id}"
+    n = 0
+    for blob in client.list_blobs(args.bucket, prefix=prefix):
+        rel = blob.name[len(prefix):]
+        if not rel:
+            continue
+        target = dest / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        blob.download_to_filename(str(target))
+        n += 1
+    items = sorted(p.name for p in dest.iterdir()) if dest.is_dir() else []
+    print(f"{n} files for {len(items)} items -> {dest}")
+    return 0 if n else 1
 
 
 def merge_sweep_report(args: argparse.Namespace) -> int:

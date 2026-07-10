@@ -52,6 +52,8 @@ infra/gcp/           Dockerfile.train (ARG TORCH_INDEX: cpu|cu121) + entrypoint.
 colab/
   catalog.py         COMPOSITIONS list, descriptions, categories (MODELS aliases core registry)
   probes.py          per-model inference probes + output validation
+  showcase.py        per-item human-viewable inference showcases (grids, text,
+                     pred-vs-true, kNN) — saved when args.showcase_dir is set
   runners.py         run_model/run_composition + COMPOSITION_RUNNERS dict
   menu.py            rich TUI + `python -m mini_networks.colab.launcher` CLI
   launcher.py        thin facade keeping the historical import surface
@@ -117,6 +119,7 @@ Writes `runs/sweep/<ts>/report.{md,json}`; non-zero exit on any non-pass.
 - `make -C infra/gcp validate` — terraform fmt-check + validate (static, no cloud)
 - `make -C infra/gcp build-train[-gpu]` / `dry-run[-sweep]` — build the CPU/cu121 images / run MODE=train or one MODE=sweep-task shard against a local sqlite MLflow
 - `make -C infra/gcp sweep TIER=M [ITEMS=a,b,c]` — execute the parallel L4 gate sweep (one Cloud Run task per item); `make -C infra/gcp sweep-report SWEEP=<id>` merges the shards into report.{md,json}
+- `make -C infra/gcp sweep-samples SWEEP=<id> [DEST=~/Downloads]` — download every item's inference showcase (sample grids / pred-vs-true / generated text / kNN accuracy; produced by `colab/showcase.py`, uploaded by each sweep task to `…/sweeps/<id>/samples/<item>/`)
 - `uv run pytest tests/ -m slow` — slow API tests (full trainings via TestClient)
 
 ### Env vars (playground + cloud)
