@@ -81,7 +81,7 @@ and they share `core/data/registry.py::make_classification_dataloader`.
 | Tier | Means | Budgets |
 |---|---|---|
 | S | nano smoke run (CPU, CI) | 1 epoch, 1 train batch, batch≤16, 32 samples, 1 eval batch, diffusion timesteps capped to 25 |
-| M | "actually learns" bar (Colab GPU) | ≤3 epochs, 8 batches, 512 samples, timesteps≤200 |
+| M | "actually learns" bar (L4 cloud sweep) | ≤5 epochs, 100 batches, batch≤64, 4096 samples, timesteps≤200 (re-sized 2026-07-10; do NOT run full M locally — the owner's machine is slow) |
 | L | full budget | config values as-is |
 
 `--fast_demo` forces S. Use `config.effective_*` properties (epochs, batch_size,

@@ -74,7 +74,10 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "unet_ae":               _loss(0.08, 0.03),
     "tabular_diffusion":     _loss(1.0, 0.6),
     "diffusion":             _judge(0.25, 0.50),
-    "gan":                   _judge(0.15, 0.40, loss_keys=("g_loss", "d_loss")),
+    # s_mode=finite: adversarial losses oscillate at equilibrium by design —
+    # the downward-trend check misfired on a healthy M run (m-baseline-1).
+    # Quality is still gated by judge_score at M/L.
+    "gan":                   _judge(0.15, 0.40, loss_keys=("g_loss", "d_loss"), s_mode="finite"),
     "pixelcnn":              _judge(0.10, 0.30),
     "rl_maze":               EvalSpec(metric="success_rate", thresholds={"M": 0.5, "L": 0.8},
                                       loss_keys=("episode_reward", "reward", "loss"), s_mode="finite"),
@@ -86,7 +89,8 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "clip_guided_diffusion":        _composition(loss_keys=("clip_loss", "diff_loss", "loss")),
     "transformer_clip_diffusion":   _composition(loss_keys=("lm_loss", "clip_loss", "diff_loss", "loss")),
     "gan_diffusion_comparison":     _composition(loss_keys=("gan_d_loss", "gan_g_loss", "diff_loss", "loss")),
-    "clip_guided_gan":              _composition(loss_keys=("g_loss", "d_loss", "loss")),
+    # adversarial losses → finite-only S-check (same rationale as "gan")
+    "clip_guided_gan":              _composition(loss_keys=("g_loss", "d_loss", "loss"), s_mode="finite"),
     "classifier_guided_diffusion":  _composition(loss_keys=("cls_loss", "diff_loss")),
     "rag_guided_generation":        _composition(),
     "lora_lm":                      _composition(),
@@ -97,7 +101,8 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "tabular_text_cross_attention": _composition(),
     "audio_text_dual_encoder":      _composition(),
     "tabular_text_dual_encoder":    _composition(),
-    "classifier_guided_gan":        _composition(loss_keys=("g_loss", "d_loss", "loss")),
+    # adversarial losses → finite-only S-check (same rationale as "gan")
+    "classifier_guided_gan":        _composition(loss_keys=("g_loss", "d_loss", "loss"), s_mode="finite"),
     "rag_conditioned_diffusion":    _composition(),
     "image_captioning":             _composition(),
     "multimodal_fusion_baseline":   _composition(),
