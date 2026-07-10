@@ -12,16 +12,14 @@ d_model) plus one shared learned positional embedding (seq_len → d_model), all
 wrapped around torch's nn.Transformer with n_layers encoder layers, n_layers
 decoder layers, n_heads heads, and d_ff feed-forward width (batch_first). The
 head is Linear(d_model → vocab). The trainer splits each text sequence into
-(src, tgt) halves and trains with teacher forcing: logits = model(src, tgt),
-cross-entropy against tgt.
+(src, tgt) halves and trains with shifted teacher forcing: the decoder reads
+tgt[:, :-1] under a causal mask (generate_square_subsequent_mask, applied in
+forward()) and is scored against tgt[:, 1:], so position i predicts token i+1
+from tokens ≤ i only — no future leakage.
 
-Deliberately simplified — read carefully before reusing: no causal tgt_mask is
-passed to nn.Transformer, so the decoder self-attention can see future target
-tokens. That is tolerable for this teaching task (the target is fully given and
-scored in place) but it must be fixed with generate_square_subsequent_mask for
-real autoregressive decoding. Also absent: BOS-shifted targets, padding masks,
-weight tying between embeddings and head, and a true step-by-step decode — infer()
-just feeds the source back as the target and takes an argmax.
+Deliberately simplified: no BOS/EOS tokens (the first target token is never
+predicted; decoding seeds from the last source token), no padding masks, no
+weight tying between embeddings and head, and greedy argmax decoding only.
 """
 from __future__ import annotations
 
@@ -53,5 +51,6 @@ class Seq2SeqTransformer(nn.Module):
         tgt_pos = torch.arange(T, device=tgt.device).unsqueeze(0)
         src_e = self.src_embed(src) + self.pos(src_pos)
         tgt_e = self.tgt_embed(tgt) + self.pos(tgt_pos)
-        out = self.transformer(src_e, tgt_e)
+        causal = nn.Transformer.generate_square_subsequent_mask(T, device=tgt.device)
+        out = self.transformer(src_e, tgt_e, tgt_mask=causal)
         return self.head(out)

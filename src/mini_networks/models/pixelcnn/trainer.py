@@ -33,9 +33,12 @@ class PixelCNNTrainer(BaseTrainer):
             model.train()
             total = 0.0
             for images, _ in dataloader:
-                images = images.to(config.device)
-                logits = model(images)
-                loss = F.mse_loss(logits, images)
+                # Binarised MNIST: the model is an autoregressive Bernoulli
+                # p(x_i=1 | x_<i), trained with per-pixel BCE — not a
+                # reconstruction MSE (the masks keep the target pixel unseen).
+                binary = (images.to(config.device) > 0.5).float()
+                logits = model(binary)
+                loss = F.binary_cross_entropy_with_logits(logits, binary)
                 opt.zero_grad()
                 loss.backward()
                 opt.step()
@@ -53,9 +56,9 @@ class PixelCNNTrainer(BaseTrainer):
         total = 0.0
         with torch.no_grad():
             for images, _ in dataloader:
-                images = images.to(config.device)
-                logits = model(images)
-                total += F.mse_loss(logits, images).item()
+                binary = (images.to(config.device) > 0.5).float()
+                logits = model(binary)
+                total += F.binary_cross_entropy_with_logits(logits, binary).item()
         return {"eval_loss": total / max(1, len(dataloader))}
 
     def infer(self, config: BaseConfig, inputs: Any) -> Any:
@@ -64,12 +67,20 @@ class PixelCNNTrainer(BaseTrainer):
             raise RuntimeError("Model not loaded.")
         model = self.model
         model.eval()
-        # naive sampling: start from noise and refine one pass
         n = int(inputs.get("n_samples", 4)) if isinstance(inputs, dict) else 4
-        x = torch.randn(n, 1, 28, 28, device=config.device)
+        seed = inputs.get("seed") if isinstance(inputs, dict) else None
+        if seed is not None:
+            torch.manual_seed(int(seed))
+        # True raster-scan sampling: one forward pass per pixel, each drawn
+        # from its Bernoulli conditional on everything above/left. Sequential
+        # by construction — the parallel trick only exists in training.
+        x = torch.zeros(n, 1, 28, 28, device=config.device)
         with torch.no_grad():
-            out = model(x)
-        return {"samples": out.cpu()}
+            for i in range(28):
+                for j in range(28):
+                    probs = torch.sigmoid(model(x)[:, :, i, j])
+                    x[:, :, i, j] = torch.bernoulli(probs)
+        return {"samples": x.cpu()}
 
 
 def make_pixelcnn_dataloader(config: PixelCNNConfig, split: str = "train") -> DataLoader:

@@ -62,9 +62,10 @@ class TextSeq2SeqTrainer(BaseTrainer):
             total = 0.0
             for src, tgt in dl:
                 src, tgt = src.to(config.device), tgt.to(config.device)
-                # shift target by one for teacher forcing
-                logits = model(src, tgt)
-                loss = F.cross_entropy(logits.view(-1, vocab_size), tgt.view(-1))
+                # Shifted teacher forcing: decoder reads tgt[:, :-1] (causally
+                # masked in model.forward) and predicts tgt[:, 1:].
+                logits = model(src, tgt[:, :-1])
+                loss = F.cross_entropy(logits.reshape(-1, vocab_size), tgt[:, 1:].reshape(-1))
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -82,12 +83,16 @@ class TextSeq2SeqTrainer(BaseTrainer):
         model = self.model
         model.eval()
         total = 0.0
+        n_batches = 0
         with torch.no_grad():
             for src, tgt in DataLoader(Seq2SeqDataset(dataloader.dataset), batch_size=4):
                 src, tgt = src.to(config.device), tgt.to(config.device)
-                logits = model(src, tgt)
-                total += F.cross_entropy(logits.view(-1, logits.size(-1)), tgt.view(-1)).item()
-        return {"eval_loss": total / max(1, len(dataloader))}
+                logits = model(src, tgt[:, :-1])
+                total += F.cross_entropy(logits.reshape(-1, logits.size(-1)), tgt[:, 1:].reshape(-1)).item()
+                n_batches += 1
+        # Divide by the batches actually iterated — dividing by the caller's
+        # differently-sized dataloader inflated eval_loss ~4x pre-fix.
+        return {"eval_loss": total / max(1, n_batches)}
 
     def load_checkpoint(self, config: BaseConfig, artifacts_dir) -> None:
         from pathlib import Path
@@ -105,12 +110,15 @@ class TextSeq2SeqTrainer(BaseTrainer):
             raise RuntimeError("Model not loaded.")
         src = inputs.get("src") if isinstance(inputs, dict) else inputs
         src = torch.as_tensor(src, dtype=torch.long).unsqueeze(0).to(config.device)
-        # greedy decode (copy length)
-        tgt = src.clone()
+        # True greedy decode: seed with the last source token (no BOS in the
+        # vocab; tgt continues src), then extend one token at a time.
+        max_new = min(src.size(1), 32)
+        decoded = src[:, -1:]
         with torch.no_grad():
-            logits = self.model(src, tgt)
-            preds = logits.argmax(dim=-1)
-        return {"predictions": preds.cpu().tolist()}
+            for _ in range(max_new):
+                logits = self.model(src, decoded)
+                decoded = torch.cat([decoded, logits[:, -1:].argmax(dim=-1)], dim=1)
+        return {"predictions": decoded[:, 1:].cpu().tolist()}
 
 
 def make_text_seq2seq_dataloader(config: TextSeq2SeqConfig, split: str = "train") -> DataLoader:
