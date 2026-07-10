@@ -1,7 +1,9 @@
 terraform {
   required_version = ">= 1.6"
   required_providers {
-    google  = { source = "hashicorp/google", version = "~> 5.0" }
+    # >=6: node_selector + gpu_zonal_redundancy_disabled on cloud_run_v2_job
+    # (the L4 sweep job needs both).
+    google  = { source = "hashicorp/google", version = "~> 6.0" }
     archive = { source = "hashicorp/archive", version = "~> 2.4" }
   }
 }
@@ -19,7 +21,6 @@ resource "google_project_service" "apis" {
     "cloudfunctions.googleapis.com",
     "eventarc.googleapis.com",
     "artifactregistry.googleapis.com",
-    "secretmanager.googleapis.com",
     "storage.googleapis.com",
     "cloudbuild.googleapis.com",
     "iam.googleapis.com",
@@ -29,6 +30,7 @@ resource "google_project_service" "apis" {
 }
 
 locals {
-  train_image   = "${var.region}-docker.pkg.dev/${var.project_id}/${var.ar_repo}/mini-networks-train:${var.image_tag}"
-  artifact_root = "gs://${var.bucket_name}/${var.bucket_prefix}/artifacts"
+  train_image     = "${var.region}-docker.pkg.dev/${var.project_id}/${var.ar_repo}/mini-networks-train:${var.image_tag}"
+  train_gpu_image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.ar_repo}/mini-networks-train-gpu:${var.image_tag}"
+  artifact_root   = "gs://${var.bucket_name}/${var.bucket_prefix}/artifacts"
 }

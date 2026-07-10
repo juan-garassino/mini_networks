@@ -1,12 +1,17 @@
 # CLAUDE.md — mini_networks
 
-Educational ML lab: ~31 models and ~19 cross-model compositions sharing one
+Educational ML lab: 32 models and 19 cross-model compositions sharing one
 runtime contract, one data registry, one logging format, and one quality gate.
 Owner-facing reference lab with a graphical **playground** (Observatory).
 Nano S-tier runs locally (CPU) for the gate/dev; **M/L training runs on GCP
-ephemeral Cloud Run Jobs** (queue-triggered, scale-to-zero) writing to a
-persistent MLflow contract (Neon Postgres + GCS); Colab is now optional. Design
-specs: `docs/superpowers/specs/2026-06-12-ultimate-educational-resource-design.md`
+ephemeral Cloud Run Jobs** (single-train via Pub/Sub, or ONE parallel L4 sweep
+job that gates every item as its own task) writing to the **global
+`garassino-mlflow` tracker** (Cloud Run + Cloud SQL +
+gs://garassino-ml-mlflow-artifacts via --serve-artifacts; deployed from the
+desktop garassino-ml workspace — the earlier Neon-DSN plan is superseded).
+Gate-passing M/L checkpoints are registered as `mini-<model>` with
+champion/challenger promotion. Colab is optional. Design specs:
+`docs/superpowers/specs/2026-06-12-ultimate-educational-resource-design.md`
 and `…/2026-06-24-playground-and-gcp-training-design.md`.
 
 ## Architecture (src/mini_networks/)
@@ -23,12 +28,17 @@ core/
   logging/logger.py  Logger → runs/<name>/<ts>/{metrics.jsonl,config.yaml,artifacts/}
   logging/mlflow_sink.py  optional env-gated MLflow mirror (MN_MLFLOW_TRACKING_URI);
                      Logger dual-writes; ended by Logger.close() + atexit net
+  logging/mlflow_registry.py  champion/challenger Model Registry: gate-passing
+                     M/L ckpts → `mini-<model>` versions, promoted on the gate
+                     metric (MN_MLFLOW_REGISTER=1; never fails a run)
   diffusion/sampling.py  shared DDPM sample_loop (guidance + callbacks)
 models/<name>/       config.py + model.py + trainer.py per model
 compositions/        multi-model pipelines (each exposes train/sample or compare)
 web/                 read-layer: metrics.py (pivot) + sources.py (Local/MLflow/
                      Composite RunSource) + model_catalog.py — reader of the contract
 cloud/               publisher.py: JobSpec + Pub/Sub publisher (cloud train dispatch)
+                     sweep_shard.py: task-index→item sharding for the parallel
+                     sweep job + GCS shard upload + report merge
 playground/ (repo root)  Next.js 16 + React 19 + TS + Tailwind v4 + shadcn/ui +
                      Recharts + Motion + Lucide. Toy/storybook "enchanted grove"
                      UI (4 views: Watch/Play/Lab/Quest). Static-exported
@@ -36,8 +46,9 @@ playground/ (repo root)  Next.js 16 + React 19 + TS + Tailwind v4 + shadcn/ui +
                      StaticFiles at /. Pure client of /web,/train,/infer. Source
                      committed; out/ + node_modules gitignored (build with
                      `make playground`). Replaced the old no-build vanilla SPA.
-infra/gcp/           Dockerfile.train + entrypoint.sh (MODE=train) + terraform/ +
-                     function/ — ephemeral Cloud Run Job pipeline (see its README)
+infra/gcp/           Dockerfile.train (ARG TORCH_INDEX: cpu|cu121) + entrypoint.sh
+                     (MODE=train|sweep-task) + terraform/ (train job, L4 sweep
+                     job, topic, trigger, IAM) + function/ (see its README)
 colab/
   catalog.py         COMPOSITIONS list, descriptions, categories (MODELS aliases core registry)
   probes.py          per-model inference probes + output validation
@@ -47,7 +58,8 @@ colab/
   gate.py            quality-gate runner behind `sweep --check`
 api/                 FastAPI: routers/{training,inference,compositions,web}, in-memory
                      jobs; main.py mounts /web read-layer + the SPA at /
-main.py (repo root)  argparse CLI: serve|train|evaluate|compose|sweep|menu|list
+main.py (repo root)  argparse CLI: serve|train|evaluate|compose|sweep|
+                     sweep-task|sweep-report|menu|list
 ```
 
 Read-layer principle: the playground is a pure **reader of the run contract**.
@@ -103,15 +115,19 @@ Writes `runs/sweep/<ts>/report.{md,json}`; non-zero exit on any non-pass.
 - `make playground` — build the Next.js UI to `playground/out` (rebuild after UI changes; CI builds it for deploy)
 - `make playground-dev` — Next dev server on :3000 with hot reload (proxies API to :8000 via `NEXT_PUBLIC_API_BASE`)
 - `make -C infra/gcp validate` — terraform fmt-check + validate (static, no cloud)
-- `make -C infra/gcp build-train` / `dry-run` — build the train image / run MODE=train against a local sqlite MLflow
+- `make -C infra/gcp build-train[-gpu]` / `dry-run[-sweep]` — build the CPU/cu121 images / run MODE=train or one MODE=sweep-task shard against a local sqlite MLflow
+- `make -C infra/gcp sweep TIER=M [ITEMS=a,b,c]` — execute the parallel L4 gate sweep (one Cloud Run task per item); `make -C infra/gcp sweep-report SWEEP=<id>` merges the shards into report.{md,json}
 - `uv run pytest tests/ -m slow` — slow API tests (full trainings via TestClient)
 
 ### Env vars (playground + cloud)
 
-- `MN_MLFLOW_TRACKING_URI` / `MN_MLFLOW_ARTIFACT_ROOT` / `MN_MLFLOW_EXPERIMENT` — enable + configure the Logger's MLflow sink.
+- `MN_MLFLOW_TRACKING_URI` — enable the Logger's MLflow sink. Cloud contract: the global tracker URL `https://garassino-mlflow-mjz4n7eeia-ew.a.run.app` (public; leave `MN_MLFLOW_ARTIFACT_ROOT` unset so artifacts proxy through --serve-artifacts). Local dev may use `sqlite:///…` + `MN_MLFLOW_ARTIFACT_ROOT`.
+- `MN_MLFLOW_EXPERIMENT` — experiment name (default `mini-networks`).
+- `MN_MLFLOW_REGISTER=1` — gate hook registers gate-passing M/L checkpoints as `mini-<model>` with champion/challenger promotion on the gate metric.
 - `MN_RUN_SOURCE` = `local` (default) | `mlflow` — what `/web` reads.
 - `MN_TRAIN_BACKEND` = `local` (default) | `cloud` — `POST /train` runs locally vs publishes to Pub/Sub.
 - `MN_PUBSUB_TOPIC` / `GOOGLE_CLOUD_PROJECT` — cloud train publisher.
+- `MN_SWEEP_BUCKET` / `MN_SWEEP_PREFIX` / `SWEEP_ID` / `ITEMS` / `CLOUD_RUN_TASK_INDEX` — sweep-task sharding + shard upload (bucket unset = local-only dry-run).
 - Cloud/MLflow deps live in the `cloud` extra (`uv sync --extra cloud`); all imports are lazy so the base install + `smoke-import` stay light.
 
 ## CI (.github/workflows/ci.yml)
@@ -133,14 +149,21 @@ that line when it does.
 - `legacy/` is reference-only; its datasets/venvs are untracked (history was
   rewritten 2026-06-12 to purge binaries — do not re-add binary data to git)
 - The owner's machine is slow: locally run only targeted tests and single
-  S-tier (nano) runs; full sweeps belong to CI or Colab.
+  S-tier (nano) runs; full sweeps belong to CI (S) or the cloud sweep job (M/L).
 
 ## Working state
 
 - Phase 0 (foundation) + Phase 1 (quality gate) + Phase 3 (docs) done.
-- Phase 2: M-tier stabilization on Colab GPU until all 50 items pass
-  (driver: `colab/notebooks/00_sweep.ipynb`).
-- Playground + GCP-ephemeral training (Plan A) landed: MLflow sink, `/web`
-  read-layer, Observatory SPA, Pub/Sub→Cloud Run Job pipeline (infra static-
-  validated; live apply is a deliberate cost-approved step). Plan B (Sandbox,
-  Lab-compare, Lessons, showcase deploy) is future work.
+- Phase 2: M-tier stabilization until all 51 items pass — driver is now the
+  **parallel cloud sweep** (`make -C infra/gcp sweep TIER=M` → `sweep-report`
+  → triage worst-first; rerun failures with `ITEMS=…`). Colab notebook
+  (`colab/notebooks/00_sweep.ipynb`) remains a fallback.
+- Playground + GCP training landed: MLflow sink → global `garassino-mlflow`
+  tracker (Cloud SQL; Neon plan superseded), champion/challenger Model
+  Registry (`mini-<model>`), `/web` read-layer, Observatory SPA,
+  Pub/Sub→Cloud Run Job single-train, ONE parallel L4 sweep job
+  (`mini-networks-sweep`, task-sharded gate). Plan B (Sandbox, Lab-compare,
+  Lessons, showcase deploy) is future work.
+- Known instability fixes applied 2026-07-10: text_seq2seq causal mask +
+  shifted teacher forcing + honest eval divisor; pixelcnn Bernoulli BCE +
+  true raster-scan sampling; optional `BaseConfig.max_grad_norm` clipping.

@@ -27,3 +27,6 @@ legacy/data/
 
 # terraform function build artifact
 infra/gcp/terraform/.build/
+
+# terraform local state/providers — never commit binaries
+**/.terraform/

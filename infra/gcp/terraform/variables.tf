@@ -34,9 +34,12 @@ variable "mlflow_experiment" {
   default = "mini-networks"
 }
 
-variable "neon_secret_id" {
+# Global garassino MLflow tracker (Cloud Run + Cloud SQL, --serve-artifacts).
+# Public URL, so plain env — no secret. All workspace projects share this UI;
+# mini-networks writes under experiment var.mlflow_experiment.
+variable "mlflow_tracking_url" {
   type    = string
-  default = "mini-networks-neon-dsn"
+  default = "https://garassino-mlflow-mjz4n7eeia-ew.a.run.app"
 }
 
 variable "runtime_sa_id" {
@@ -61,6 +64,20 @@ variable "github_repo" {
   type        = string
   default     = "juan-garassino/mini-networks"
   description = "owner/repo allowed to impersonate the runtime SA via WIF"
+}
+
+# Parallel gate sweep (mini-networks-sweep job). task_count is a default
+# ceiling — `make sweep` overrides --tasks per execution to match ITEMS.
+# Parallelism is bounded by the regional Cloud Run L4 quota; tasks queue
+# beyond it, so a larger count is safe but slower per wall-clock.
+variable "sweep_task_count" {
+  type    = number
+  default = 51 # 32 models + 19 compositions
+}
+
+variable "sweep_parallelism" {
+  type    = number
+  default = 4
 }
 
 # Heavy models that warrant a GPU; routed by the trigger function to the GPU job.

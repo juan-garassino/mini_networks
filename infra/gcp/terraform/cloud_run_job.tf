@@ -22,10 +22,6 @@ resource "google_cloud_run_v2_job" "train" {
           value = "/tmp/runs"
         }
         env {
-          name  = "MN_MLFLOW_ARTIFACT_ROOT"
-          value = local.artifact_root
-        }
-        env {
           name  = "MN_MLFLOW_EXPERIMENT"
           value = var.mlflow_experiment
         }
@@ -33,15 +29,11 @@ resource "google_cloud_run_v2_job" "train" {
           name  = "GOOGLE_CLOUD_PROJECT"
           value = var.project_id
         }
-        # Neon DSN injected from Secret Manager at runtime — never in the image.
+        # Global tracker URL. MN_MLFLOW_ARTIFACT_ROOT stays UNSET so artifacts
+        # proxy through the tracker's --serve-artifacts root.
         env {
-          name = "MN_MLFLOW_TRACKING_URI"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.neon_dsn.secret_id
-              version = "latest"
-            }
-          }
+          name  = "MN_MLFLOW_TRACKING_URI"
+          value = var.mlflow_tracking_url
         }
 
         resources {
@@ -53,8 +45,6 @@ resource "google_cloud_run_v2_job" "train" {
       }
     }
   }
-
-  depends_on = [google_secret_manager_secret_iam_member.runtime_secret]
 }
 
 # Optional L4 GPU variant for the heavy few (diffusion/transformer/vit).
@@ -88,10 +78,6 @@ resource "google_cloud_run_v2_job" "train_gpu" {
           value = "/tmp/runs"
         }
         env {
-          name  = "MN_MLFLOW_ARTIFACT_ROOT"
-          value = local.artifact_root
-        }
-        env {
           name  = "MN_MLFLOW_EXPERIMENT"
           value = var.mlflow_experiment
         }
@@ -100,13 +86,8 @@ resource "google_cloud_run_v2_job" "train_gpu" {
           value = var.project_id
         }
         env {
-          name = "MN_MLFLOW_TRACKING_URI"
-          value_source {
-            secret_key_ref {
-              secret  = google_secret_manager_secret.neon_dsn.secret_id
-              version = "latest"
-            }
-          }
+          name  = "MN_MLFLOW_TRACKING_URI"
+          value = var.mlflow_tracking_url
         }
 
         resources {
@@ -119,6 +100,4 @@ resource "google_cloud_run_v2_job" "train_gpu" {
       }
     }
   }
-
-  depends_on = [google_secret_manager_secret_iam_member.runtime_secret]
 }

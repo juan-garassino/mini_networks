@@ -152,13 +152,22 @@ Composition endpoints:
 - `POST /compose/{composition_name}/infer` runs inference for a composition.
 
 **GCP ephemeral training (M/L)**
-M/L training can run on GCP Cloud Run Jobs: a Pub/Sub message launches an
-ephemeral job that trains and persists to MLflow (Neon Postgres + GCS), then
-self-terminates — nothing runs at rest. The playground reads MLflow with
-`MN_RUN_SOURCE=mlflow`. Build/validate without touching the cloud:
+M/L training runs on GCP Cloud Run Jobs and logs runs + registered models to
+the global `garassino-mlflow` tracker (Cloud Run + Cloud SQL). Two shapes,
+nothing runs at rest:
+- single train: a Pub/Sub message launches one ephemeral job (`MODE=train`);
+- full sweep: `make -C infra/gcp sweep TIER=M` executes ONE parallel L4 job
+  where every model + composition is its own task running the quality gate;
+  `make -C infra/gcp sweep-report SWEEP=<id>` merges the per-item shards into
+  one report. Gate-passing M/L checkpoints become `mini-<model>` registry
+  versions with champion/challenger promotion.
+
+The playground reads MLflow with `MN_RUN_SOURCE=mlflow`. Build/validate
+without touching the cloud:
 ```
-make -C infra/gcp validate     # terraform fmt-check + validate
-make -C infra/gcp dry-run      # train image vs a local sqlite MLflow
+make -C infra/gcp validate       # terraform fmt-check + validate
+make -C infra/gcp dry-run        # train image vs a local sqlite MLflow
+make -C infra/gcp dry-run-sweep  # one sweep-task shard, local only
 ```
 Provisioning + the env-var contract are documented in `infra/gcp/README.md`.
 

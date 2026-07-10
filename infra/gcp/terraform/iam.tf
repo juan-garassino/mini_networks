@@ -21,13 +21,6 @@ resource "google_storage_bucket_iam_member" "runtime_objects" {
   }
 }
 
-# Runtime SA may read the Neon DSN secret.
-resource "google_secret_manager_secret_iam_member" "runtime_secret" {
-  secret_id = google_secret_manager_secret.neon_dsn.secret_id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.runtime.email}"
-}
-
 # Trigger SA: launch Cloud Run Jobs WITH OVERRIDES — needs run.developer
 # (run.invoker is NOT sufficient for runJob-with-overrides).
 resource "google_project_iam_member" "trigger_run_developer" {

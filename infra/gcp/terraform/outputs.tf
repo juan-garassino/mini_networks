@@ -24,12 +24,12 @@ output "trigger_sa" {
 
 output "next_steps" {
   value = <<-EOT
-    1. Set the Neon DSN (out-of-band — never in git/state):
-         printf '%s' "$NEON_DSN" | gcloud secrets versions add ${var.neon_secret_id} --data-file=-
-    2. Publish a test run:
+    1. Publish a test run:
          gcloud pubsub topics publish ${google_pubsub_topic.train_requests.name} \
            --message '{"model":"classifier","training_tier":"S","run_name":"smoke-1"}'
-    3. Point the playground at MLflow and watch it:
-         MN_RUN_SOURCE=mlflow MN_MLFLOW_TRACKING_URI="$NEON_DSN" python main.py serve
+    2. Point the playground at the global tracker and watch it:
+         MN_RUN_SOURCE=mlflow MN_MLFLOW_TRACKING_URI=${var.mlflow_tracking_url} python main.py serve
+    3. Full parallel gate sweep (all models + compositions on L4 tasks):
+         make -C infra/gcp sweep TIER=M
   EOT
 }
