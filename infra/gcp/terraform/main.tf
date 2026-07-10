@@ -32,5 +32,6 @@ resource "google_project_service" "apis" {
 locals {
   train_image     = "${var.region}-docker.pkg.dev/${var.project_id}/${var.ar_repo}/mini-networks-train:${var.image_tag}"
   train_gpu_image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.ar_repo}/mini-networks-train-gpu:${var.image_tag}"
+  app_image       = "${var.region}-docker.pkg.dev/${var.project_id}/${var.ar_repo}/mini-networks-app:${var.image_tag}"
   artifact_root   = "gs://${var.bucket_name}/${var.bucket_prefix}/artifacts"
 }

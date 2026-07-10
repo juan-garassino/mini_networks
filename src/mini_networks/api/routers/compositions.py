@@ -288,6 +288,9 @@ async def start_composition_training(
     request: ComposeTrainRequest,
     background_tasks: BackgroundTasks,
 ):
+    # Same guard as /train — public showcases must not start trainings.
+    if os.environ.get("MN_DISABLE_TRAIN") == "1":
+        raise HTTPException(status_code=403, detail="training is disabled on this deployment")
     registry = _composition_registry()
     if composition_name not in registry:
         raise HTTPException(status_code=404, detail=f"Unknown composition: {composition_name}")

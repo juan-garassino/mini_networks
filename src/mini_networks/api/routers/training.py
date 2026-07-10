@@ -61,6 +61,10 @@ async def start_training(
     request: TrainRequest,
     background_tasks: BackgroundTasks,
 ):
+    # Public showcase deployments set MN_DISABLE_TRAIN=1: anonymous visitors
+    # must not dispatch GPU jobs or in-process trainings.
+    if os.environ.get("MN_DISABLE_TRAIN") == "1":
+        raise HTTPException(status_code=403, detail="training is disabled on this deployment")
     registry = get_model_registry()
     if model_name not in registry:
         raise HTTPException(status_code=404, detail=f"Unknown model: {model_name}")
