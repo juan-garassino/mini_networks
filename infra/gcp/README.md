@@ -97,7 +97,13 @@ gcloud pubsub topics publish mini-networks-train-requests \
 
 ## Gotchas
 
-- **L4 quota bounds parallelism** (terraform `sweep_parallelism`, default 4).
+- **Jobs pin image digests at deploy time.** Pushing a new `:latest` (locally or
+  via `gcloud builds submit --config infra/gcp/cloudbuild.yaml .`) does NOT
+  reach existing jobs — run `make refresh-jobs` after every image push.
+- **`.gcloudignore` patterns must stay anchored** (leading `/`): an unanchored
+  `data/` once excluded `src/mini_networks/core/data/` and shipped a broken image.
+- **L4 quota bounds parallelism** (terraform `sweep_parallelism`, default 3 =
+  the region's `NvidiaL4GpuAllocNoZonalRedundancyPerProjectRegion` quota).
   Tasks beyond it queue — safe, just slower. The GPU job shape (gen2 +
   `nvidia-l4` node selector + zonal redundancy off) mirrors the live
   `ppe-train` job, which proves europe-west1 GPU jobs work.

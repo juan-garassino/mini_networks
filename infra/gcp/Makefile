@@ -1,4 +1,4 @@
-.PHONY: help validate fmt plan show destroy build-train build-train-gpu push-images dry-run dry-run-sweep sweep sweep-report
+.PHONY: help validate fmt plan show destroy build-train build-train-gpu push-images refresh-jobs dry-run dry-run-sweep sweep sweep-report
 
 TF := terraform -chdir=terraform
 
@@ -61,6 +61,13 @@ push-images: build-train build-train-gpu
 	docker tag mini-networks-train-gpu:dev $(REGISTRY)/mini-networks-train-gpu:$(TAG)
 	docker push $(REGISTRY)/mini-networks-train:$(TAG)
 	docker push $(REGISTRY)/mini-networks-train-gpu:$(TAG)
+	$(MAKE) refresh-jobs
+
+# Cloud Run jobs pin the image DIGEST at deploy time — after any image push
+# (local or Cloud Build) the jobs must be updated to re-resolve :latest.
+refresh-jobs:
+	gcloud run jobs update mini-networks-sweep --image $(REGISTRY)/mini-networks-train-gpu:$(TAG) --region $(REGION) --project $(PROJECT)
+	gcloud run jobs update mini-networks-train --image $(REGISTRY)/mini-networks-train:$(TAG) --region $(REGION) --project $(PROJECT)
 
 dry-run: build-train
 	mkdir -p /tmp/mlruns
