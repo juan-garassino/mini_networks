@@ -77,7 +77,7 @@ variable "sweep_task_count" {
 
 variable "sweep_parallelism" {
   type    = number
-  default = 4
+  default = 3 # NvidiaL4GpuAllocNoZonalRedundancyPerProjectRegion quota is 3 in garassino-ml/europe-west1
 }
 
 # Heavy models that warrant a GPU; routed by the trigger function to the GPU job.
