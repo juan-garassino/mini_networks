@@ -29,8 +29,10 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     # the 0.25 bar; double the steps for margin (m-full-2).
     "diffusion": {"M": {"epochs": 10}},
     # Honest FSDD (random subset, all 10 classes) needs real training: the old
-    # 1.0 came from a head-sliced 2-class subset (m-full-2).
-    "audio_classifier": {"M": {"epochs": 15}},
+    # 1.0 came from a head-sliced 2-class subset (m-full-2). The raw-waveform
+    # CNN is the slowest learner in the zoo: 0.094 @ 5 ep -> 0.383 @ 15
+    # (m-triage-5); epochs cost ~1.5s each on L4.
+    "audio_classifier": {"M": {"epochs": 40}},
     "audio_spectrogram": {"M": {"epochs": 15}},
     "audio_melspectrogram": {"M": {"epochs": 15}},
     "audio_transformer": {"M": {"epochs": 15}},
