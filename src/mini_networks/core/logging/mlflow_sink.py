@@ -5,9 +5,11 @@ heavy ``import mlflow`` happens lazily inside ``MLflowSink.__init__``. Every cal
 is wrapped so a flaky tracking backend can never break a training run — the file
 logging in ``Logger`` is the source of truth; MLflow is an additive mirror.
 
-Activated by ``MN_MLFLOW_TRACKING_URI`` (a database URI like
-``postgresql://…`` or ``sqlite:///…`` works server-lessly). Artifacts go to
-``MN_MLFLOW_ARTIFACT_ROOT`` (e.g. a ``gs://`` path); experiment name from
+Activated by ``MN_MLFLOW_TRACKING_URI`` — normally the global tracker URL
+(``https://garassino-mlflow-….run.app``); a database URI like ``sqlite:///…``
+also works server-lessly for local dev. Leave ``MN_MLFLOW_ARTIFACT_ROOT`` unset
+against the HTTP tracker so artifacts proxy through its ``--serve-artifacts``
+root; set it only for serverless DB URIs. Experiment name from
 ``MN_MLFLOW_EXPERIMENT`` (default ``mini-networks``).
 """
 from __future__ import annotations
@@ -74,6 +76,10 @@ class MLflowSink:
             self._active = True
         except Exception as e:
             log.warning("MLflow init failed; logging file-only: %s", e)
+
+    @property
+    def run_id(self) -> str | None:
+        return self._run_id
 
     def _ensure_experiment(self, client) -> str:
         name = os.environ.get(EXPERIMENT_ENV, DEFAULT_EXPERIMENT)

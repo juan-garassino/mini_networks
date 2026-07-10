@@ -226,6 +226,22 @@ def check_model(name: str, args, judge: JudgeContext) -> CheckResult:
             result.infer_summary = _run_model_inference_probe(name, target, config, dl_train)
 
         _decide(result, spec, s_ok, tier)
+
+        # Gate-passing M/L checkpoints become registry versions (mini-<name>),
+        # champion/challenger-promoted on the gate metric. Env-gated + wrapped:
+        # never affects the pass/fail decision.
+        if result.status == "pass" and tier in ("M", "L"):
+            from mini_networks.core.logging.mlflow_registry import register_and_promote
+
+            result.registry = register_and_promote(
+                name=name,
+                artifacts_dir=logger.artifacts_dir,
+                metric_key=spec.metric,
+                value=result.value,
+                higher_is_better=spec.higher_is_better,
+                run_id=logger.mlflow_run_id,
+                tier=tier,
+            )
     except Exception:
         result.status = "error"
         result.error = "\n".join(traceback.format_exc().splitlines()[-15:])

@@ -27,6 +27,7 @@ class CheckResult:
     duration_s: float = 0.0
     run_dir: str | None = None
     error: str | None = None            # traceback tail when status == "error"
+    registry: dict | None = None        # {"tracked", "model", "version", "stage", ...} when registered
 
 
 def _fmt(value: float | None) -> str:
@@ -53,6 +54,12 @@ def render_markdown(results: list[CheckResult], meta: dict) -> str:
             f"| {r.name} | {r.item_type} | {r.status} | {r.metric or 'n/a'} "
             f"| {_fmt(r.value)} | {_fmt(r.threshold)} | {r.roundtrip} | {r.duration_s:.1f}s |"
         )
+    registered = [r for r in results if r.registry and r.registry.get("tracked")]
+    if registered:
+        lines += ["", "## Registry", ""]
+        for r in registered:
+            reg = r.registry
+            lines.append(f"- {reg['model']} v{reg['version']} → {reg['stage']}")
     failures = [r for r in results if r.status != "pass"]
     if failures:
         lines += ["", "## Failures", ""]

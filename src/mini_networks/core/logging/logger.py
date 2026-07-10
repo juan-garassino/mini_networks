@@ -63,6 +63,11 @@ class Logger:
         return self.artifacts_dir / name
 
     @property
+    def mlflow_run_id(self) -> str | None:
+        """MLflow run id when the sink is active (survives close()); else None."""
+        return self._mlflow.run_id if self._mlflow is not None else None
+
+    @property
     def state_path(self) -> Path:
         return self._state_path
 
