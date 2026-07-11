@@ -28,42 +28,51 @@ import torch.nn as nn
 
 
 class Generator(nn.Module):
-    """MLP generator: maps latent noise → flattened image, reshaped to [B, 1, 28, 28]."""
+    """Mini-DCGAN generator: latent → 7×7 map → two stride-2 transposed convs → 28×28 Tanh.
+
+    Convolutional, not MLP: an MLP generator has no spatial inductive bias —
+    at mini budgets it plateaued at judge≈0.05 producing centered blobs,
+    never strokes (m-vision-7). Shared conv filters make strokes cheap.
+    """
 
     def __init__(self, latent_dim: int = 100, image_size: int = 28, in_channels: int = 1):
         super().__init__()
-        out_dim = in_channels * image_size * image_size
+        assert image_size == 28, "mini-DCGAN generator is wired for 28x28"
+        self.project = nn.Linear(latent_dim, 128 * 7 * 7)
         self.net = nn.Sequential(
-            nn.Linear(latent_dim, 256),  nn.LeakyReLU(0.2),
-            nn.Linear(256, 512),         nn.LeakyReLU(0.2),
-            nn.Linear(512, 1024),        nn.LeakyReLU(0.2),
-            nn.Linear(1024, out_dim),    nn.Tanh(),
+            nn.BatchNorm2d(128), nn.ReLU(),
+            nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),  # 14x14
+            nn.BatchNorm2d(64), nn.ReLU(),
+            nn.ConvTranspose2d(64, in_channels, 4, stride=2, padding=1),  # 28x28
+            nn.Tanh(),
         )
         self.image_size = image_size
         self.in_channels = in_channels
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
         """z: [B, latent_dim] → [B, C, H, W]."""
-        x = self.net(z)
-        return x.view(z.size(0), self.in_channels, self.image_size, self.image_size)
+        x = self.project(z).view(z.size(0), 128, 7, 7)
+        return self.net(x)
 
 
 class Discriminator(nn.Module):
-    """MLP discriminator: image [B, C, H, W] → real/fake probability [B, 1]."""
+    """Mini-DCGAN discriminator: two stride-2 convs → probability [B, 1]."""
 
     def __init__(self, image_size: int = 28, in_channels: int = 1, dropout: float = 0.3):
         super().__init__()
-        in_dim = in_channels * image_size * image_size
+        assert image_size == 28, "mini-DCGAN discriminator is wired for 28x28"
         self.net = nn.Sequential(
-            nn.Linear(in_dim, 1024), nn.LeakyReLU(0.2), nn.Dropout(dropout),
-            nn.Linear(1024, 512),    nn.LeakyReLU(0.2), nn.Dropout(dropout),
-            nn.Linear(512, 256),     nn.LeakyReLU(0.2), nn.Dropout(dropout),
-            nn.Linear(256, 1),       nn.Sigmoid(),
+            nn.Conv2d(in_channels, 64, 4, stride=2, padding=1),   # 14x14
+            nn.LeakyReLU(0.2), nn.Dropout2d(dropout),
+            nn.Conv2d(64, 128, 4, stride=2, padding=1),           # 7x7
+            nn.LeakyReLU(0.2), nn.Dropout2d(dropout),
+            nn.Flatten(),
+            nn.Linear(128 * 7 * 7, 1), nn.Sigmoid(),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """x: [B, C, H, W] → [B, 1] probability of being real."""
-        return self.net(x.view(x.size(0), -1))
+        return self.net(x)
 
 
 def gan_d_loss(
