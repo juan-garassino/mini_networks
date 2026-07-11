@@ -239,11 +239,13 @@ class SyntheticAudioDigits(Dataset):
         n_classes: int = 10,
         fast_demo: bool = False,
         seed: int = 123,
+        split: str = "train",
     ):
         self.n_classes = n_classes
         self.sample_len = sample_len
         self._limit = 256 if fast_demo else n_samples
-        g = torch.Generator().manual_seed(seed)
+        # Split-offset seed → disjoint generated samples per split.
+        g = torch.Generator().manual_seed(seed + (10_000 if split == "test" else 0))
         self._labels = torch.randint(0, n_classes, (self._limit,), generator=g)
 
     def __len__(self) -> int:
@@ -268,12 +270,16 @@ class SyntheticTabular(Dataset):
         n_classes: int = 3,
         fast_demo: bool = False,
         seed: int = 123,
+        split: str = "train",
     ):
         self.n_features = n_features
         self.n_classes = n_classes
         self._limit = 256 if fast_demo else n_samples
         g = torch.Generator().manual_seed(seed)
+        # Class centers from the BASE seed (identical geometry across splits);
+        # the sampled points use a split-offset seed → disjoint train/test.
         centers = torch.randn(n_classes, n_features, generator=g) * 2.0
+        g = torch.Generator().manual_seed(seed + (10_000 if split == "test" else 0))
         labels = torch.randint(0, n_classes, (self._limit,), generator=g)
         data = centers[labels] + 0.5 * torch.randn(self._limit, n_features, generator=g)
         self._data = data
@@ -297,10 +303,17 @@ class SpeechDigitsDataset(Dataset):
         fast_demo: bool = False,
         sample_len: int = 4000,
         require_downloads: bool = True,
+        split: str = "train",
     ):
         self.data_root = data_root
         self.sample_len = sample_len
-        self._files = _ensure_fsdd(data_root, require_downloads=require_downloads)
+        files = _ensure_fsdd(data_root, require_downloads=require_downloads)
+        # Deterministic disjoint split (index parity: every 5th file -> test).
+        # This class used to IGNORE split — train and eval saw the same files,
+        # so audio accuracies were training accuracy (audio_transformer's 0.99
+        # memorization; found by the 2026-07-11 gate audit).
+        test = [f for i, f in enumerate(files) if i % 5 == 4]
+        self._files = test if split == "test" else [f for i, f in enumerate(files) if i % 5 != 4]
         if fast_demo:
             self._files = self._files[: min(50, len(self._files))]
 
@@ -319,9 +332,16 @@ class IrisDataset(Dataset):
 
     IRIS_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"
 
-    def __init__(self, data_root: str, fast_demo: bool = False, require_downloads: bool = True):
+    def __init__(self, data_root: str, fast_demo: bool = False, require_downloads: bool = True,
+                 split: str = "train"):
         self.data_root = data_root
         X, y = _ensure_iris(data_root, require_downloads=require_downloads)
+        # Disjoint index-parity split (was ignored — same leak as FSDD; see
+        # SpeechDigitsDataset). Parity, not a head-slice: iris.data is
+        # class-sorted, so a head-slice would drop whole classes per split.
+        keep = [i for i in range(len(y)) if (i % 5 == 4) == (split == "test")]
+        X = [X[i] for i in keep]
+        y = [y[i] for i in keep]
         if fast_demo:
             X = X[:50]
             y = y[:50]
@@ -607,6 +627,7 @@ def get_dataset(
             n_classes=kwargs.get("n_classes", 10),
             fast_demo=fast_demo,
             seed=kwargs.get("seed", 123),
+            split=split,
         )
     elif name == "synthetic_tabular":
         return SyntheticTabular(
@@ -615,6 +636,7 @@ def get_dataset(
             n_classes=kwargs.get("n_classes", 3),
             fast_demo=fast_demo,
             seed=kwargs.get("seed", 123),
+            split=split,
         )
     elif name == "speech_digits":
         return SpeechDigitsDataset(
@@ -622,12 +644,14 @@ def get_dataset(
             fast_demo=fast_demo,
             sample_len=kwargs.get("sample_len", 4000),
             require_downloads=kwargs.get("require_downloads", True),
+            split=split,
         )
     elif name == "iris":
         return IrisDataset(
             data_root=data_root,
             fast_demo=fast_demo,
             require_downloads=kwargs.get("require_downloads", True),
+            split=split,
         )
     else:
         raise ValueError(f"Unknown dataset: {name}")

@@ -41,7 +41,15 @@ class NoiseScheduler:
     ):
         self.timesteps = timesteps
         if schedule == "linear":
-            betas = torch.linspace(beta_start, beta_end, timesteps)
+            # beta_start/beta_end are calibrated for the reference T=1000
+            # chain. At tier-capped T the same betas leave the forward process
+            # far from pure noise (T=200: terminal a_bar=0.13 → 36% signal;
+            # T=25: 88% signal) while sampling STARTS from pure noise — the
+            # model never sees that distribution and samples come out as
+            # noise. Scale betas so sum(betas)≈const, i.e. terminal a_bar
+            # matches the reference chain at any T.
+            scale = 1000.0 / timesteps
+            betas = torch.linspace(beta_start * scale, beta_end * scale, timesteps).clamp(0, 0.999)
         elif schedule == "cosine":
             steps = timesteps + 1
             t = torch.linspace(0, timesteps, steps) / timesteps

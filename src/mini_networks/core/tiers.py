@@ -25,6 +25,17 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     # 0.049 @ 3.5k (non-monotone). With generator EMA, run long and let the
     # slow average ride out the oscillations (m-full-2).
     "gan": {"M": {"epochs": 50}},
+    # Guided-diffusion compositions match base diffusion's 10 epochs: at the
+    # 5-epoch default their CFG UNets stay noisy and guide_weight=2 AMPLIFIES
+    # the error (eps_c + w*(eps_c - eps_u)) — samples were noise while base
+    # diffusion produced digits on the same image (m-vision-1/2).
+    "clip_guided_diffusion": {"M": {"epochs": 10}},
+    "transformer_clip_diffusion": {"M": {"epochs": 10}},
+    "rag_conditioned_diffusion": {"M": {"epochs": 10}},
+    "classifier_guided_diffusion": {"M": {"epochs": 10}},
+    # Self-supervised needs more steps than supervised: kNN 0.16 at 5 epochs
+    # with healthy loss — representation quality lags the loss (m-vision-1).
+    "dino": {"M": {"epochs": 15}},
     # judge 0.31 and 0.18 on identical configs @ 5 epochs — the metric sits ON
     # the 0.25 bar; double the steps for margin (m-full-2).
     "diffusion": {"M": {"epochs": 10}},

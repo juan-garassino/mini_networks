@@ -16,6 +16,14 @@ class DINOConfig(BaseConfig):
     proj_hidden: int = 128   # paper: 2048
     out_dim: int = 64        # prototype count; paper: 65536
     student_temp: float = 0.1
-    teacher_temp: float = 0.04
-    ema_decay: float = 0.996
+    # 0.07, not the paper's 0.04: targets at 0.04 are near-one-hot from a
+    # random teacher, so the student locks onto arbitrary prototype
+    # assignments (kNN 0.16-0.20 ~ chance, mixed-digit neighbor rows —
+    # m-vision-1). Softer targets keep early training informative at mini
+    # scale; the paper itself warms teacher temp up for the same reason.
+    teacher_temp: float = 0.07
+    # 0.99, not the paper's 0.996: at M-tier's ~500 steps, 0.996 leaves the
+    # teacher ~13% initial random weights (0.996^500≈0.14) — the student
+    # chases a half-random target (flat loss + kNN 0.20, 2026-07-11 audit).
+    ema_decay: float = 0.99
     center_momentum: float = 0.9

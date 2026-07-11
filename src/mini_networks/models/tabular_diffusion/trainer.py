@@ -19,7 +19,11 @@ from mini_networks.models.tabular_diffusion.model import TabularDenoiser
 class TabularNoiseScheduler:
     def __init__(self, timesteps: int, beta_start: float, beta_end: float):
         self.timesteps = timesteps
-        betas = torch.linspace(beta_start, beta_end, timesteps)
+        # Same terminal-SNR scaling as the image NoiseScheduler: betas are
+        # calibrated for T=1000; scale them so the chain reaches ~pure noise
+        # at tier-capped T (see models/diffusion/scheduler.py).
+        scale = 1000.0 / timesteps
+        betas = torch.linspace(beta_start * scale, beta_end * scale, timesteps).clamp(0, 0.999)
         alphas = 1.0 - betas
         self.alphas_cumprod = torch.cumprod(alphas, dim=0)
 

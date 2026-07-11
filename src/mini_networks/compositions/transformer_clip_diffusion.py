@@ -133,6 +133,7 @@ class TransformerCLIPDiffusion:
             n_feat=config.n_feat,
             n_classes=config.n_classes,
             drop_prob=config.drop_prob,
+            timesteps=config.effective_timesteps,  # time-embedding normalizer must match the chain
         ).to(config.device)
 
     def _build_scheduler(self, config: TransformerCLIPDiffusionConfig) -> NoiseScheduler:
@@ -266,7 +267,10 @@ class TransformerCLIPDiffusion:
         )
 
         T = config.effective_timesteps
-        epochs = config.tier_epochs(config.diff_epochs, medium_cap=2)
+        # effective_epochs (honors the composition's tier override), not
+        # tier_epochs(medium_cap=2): the hardcoded 2-epoch cap left this CFG
+        # UNet saturated while its siblings trained 10 epochs (m-vision-4).
+        epochs = config.effective_epochs
         for epoch in range(epochs):
             unet.train()
             total = 0.0

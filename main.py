@@ -262,6 +262,41 @@ def cmd_sweep_samples(args: argparse.Namespace) -> None:
     sys.exit(download_sweep_samples(args))
 
 
+def cmd_showcase(args: argparse.Namespace) -> None:
+    """Regenerate inference showcases locally from the pulled champions."""
+    from pathlib import Path
+    from rich.console import Console
+    from mini_networks.cloud.champions import champion_artifacts_dir, has_champion
+    from mini_networks.colab.showcase import save_model_showcase
+    from mini_networks.core.registry import MODEL_NAMES, get_model_registry
+
+    console = Console()
+    models = [m.strip() for m in args.models.split(",") if m.strip()] if args.models != "all" else MODEL_NAMES
+    dest_root = Path(args.dest).expanduser()
+    done = skipped = failed = 0
+    for name in models:
+        if not has_champion(name, args.checkpoint_root):
+            console.print(f"[yellow]{name}[/yellow]: no champion pulled — skipping")
+            skipped += 1
+            continue
+        try:
+            ConfigClass, TrainerClass, dl_fn = get_model_registry()[name]
+            # Tier M, NOT fast_demo: champions were trained at M and
+            # effective_timesteps must match training (S's 25-step cap turns a
+            # 200-step diffusion champion's samples into pure noise).
+            config = ConfigClass(training_tier="M", device="cpu")
+            trainer = TrainerClass()
+            trainer.load_checkpoint(config, champion_artifacts_dir(name, args.checkpoint_root))
+            save_model_showcase(name, trainer, config, dl_fn, dest_root / name)
+            console.print(f"[green]{name}[/green]: {sorted(p.name for p in (dest_root / name).iterdir())}")
+            done += 1
+        except Exception as e:
+            console.print(f"[red]{name}[/red]: {type(e).__name__}: {e}")
+            failed += 1
+    console.print(f"\n{done} showcased, {skipped} skipped, {failed} failed → {dest_root}")
+    sys.exit(0 if done and not failed else 1)
+
+
 def cmd_pull_champions(args: argparse.Namespace) -> None:
     """Pull every Production mini-<model> checkpoint for local inference."""
     from rich.console import Console
@@ -422,6 +457,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_ch.add_argument("--models", default=None, help="Comma list (default: all models)")
     p_ch.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
 
+    # showcase — regenerate visual showcases from pulled champions
+    p_sc = sub.add_parser("showcase", help="Render inference showcases from local champions")
+    p_sc.add_argument("--models", default="all", help="Comma list or 'all'")
+    p_sc.add_argument("--dest", default="~/Downloads/mini-networks-champions")
+    p_sc.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
+
     # list
     sub.add_parser("list", help="List all models and compositions")
 
@@ -458,6 +499,7 @@ def main() -> None:
         "sweep-report":    cmd_sweep_report,
         "sweep-samples":   cmd_sweep_samples,
         "pull-champions":  cmd_pull_champions,
+        "showcase":        cmd_showcase,
         "evaluate":     cmd_evaluate,
         "menu":         cmd_menu,
         "list":         cmd_list,

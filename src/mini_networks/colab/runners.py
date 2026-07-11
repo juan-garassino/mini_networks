@@ -190,6 +190,23 @@ def _run_clip_guided_diffusion(fast_demo, training_tier, data_root, device, chec
     pipeline.train_all(cfg, logger)
     images, class_id = pipeline.text_to_image("digit zero", cfg)
     console.print(f"  Generated images shape: [cyan]{images.shape}[/cyan]")
+
+    # Rotation-trick showcase: denoise ↔ rot90(180°) ↔ toggle class, 6↔9 (a
+    # rotated 6 IS a 9, so the oscillation reads visually). Saves the frame
+    # trajectory as one strip artifact.
+    try:
+        import torch
+        from torchvision.utils import save_image
+
+        final, frames = pipeline.dual_oscillation(6, 9, cfg, return_frames=True)
+        if frames:
+            strip = torch.cat(frames + [final], dim=0)
+            save_image(strip, str(logger.artifact_path("rotation_strip.png")),
+                       nrow=strip.size(0), normalize=False)
+        save_image(final, str(logger.artifact_path("rotation_final.png")))
+        console.print(f"  Rotation demo: [cyan]{len(frames)}[/cyan] frames saved")
+    except Exception as exc:  # demo is a bonus — never fail the run
+        console.print(f"  Rotation demo skipped: {exc}")
     return {"images": images, "class_id": class_id, "config": cfg, "run_dir": str(logger.run_dir)}
 
 def _run_transformer_clip_diffusion(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
