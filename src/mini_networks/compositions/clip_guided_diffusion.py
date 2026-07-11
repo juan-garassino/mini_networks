@@ -391,6 +391,76 @@ class CLIPGuidedDiffusion:
         return images, class_id
 
     @torch.no_grad()
+    def rotation_carousel(
+        self,
+        classes: list[int],
+        config: CLIPGuidedDiffusionConfig,
+        flip_every: int | None = None,
+        rot_k: int | None = None,
+        return_frames: bool = False,
+    ) -> torch.Tensor | tuple[torch.Tensor, list[torch.Tensor]]:
+        """Generalized rotation trick: every `flip_every` denoising steps,
+        rotate the latent by rot_k·90° and advance to the NEXT class in
+        `classes` (cyclic). 1 class = pure rotation-equivariance test,
+        2 classes = the classic 180° duel (6↔9), 4 classes = a quarter-turn
+        carousel with one class per orientation.
+        """
+        assert self.unet is not None and self.scheduler is not None
+        assert classes, "need at least one class"
+        # Default rotation: full turn distributed over the class cycle.
+        k = rot_k if rot_k is not None else max(1, 4 // len(classes))
+        unet, scheduler = self.unet, self.scheduler
+        unet.eval()
+        if self.vae is not None:
+            self.vae.eval()
+        dev = config.device
+        every = flip_every if flip_every is not None else config.flip_every
+
+        if config.use_vae and self.vae is not None:
+            shape = (1, *self.vae.latent_size)
+        else:
+            shape = (1, 1, 28, 28)
+
+        x = torch.randn(shape, device=dev)
+        frames: list[torch.Tensor] = []
+        uncond_mask = torch.ones(1, dtype=torch.long, device=dev)
+        cond_mask = torch.zeros(1, dtype=torch.long, device=dev)
+        T = config.effective_timesteps
+        state = {"idx": 0}
+
+        def predict_noise(x, t_batch, t, state):
+            label = torch.tensor([classes[state["idx"] % len(classes)]],
+                                 dtype=torch.long, device=dev)
+            eps_cond = unet(x, t_batch, label, cond_mask)
+            eps_uncond = unet(x, t_batch, label, uncond_mask)
+            return (1 + config.guide_weight) * eps_cond - config.guide_weight * eps_uncond
+
+        def step_cb(x, t, step, state):
+            if every > 0 and step > 0 and step % every == 0:
+                x = torch.rot90(x, k=k, dims=(-2, -1))
+                state["idx"] += 1
+            if return_frames and (step % max(1, T // 16) == 0):
+                decoded = self.vae.decode(x) if (config.use_vae and self.vae) else x
+                frames.append(((decoded.clamp(-1, 1) + 1) / 2).cpu())
+            return x
+
+        x = sample_loop(
+            scheduler=scheduler,
+            predict_noise=predict_noise,
+            shape=shape,
+            device=dev,
+            timesteps=T,
+            step_callback=step_cb,
+            state=state,
+        )
+        if config.use_vae and self.vae is not None:
+            x = self.vae.decode(x)
+        final = ((x.clamp(-1, 1) + 1) / 2).cpu()
+        if return_frames:
+            return final, frames
+        return final
+
+    @torch.no_grad()
     def dual_oscillation(
         self,
         class_a: int,

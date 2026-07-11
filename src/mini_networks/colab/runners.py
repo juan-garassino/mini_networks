@@ -198,13 +198,18 @@ def _run_clip_guided_diffusion(fast_demo, training_tier, data_root, device, chec
         import torch
         from torchvision.utils import save_image
 
-        final, frames = pipeline.dual_oscillation(6, 9, cfg, return_frames=True)
-        if frames:
-            strip = torch.cat(frames + [final], dim=0)
-            save_image(strip, str(logger.artifact_path("rotation_strip.png")),
-                       nrow=strip.size(0), normalize=False)
+        # Three carousel modes: 1 class (equivariance test), 2 classes (the
+        # classic 6↔9 180° duel), 4 classes (quarter-turn carousel, one class
+        # per orientation).
+        for tag, classes in (("1class_3", [3]), ("2class_6_9", [6, 9]),
+                             ("4class_6_9_8_0", [6, 9, 8, 0])):
+            final, frames = pipeline.rotation_carousel(classes, cfg, return_frames=True)
+            if frames:
+                strip = torch.cat(frames + [final], dim=0)
+                save_image(strip, str(logger.artifact_path(f"rotation_{tag}.png")),
+                           nrow=strip.size(0), normalize=False)
+            console.print(f"  Rotation carousel {tag}: [cyan]{len(frames)}[/cyan] frames")
         save_image(final, str(logger.artifact_path("rotation_final.png")))
-        console.print(f"  Rotation demo: [cyan]{len(frames)}[/cyan] frames saved")
     except Exception as exc:  # demo is a bonus — never fail the run
         console.print(f"  Rotation demo skipped: {exc}")
     return {"images": images, "class_id": class_id, "config": cfg, "run_dir": str(logger.run_dir)}
