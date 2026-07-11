@@ -37,10 +37,16 @@ class TabularNoiseScheduler:
 
     @torch.no_grad()
     def step(self, model_out: torch.Tensor, t: int, x_t: torch.Tensor) -> torch.Tensor:
-        # Simple ancestral step (not exact, but fine for toy)
+        # Real DDPM ancestral step (the old `x - 0.5*eps` shortcut ignored the
+        # schedule entirely — samples collapsed to near-identical rows, audit
+        # 2026-07-11): mean = 1/sqrt(a_t) (x_t - beta_t/sqrt(1-abar_t) eps).
+        ac = self.alphas_cumprod.to(x_t.device)
+        beta_t = 1.0 - (ac[t] / (ac[t - 1] if t > 0 else torch.ones_like(ac[0])))
+        alpha_t = 1.0 - beta_t
+        mean = (x_t - beta_t / (1.0 - ac[t]).sqrt() * model_out) / alpha_t.sqrt()
         if t == 0:
-            return x_t - model_out
-        return x_t - model_out * 0.5
+            return mean
+        return mean + beta_t.sqrt() * torch.randn_like(x_t)
 
 
 class TabularDiffusionTrainer(BaseTrainer):

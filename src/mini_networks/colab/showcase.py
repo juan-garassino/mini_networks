@@ -169,6 +169,82 @@ def _render_maze_path(trainer, config, dest: Path, lines: list[str]) -> None:
     )
 
 
+def _draw_boxes(images, boxes, dest: Path, lines: list[str]) -> None:
+    """Paint predicted bbox edges onto the images (boxes in [0,1] xywh or xyxy)."""
+    import torch
+    from torchvision.utils import save_image
+
+    x = images[:8].detach().cpu().clone()
+    if x.dim() == 3:
+        x = x.unsqueeze(1)
+    x = x.repeat(1, 3, 1, 1) if x.size(1) == 1 else x
+    H, W = x.shape[-2:]
+    b = torch.as_tensor(boxes)[: x.size(0)].detach().cpu().float()
+    if b.dim() == 3:
+        b = b[:, 0]
+    for i in range(x.size(0)):
+        x0, y0, x1, y1 = b[i][:4].clamp(0, 1).tolist()
+        if x1 <= x0 or y1 <= y0:  # xywh -> xyxy
+            x1, y1 = min(1.0, x0 + abs(x1)), min(1.0, y0 + abs(y1))
+        c0, r0, c1, r1 = int(x0 * (W - 1)), int(y0 * (H - 1)), int(x1 * (W - 1)), int(y1 * (H - 1))
+        x[i, 0, r0, c0:c1 + 1] = 1.0; x[i, 0, r1, c0:c1 + 1] = 1.0
+        x[i, 0, r0:r1 + 1, c0] = 1.0; x[i, 0, r0:r1 + 1, c1] = 1.0
+        x[i, 1:, r0, c0:c1 + 1] = 0.0; x[i, 1:, r1, c0:c1 + 1] = 0.0
+        x[i, 1:, r0:r1 + 1, c0] = 0.0; x[i, 1:, r0:r1 + 1, c1] = 0.0
+    save_image(x, str(dest / "boxes.png"), nrow=4)
+    lines.append("boxes.png: predicted bounding boxes drawn in red over the inputs")
+
+
+def _recon_pairs(trainer, config, batch, dest: Path, lines: list[str]) -> None:
+    """VAE evidence in its own objective: input | reconstruction pairs."""
+    import torch
+    from torchvision.utils import save_image
+
+    x = batch[0][:8]
+    out = trainer.infer(config, {"images": x})
+    recon = out.get("recon", out.get("reconstruction")) if isinstance(out, dict) else out
+    if recon is None:
+        return
+    pairs = torch.stack([x.cpu(), recon.cpu()], dim=1).flatten(0, 1)
+    save_image(pairs, str(dest / "recon_pairs.png"), nrow=2)
+    lines.append("recon_pairs.png: rows of [input | reconstruction]")
+
+
+def _clip_retrieval_grid(trainer, config, dataloader_fn, dest: Path, lines: list[str],
+                         max_images: int = 256) -> None:
+    """CLIP evidence: for each digit-name prompt, the top-4 retrieved images."""
+    import torch
+    from torchvision.utils import save_image
+
+    from mini_networks.core.data.registry import label_to_tokens
+
+    dl = dataloader_fn(config, split="train")
+    images, labels = [], []
+    for batch in dl:
+        images.append(batch[0])
+        labels.append(torch.as_tensor(batch[-1]).flatten())
+        if sum(t.size(0) for t in images) >= max_images:
+            break
+    x = torch.cat(images)[:max_images]
+    y = torch.cat(labels)[:max_images]
+    img_emb = trainer.infer(config, {"images": x})["image_embeds"]
+    img_emb = torch.nn.functional.normalize(img_emb.float(), dim=-1)
+    rows, hits = [], 0
+    digits = list(range(10))
+    for d in digits:
+        tokens = label_to_tokens(d).unsqueeze(0)
+        txt = trainer.infer(config, {"tokens": tokens})["text_embeds"]
+        txt = torch.nn.functional.normalize(txt.float(), dim=-1)
+        top = (txt @ img_emb.T).squeeze(0).topk(4).indices
+        rows.append(x[top])
+        hits += int((y[top] == d).float().sum())
+    save_image(torch.cat(rows), str(dest / "text_retrieval.png"), nrow=4)
+    lines.append(
+        f"text_retrieval.png: row i = top-4 images for the caption of digit i; "
+        f"retrieval precision {hits}/40 (chance 4)"
+    )
+
+
 def _knn1_accuracy(trainer, config, dataloader_fn, max_samples: int = 512) -> str:
     """1-NN label accuracy on embeddings — the legible 'did it learn?' number
     for self-supervised models (random embeddings score ~chance)."""
@@ -234,10 +310,14 @@ def save_model_showcase(name: str, trainer, config, dataloader_fn, dest: str | P
         if name in SAMPLERS:
             out = trainer.infer(config, {"n_samples": _GRID_MAX, "seed": config.seed, "sample": _GRID_MAX})
             _dump_generic(out, dest, lines)
+            if name == "vae" and batch is not None:
+                _recon_pairs(trainer, config, batch, dest, lines)
         elif name in EMBEDDERS:
             lines.append(_knn1_accuracy(trainer, config, dataloader_fn))
             if name != "clip":  # clip's loader yields (image, text) pairs, not two views
                 _neighbor_grid(trainer, config, dataloader_fn, dest, lines)
+            else:
+                _clip_retrieval_grid(trainer, config, dataloader_fn, dest, lines)
         elif name in VISION_CLS and batch is not None:
             x = batch[0][:_GRID_MAX]
             if _save_grid(x, dest / "inputs.png"):
@@ -268,6 +348,8 @@ def save_model_showcase(name: str, trainer, config, dataloader_fn, dest: str | P
                 lines.append("inputs: inputs.png")
             out = trainer.infer(config, {"images": x} if name != "unet_ae" else x)
             _dump_generic(out, dest, lines)
+            if name == "detection" and isinstance(out, dict) and "bboxes" in out:
+                _draw_boxes(x, out["bboxes"], dest, lines)
         elif name.startswith("audio_") and batch is not None:
             out = trainer.infer(config, batch[0][:_GRID_MAX])
             _pred_vs_true(out, batch[1], lines)

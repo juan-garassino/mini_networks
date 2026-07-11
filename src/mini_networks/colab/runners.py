@@ -409,11 +409,27 @@ def _run_diffusion_distillation(fast_demo, training_tier, data_root, device, che
     pipeline.train(cfg, logger)
     import torch
 
-    xt = torch.randn(1, 1, 28, 28, device=cfg.device)
-    t = torch.zeros(1, dtype=torch.long, device=cfg.device)
+    # SAMPLE from the student, don't dump one eps-prediction (an eps map looks
+    # like noise by construction — the audit graded that showcase C).
+    from mini_networks.core.diffusion.sampling import sample_loop
+
     with torch.no_grad():
-        pred = pipeline.student(xt, t)
-    return {"student_pred": pred.cpu(), "config": cfg, "run_dir": str(logger.run_dir)}
+        x = sample_loop(
+            scheduler=pipeline.scheduler,
+            predict_noise=lambda x, t_b, t, _: pipeline.student(x, t_b),
+            shape=(8, 1, 28, 28),
+            device=cfg.device,
+            timesteps=cfg.effective_timesteps,
+            seed=cfg.seed,
+        )
+    samples = (x.clamp(-1, 1) + 1) / 2
+    try:
+        from torchvision.utils import save_image
+
+        save_image(samples.cpu(), str(logger.artifact_path("student_samples.png")), nrow=4)
+    except Exception:
+        pass
+    return {"student_samples": samples.cpu(), "config": cfg, "run_dir": str(logger.run_dir)}
 
 
 def _run_audio_text_contrastive(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
@@ -579,14 +595,22 @@ def _run_image_captioning(fast_demo, training_tier, data_root, device, checkpoin
         sample_limit=cfg.dataset_sample_limit,
     )
     images, labels = next(iter(dl))
-    tokens = torch.stack(
-        [label_to_tokens(int(labels[0]), cfg.text_seq_len, cfg.vocab_size)],
-        dim=0,
-    ).to(cfg.device)
     with torch.no_grad():
-        logits = pipeline.model(images.to(cfg.device), tokens)
+        gen = pipeline.model.generate(images.to(cfg.device), max_len=cfg.text_seq_len)
+    caption = "".join(chr(int(i)) for i in gen[0] if 0 < int(i) < 128).strip()
+    # Evidence artifact: the input image + its generated caption vs truth.
+    try:
+        from torchvision.utils import save_image
+
+        save_image(images[0], str(logger.artifact_path("caption_input.png")))
+        (logger.artifact_path("caption.txt")).write_text(
+            f"true label: {int(labels[0])}\ngenerated caption: {caption}\n")
+    except Exception:
+        pass
+    console.print(f"  Caption for a '{int(labels[0])}': [cyan]{caption!r}[/cyan]")
     return {
-        "caption_logits": logits.cpu(),
+        "caption": caption,
+        "true_label": int(labels[0]),
         "config": cfg,
         "run_dir": str(logger.run_dir),
     }

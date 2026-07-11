@@ -43,8 +43,23 @@ class Captioner(nn.Module):
         B, T = tokens.shape
         pos = torch.arange(T, device=tokens.device).unsqueeze(0)
         tgt = self.token(tokens) + self.pos(pos)
-        out = self.decoder(tgt, mem)
+        # Causal mask is load-bearing: without it the decoder attends to the
+        # full target and the training loss is solvable by COPYING the input
+        # tokens — the model never learned to caption (2026-07-11 audit).
+        causal = nn.Transformer.generate_square_subsequent_mask(T, device=tokens.device)
+        out = self.decoder(tgt, mem, tgt_mask=causal)
         return self.head(out)
+
+    @torch.no_grad()
+    def generate(self, images: torch.Tensor, max_len: int = 32) -> torch.Tensor:
+        """Greedy caption generation seeded with BOS(=0). Returns [B, max_len]."""
+        B = images.size(0)
+        dev = images.device
+        tokens = torch.zeros(B, 1, dtype=torch.long, device=dev)
+        for _ in range(max_len - 1):
+            logits = self.forward(images, tokens)
+            tokens = torch.cat([tokens, logits[:, -1:].argmax(dim=-1)], dim=1)
+        return tokens[:, 1:]
 
 
 class ImageCaptioning:
@@ -79,7 +94,11 @@ class ImageCaptioning:
                     label_to_tokens(int(l), config.text_seq_len, config.vocab_size)
                     for l in labels
                 ], dim=0).to(config.device)
-                logits = model(images, tokens)
+                # BOS(=0)-shifted teacher forcing: read [BOS, tok_<T]], predict tok.
+                # Captions never start with PAD(0), so 0 doubles as BOS safely.
+                bos = torch.zeros(tokens.size(0), 1, dtype=torch.long, device=config.device)
+                inp = torch.cat([bos, tokens[:, :-1]], dim=1)
+                logits = model(images, inp)
                 loss = F.cross_entropy(logits.view(-1, config.vocab_size), tokens.view(-1))
                 opt.zero_grad()
                 loss.backward()

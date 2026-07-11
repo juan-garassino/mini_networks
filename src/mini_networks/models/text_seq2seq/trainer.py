@@ -109,15 +109,19 @@ class TextSeq2SeqTrainer(BaseTrainer):
         if self.model is None:
             raise RuntimeError("Model not loaded.")
         src = inputs.get("src") if isinstance(inputs, dict) else inputs
+        temperature = float(inputs.get("temperature", 0.8)) if isinstance(inputs, dict) else 0.8
         src = torch.as_tensor(src, dtype=torch.long).unsqueeze(0).to(config.device)
-        # True greedy decode: seed with the last source token (no BOS in the
-        # vocab; tgt continues src), then extend one token at a time.
+        # Sampled decode, seeded with the last source token (no BOS in the
+        # vocab; tgt continues src). Greedy argmax on a small char model
+        # collapses into unigram loops (" the the the" — audit); temperature
+        # sampling keeps continuations alive.
         max_new = min(src.size(1), 32)
         decoded = src[:, -1:]
         with torch.no_grad():
             for _ in range(max_new):
-                logits = self.model(src, decoded)
-                decoded = torch.cat([decoded, logits[:, -1:].argmax(dim=-1)], dim=1)
+                logits = self.model(src, decoded)[:, -1, :] / max(temperature, 1e-4)
+                nxt = torch.multinomial(torch.softmax(logits, dim=-1), 1)
+                decoded = torch.cat([decoded, nxt], dim=1)
         return {"predictions": decoded[:, 1:].cpu().tolist()}
 
 

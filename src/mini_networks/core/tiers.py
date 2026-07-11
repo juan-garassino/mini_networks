@@ -36,6 +36,19 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     # Self-supervised needs more steps than supervised: kNN 0.16 at 5 epochs
     # with healthy loss — representation quality lags the loss (m-vision-1).
     "dino": {"M": {"epochs": 15}},
+    # Char-level LMs are fast (~1s/epoch on L4) and generation quality lags
+    # eval_loss badly — the audit graded all of them "gibberish words, learned
+    # structure only". Triple the budget for legible text.
+    "transformer": {"M": {"epochs": 15}},
+    "mamba": {"M": {"epochs": 15}},
+    "rnn": {"M": {"epochs": 15}},
+    "rag": {"M": {"epochs": 15}},
+    "text_seq2seq": {"M": {"epochs": 15}},
+    "rlhf": {"M": {"epochs": 15}},
+    "image_captioning": {"M": {"epochs": 15}},
+    # pixelcnn samples were stroke fragments at 5 epochs (judge 0.6-0.77);
+    # AR likelihood models keep improving with budget.
+    "pixelcnn": {"M": {"epochs": 15}},
     # judge 0.31 and 0.18 on identical configs @ 5 epochs — the metric sits ON
     # the 0.25 bar; double the steps for margin (m-full-2).
     "diffusion": {"M": {"epochs": 10}},
