@@ -33,6 +33,9 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     "transformer_clip_diffusion": {"M": {"epochs": 10}},
     "rag_conditioned_diffusion": {"M": {"epochs": 10}},
     "classifier_guided_diffusion": {"M": {"epochs": 10}},
+    # Self-supervised needs more steps than supervised: kNN 0.16 at 5 epochs
+    # with healthy loss — representation quality lags the loss (m-vision-1).
+    "dino": {"M": {"epochs": 15}},
     # judge 0.31 and 0.18 on identical configs @ 5 epochs — the metric sits ON
     # the 0.25 bar; double the steps for margin (m-full-2).
     "diffusion": {"M": {"epochs": 10}},
