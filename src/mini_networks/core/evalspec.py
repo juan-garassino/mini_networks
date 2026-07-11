@@ -76,6 +76,9 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "dino":                  _loss(4.2, 3.5, s_mode="finite"),
     "vision_embed":          _loss(4.0, 3.0),
     "transformer":           _loss(2.6, 2.0),    # char-level Shakespeare CE
+    # Sparse-capacity twin of transformer on the same corpus; slightly looser
+    # bar — top-1 routing splits capacity and the balance aux slows CE early.
+    "moe":                   _loss(2.8, 2.2),
     "mamba":                 _loss(2.8, 2.2),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),

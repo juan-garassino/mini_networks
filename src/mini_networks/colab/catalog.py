@@ -38,6 +38,7 @@ DESCRIPTIONS = {
     "simclr":                        "SimCLR-lite contrastive vision pretraining",
     "dino":                          "DINO self-distillation ViT (EMA teacher, no labels)",
     "transformer":                   "Character-level TransformerLM on Shakespeare",
+    "moe":                           "Mixture-of-Experts LM: router + top-1 experts + balance loss",
     "mamba":                         "NanoMamba state-space sequence model",
     "gan":                           "Generator + Discriminator trained on MNIST",
     "rnn":                           "RNN / LSTM / GRU recurrent language model",
@@ -84,7 +85,7 @@ CATEGORY = {name: "Vision / Multimodal" for name in [
     "clip", "diffusion", "segmentation", "detection", "gan",
     "classifier", "resnet", "vit", "vae", "unet_ae", "simclr", "dino",
 ]}
-CATEGORY.update({name: "Language" for name in ["transformer", "mamba", "rnn", "lora", "rag", "rlhf", "grpo"]})
+CATEGORY.update({name: "Language" for name in ["transformer", "moe", "mamba", "rnn", "lora", "rag", "rlhf", "grpo"]})
 CATEGORY["rl_maze"] = "Reinforcement Learning"
 CATEGORY["reinforce"] = "Reinforcement Learning"
 CATEGORY["audio_classifier"] = "Audio"

@@ -21,6 +21,7 @@ MODEL_NAMES: list[str] = [
     "simclr",
     "dino",
     "transformer",
+    "moe",
     "mamba",
     "gan",
     "rnn",
@@ -74,6 +75,7 @@ def get_model_registry() -> dict:
     from mini_networks.models.rlhf.trainer import RLHFTrainer, make_rlhf_dataloader
     from mini_networks.models.grpo.config import GRPOConfig
     from mini_networks.models.grpo.trainer import GRPOTrainer, make_grpo_dataloader
+    from mini_networks.models.moe.config import MoEConfig
     from mini_networks.models.vae.config import VAEConfig
     from mini_networks.models.vae.trainer import VAETrainer, make_vae_dataloader
     from mini_networks.models.classifier.config import ClassifierConfig
@@ -142,6 +144,7 @@ def get_model_registry() -> dict:
         "simclr": (SimCLRConfig, SimCLRTrainer, make_simclr_dataloader),
         "dino": (DINOConfig, DINOTrainer, make_dino_dataloader),
         "transformer": (TransformerConfig, TransformerTrainer, make_transformer_dataloader),
+        "moe": (MoEConfig, TransformerTrainer, make_transformer_dataloader),
         "mamba": (MambaConfig, MambaTrainer, make_mamba_dataloader),
         "gan": (GANConfig, GANTrainer, make_gan_dataloader),
         "rnn": (RNNConfig, RNNTrainer, make_rnn_dataloader),

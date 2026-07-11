@@ -43,6 +43,7 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     # eval_loss badly — the audit graded all of them "gibberish words, learned
     # structure only". Triple the budget for legible text.
     "transformer": {"M": {"epochs": 15}},
+    "moe": {"M": {"epochs": 15}},
     "mamba": {"M": {"epochs": 15}},
     "rnn": {"M": {"epochs": 15}},
     "rag": {"M": {"epochs": 15}},

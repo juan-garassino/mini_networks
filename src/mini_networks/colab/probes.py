@@ -94,7 +94,7 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
         output = trainer.infer(config, {"images": batch[0][:1]})
     elif model in {"diffusion", "gan", "pixelcnn", "tabular_diffusion"}:
         output = trainer.infer(config, {"n_samples": 1})
-    elif model in {"transformer", "mamba", "rnn", "rlhf", "grpo"}:
+    elif model in {"transformer", "moe", "mamba", "rnn", "rlhf", "grpo"}:
         output = trainer.infer(config, {"prompt": "To be", "max_new_tokens": 8})
     elif model == "rag":
         output = trainer.infer(config, {"query": "To be", "max_new_tokens": 8})
