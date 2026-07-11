@@ -86,6 +86,8 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # Same bars as rlhf (identical pretrain stage/corpus); grpo_loss can be
     # negative (advantage-weighted surrogate), so gate the pretrain loss.
     "grpo":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "grpo_loss")),
+    # dpo_loss can plateau near log(2) with self-labelled pairs; gate pretrain.
+    "dpo":                   _loss(3.0, 2.4, loss_keys=("pretrain_loss", "dpo_loss")),
     "text_seq2seq":          _loss(2.5, 1.8),
     "text_token_classifier": _loss(1.5, 0.8),
     # Units fixed 2026-07-11: the model returns mean-reduced per-PIXEL

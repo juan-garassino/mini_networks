@@ -49,6 +49,7 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     "rag": {"M": {"epochs": 15}},
     "text_seq2seq": {"M": {"epochs": 15}},
     "rlhf": {"M": {"epochs": 15}},
+    "dpo": {"M": {"epochs": 15}},
     "image_captioning": {"M": {"epochs": 15}},
     # pixelcnn samples were stroke fragments at 5 epochs (judge 0.6-0.77);
     # AR likelihood models keep improving with budget.

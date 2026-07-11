@@ -47,6 +47,7 @@ DESCRIPTIONS = {
     "rl_maze":                       "Q / DQN / PPO agents on a procedural maze",
     "rlhf":                          "PPO fine-tuning with Shakespearean reward",
     "grpo":                          "GRPO: group-relative advantages, no value net (DeepSeek)",
+    "dpo":                           "DPO: preference pairs, no RL — implicit KL via reference",
     "reinforce":                     "REINFORCE policy gradient on a procedural maze",
     "audio_classifier":              "1D CNN classifier on speech digits",
     "audio_spectrogram":             "2D CNN on audio spectrograms",
@@ -85,7 +86,7 @@ CATEGORY = {name: "Vision / Multimodal" for name in [
     "clip", "diffusion", "segmentation", "detection", "gan",
     "classifier", "resnet", "vit", "vae", "unet_ae", "simclr", "dino",
 ]}
-CATEGORY.update({name: "Language" for name in ["transformer", "moe", "mamba", "rnn", "lora", "rag", "rlhf", "grpo"]})
+CATEGORY.update({name: "Language" for name in ["transformer", "moe", "mamba", "rnn", "lora", "rag", "rlhf", "grpo", "dpo"]})
 CATEGORY["rl_maze"] = "Reinforcement Learning"
 CATEGORY["reinforce"] = "Reinforcement Learning"
 CATEGORY["audio_classifier"] = "Audio"
