@@ -51,6 +51,13 @@ class EMA:
     def update(self, model: torch.nn.Module) -> None:
         for shadow_p, model_p in zip(self.shadow.parameters(), model.parameters()):
             shadow_p.copy_(self.decay * shadow_p + (1.0 - self.decay) * model_p)
+        # Buffers too (BatchNorm running stats): parameters-only EMA left the
+        # shadow's BN stats at their init values forever — the DCGAN
+        # generator's EMA checkpoint normalized with garbage stats and
+        # sampled uniform checkerboard (m-vision-8). Buffers track the live
+        # model directly (no averaging — running stats are already an EMA).
+        for shadow_b, model_b in zip(self.shadow.buffers(), model.buffers()):
+            shadow_b.copy_(model_b)
 
     def state_dict(self) -> dict:
         return self.shadow.state_dict()
