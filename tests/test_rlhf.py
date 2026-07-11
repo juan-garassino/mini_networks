@@ -22,9 +22,17 @@ class TestShakespeareanScore:
     def test_empty_string_returns_zero(self):
         assert shakespearean_score("") == 0.0
 
-    def test_no_archaic_words_returns_zero(self):
-        score = shakespearean_score("the dog ran fast over the hill")
-        assert score == 0.0
+    def test_gibberish_scores_near_zero(self):
+        # The reward is deliberately DENSE (see shakespearean_score): plain
+        # English scores low-but-nonzero so PPO has a gradient; only true
+        # gibberish bottoms out.
+        assert shakespearean_score("xqzt blorp fneep grix") == 0.0
+
+    def test_graded_bands_are_ordered(self):
+        gibberish = shakespearean_score("xqzt blorp fneep grix")
+        english = shakespearean_score("the dog ran fast over the hill")
+        archaic = shakespearean_score("thou art a verily noble soul")
+        assert gibberish < english < archaic
 
     def test_archaic_words_raise_score(self):
         score = shakespearean_score("thou art a verily noble soul")
