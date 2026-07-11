@@ -52,15 +52,17 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "mobilenet":             _acc(0.80, 0.93),
     "convnext":              _acc(0.80, 0.93),
     "tabular_classifier":    _acc(0.75, 0.90),   # provisional post-split-fix: 30-row honest eval, 1 miss = -3.3%
-    # PROVISIONAL (2026-07-11): every pre-split-fix audio number was TRAINING
-    # accuracy (FSDD ignored `split` — train==eval; gate audit). Bars below
-    # are placed under the expected honest-eval bands and must be re-derived
-    # from the first post-fix sweep. audio_classifier's raw-waveform lesson
-    # (wrong representation vs spectrograms) still holds.
+    # Honest held-out bands (m-honest-1, first post-split-fix sweep):
+    # ac 0.385 / asp 0.449 / amel 0.430 / atr 0.955 — pre-fix numbers were
+    # training accuracy (FSDD ignored `split`). Caveat: the index-parity
+    # split mixes speakers, so speaker-level leakage remains (fine for a
+    # teaching zoo). audio_classifier's raw-waveform lesson stands.
     "audio_classifier":      _acc(0.20, 0.50),
     "audio_spectrogram":     _acc(0.35, 0.70),
-    "audio_transformer":     _acc(0.40, 0.75),   # provisional post-split-fix (0.99 was memorized train acc)
-    "audio_melspectrogram":  _acc(0.40, 0.70),   # provisional post-split-fix (was 0.50 on leaked eval)
+    "audio_transformer":     _acc(0.40, 0.75),   # honest held-out 0.955 (m-honest-1) — genuinely strong, not a leak
+    # 0.35: honest band starts at 0.430 (m-honest-1) — the provisional 0.40
+    # left only a +7% margin on a judge-free but small (600-file) eval.
+    "audio_melspectrogram":  _acc(0.35, 0.70),
     "segmentation":          EvalSpec(metric="eval_iou", thresholds={"M": 0.55, "L": 0.75}),
     "detection":             EvalSpec(metric="eval_accuracy", thresholds={"M": 0.55, "L": 0.80}),
     "lora":                  _acc(0.60, 0.80, loss_keys=("loss", "pretrain_loss", "finetune_loss")),
