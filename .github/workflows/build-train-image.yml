@@ -46,3 +46,17 @@ jobs:
             europe-west1-docker.pkg.dev/garassino-ml/ml-images/mini-networks-train:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # GPU image too — the parallel sweep job runs mini-networks-train-gpu;
+      # building only the CPU image left sweeps on stale code.
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/gcp/Dockerfile.train
+          push: true
+          build-args: |
+            TORCH_INDEX=https://download.pytorch.org/whl/cu121
+          tags: |
+            europe-west1-docker.pkg.dev/garassino-ml/ml-images/mini-networks-train-gpu:${{ steps.sha.outputs.short }}
+            europe-west1-docker.pkg.dev/garassino-ml/ml-images/mini-networks-train-gpu:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
