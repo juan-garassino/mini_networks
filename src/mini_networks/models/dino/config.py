@@ -17,5 +17,8 @@ class DINOConfig(BaseConfig):
     out_dim: int = 64        # prototype count; paper: 65536
     student_temp: float = 0.1
     teacher_temp: float = 0.04
-    ema_decay: float = 0.996
+    # 0.99, not the paper's 0.996: at M-tier's ~500 steps, 0.996 leaves the
+    # teacher ~13% initial random weights (0.996^500≈0.14) — the student
+    # chases a half-random target (flat loss + kNN 0.20, 2026-07-11 audit).
+    ema_decay: float = 0.99
     center_momentum: float = 0.9

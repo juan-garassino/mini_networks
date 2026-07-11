@@ -14,8 +14,13 @@ class DiffusionConfig(BaseConfig):
     base_channels: int = 32
     dataset: str = "mnist"
 
-    # EMA (Exponential Moving Average) of model weights — improves sample quality
-    ema_decay: float = 0.9999   # set to 0.0 to disable EMA
+    # EMA (Exponential Moving Average) of model weights — improves sample quality.
+    # 0.995, NOT the paper's 0.9999: with M-tier's ~1000 steps, 0.9999 leaves
+    # the EMA ≈90% initial random weights (0.9999^1000≈0.905) and
+    # load_checkpoint PREFERS model_ema.pt — the gate was scoring a
+    # near-random model (noise samples, 2026-07-11 audit). 0.995 converges in
+    # a few hundred steps.
+    ema_decay: float = 0.995    # set to 0.0 to disable EMA
 
     # Curriculum learning — train on harder (higher-variance) images first
     curriculum: bool = False    # if True, sort batches by image complexity
