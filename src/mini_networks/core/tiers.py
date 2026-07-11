@@ -27,7 +27,7 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     # uncapped: 50 epochs over the SAME 4096 images let D memorize and G
     # chase artifacts (judge 0.14 with textured-noise samples, m-vision-10);
     # step count is still bounded by train_batches, this only adds variety.
-    "gan": {"M": {"epochs": 50, "sample_limit": None}},
+    "gan": {"M": {"epochs": 80, "sample_limit": None}},
     # Guided-diffusion compositions match base diffusion's 10 epochs: at the
     # 5-epoch default their CFG UNets stay noisy and guide_weight=2 AMPLIFIES
     # the error (eps_c + w*(eps_c - eps_u)) — samples were noise while base

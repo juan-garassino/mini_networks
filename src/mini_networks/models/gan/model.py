@@ -65,6 +65,7 @@ class Discriminator(nn.Module):
             nn.Conv2d(in_channels, 64, 4, stride=2, padding=1),   # 14x14
             nn.LeakyReLU(0.2), nn.Dropout2d(dropout),
             nn.Conv2d(64, 128, 4, stride=2, padding=1),           # 7x7
+            nn.BatchNorm2d(128),  # standard DCGAN: BN in D except the first block
             nn.LeakyReLU(0.2), nn.Dropout2d(dropout),
             nn.Flatten(),
             nn.Linear(128 * 7 * 7, 1), nn.Sigmoid(),
@@ -81,9 +82,14 @@ def gan_d_loss(
     fake: torch.Tensor,
     criterion: nn.BCELoss,
 ) -> torch.Tensor:
-    """Discriminator loss: real→1, fake→0."""
+    """Discriminator loss: real→0.9 (one-sided label smoothing), fake→0.
+
+    Smoothing the REAL label is the classic Salimans et al. stabilizer: a
+    D that can hit 1.0 on reals overcommits and starves G of gradient —
+    visible as speckled low-contrast samples (m-vision-13 vision check).
+    """
     B = real.size(0)
-    ones  = torch.ones(B, 1, device=real.device)
+    ones  = torch.full((B, 1), 0.9, device=real.device)
     zeros = torch.zeros(B, 1, device=real.device)
     loss_real = criterion(discriminator(real), ones)
     loss_fake = criterion(discriminator(fake.detach()), zeros)
