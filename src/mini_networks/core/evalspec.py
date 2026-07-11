@@ -80,6 +80,9 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),
+    # Same bars as rlhf (identical pretrain stage/corpus); grpo_loss can be
+    # negative (advantage-weighted surrogate), so gate the pretrain loss.
+    "grpo":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "grpo_loss")),
     "text_seq2seq":          _loss(2.5, 1.8),
     "text_token_classifier": _loss(1.5, 0.8),
     # Units fixed 2026-07-11: the model returns mean-reduced per-PIXEL
@@ -95,15 +98,13 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # the bar sat mid-band and flapped. Set below the band floor; L stays
     # ambitious for the full budget.
     "diffusion":             _judge(0.12, 0.50),
-    # s_mode=finite: adversarial losses oscillate at equilibrium by design —
-    # the downward-trend check misfired on a healthy M run (m-baseline-1).
-    # Quality is still gated by judge_score at M/L. M 0.15 was a pre-data
-    # guess: the vanilla mini-GAN under the strict confidence x coverage judge
-    # sits at 0.031-0.062 with generator EMA across m-triage-5..m-registry-2
-    # (0.023-0.139 without EMA, non-monotone). Bar below the observed EMA
-    # floor; the coverage term is what keeps it low (partial mode coverage is
-    # THE textbook vanilla-GAN failure this item teaches).
-    "gan":                   _judge(0.025, 0.40, loss_keys=("g_loss", "d_loss"), s_mode="finite"),
+    # s_mode=finite: adversarial losses oscillate at equilibrium by design.
+    # Bar restored to 0.15: the old 0.025-0.062 band was measuring BUGS, not
+    # the architecture — reals in [0,1] vs Tanh fakes, params-only EMA
+    # breaking BatchNorm, and a 4096-image cap letting D memorize. With all
+    # three fixed the mini-DCGAN scores 0.45 with visible digit forms
+    # (m-vision-11); 0.15 now catches real regressions.
+    "gan":                   _judge(0.15, 0.40, loss_keys=("g_loss", "d_loss"), s_mode="finite"),
     # Raised 0.10 -> 0.5 (2026-07-11 audit): honest band 0.71-0.77 across 3
     # post-fix runs — the old bar was a stale pre-data guess 7x below it.
     # Caveat in the audit: judges are overconfident on binary noise, so this

@@ -28,6 +28,7 @@ MODEL_NAMES: list[str] = [
     "rag",
     "rl_maze",
     "rlhf",
+    "grpo",
     "reinforce",
     "audio_classifier",
     "audio_spectrogram",
@@ -71,6 +72,8 @@ def get_model_registry() -> dict:
     from mini_networks.models.rl_maze.trainer import RLMazeTrainer, make_rl_maze_dataloader
     from mini_networks.models.rlhf.config import RLHFConfig
     from mini_networks.models.rlhf.trainer import RLHFTrainer, make_rlhf_dataloader
+    from mini_networks.models.grpo.config import GRPOConfig
+    from mini_networks.models.grpo.trainer import GRPOTrainer, make_grpo_dataloader
     from mini_networks.models.vae.config import VAEConfig
     from mini_networks.models.vae.trainer import VAETrainer, make_vae_dataloader
     from mini_networks.models.classifier.config import ClassifierConfig
@@ -146,6 +149,7 @@ def get_model_registry() -> dict:
         "rag": (RAGConfig, RAGTrainer, make_rag_dataloader),
         "rl_maze": (RLMazeConfig, RLMazeTrainer, make_rl_maze_dataloader),
         "rlhf": (RLHFConfig, RLHFTrainer, make_rlhf_dataloader),
+        "grpo": (GRPOConfig, GRPOTrainer, make_grpo_dataloader),
         "reinforce": (ReinforceConfig, ReinforceTrainer, make_reinforce_dataloader),
         "audio_classifier": (AudioClassifierConfig, AudioClassifierTrainer, make_audio_dataloader),
         "audio_spectrogram": (AudioSpecClassifierConfig, AudioSpecClassifierTrainer, make_audio_spec_dataloader),
