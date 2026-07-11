@@ -58,8 +58,12 @@ class GANTrainer(BaseTrainer):
             for batch_idx, batch in enumerate(dataloader):
                 if config.max_train_batches is not None and batch_idx >= config.max_train_batches:
                     break
-                # dataloader may return (image, label) or just image
-                real = (batch[0] if isinstance(batch, (list, tuple)) else batch).to(config.device)
+                # dataloader may return (image, label) or just image.
+                # Scale reals to [-1,1]: the generator ends in Tanh, and with
+                # reals left in [0,1] the discriminator separates real/fake by
+                # VALUE RANGE alone — G can never win and samples stay speckle
+                # (the audit's div=0.015 collapse; found 2026-07-11).
+                real = (batch[0] if isinstance(batch, (list, tuple)) else batch).to(config.device) * 2.0 - 1.0
                 B = real.size(0)
                 z = torch.randn(B, config.latent_dim, device=config.device)
                 fake = G(z)
@@ -111,7 +115,7 @@ class GANTrainer(BaseTrainer):
             for batch_idx, batch in enumerate(dataloader):
                 if config.max_eval_batches is not None and batch_idx >= config.max_eval_batches:
                     break
-                real = (batch[0] if isinstance(batch, (list, tuple)) else batch).to(config.device)
+                real = (batch[0] if isinstance(batch, (list, tuple)) else batch).to(config.device) * 2.0 - 1.0
                 scores = D(real)
                 total_score += scores.mean().item()
                 n += 1
