@@ -23,8 +23,11 @@ DEFAULTS: dict[str, dict[str, int | None]] = {
 MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     # judge trajectory without EMA: 0.023 @ 24 steps, 0.048 @ 500, 0.139 @ 2k,
     # 0.049 @ 3.5k (non-monotone). With generator EMA, run long and let the
-    # slow average ride out the oscillations (m-full-2).
-    "gan": {"M": {"epochs": 50}},
+    # slow average ride out the oscillations (m-full-2). sample_limit
+    # uncapped: 50 epochs over the SAME 4096 images let D memorize and G
+    # chase artifacts (judge 0.14 with textured-noise samples, m-vision-10);
+    # step count is still bounded by train_batches, this only adds variety.
+    "gan": {"M": {"epochs": 50, "sample_limit": None}},
     # Guided-diffusion compositions match base diffusion's 10 epochs: at the
     # 5-epoch default their CFG UNets stay noisy and guide_weight=2 AMPLIFIES
     # the error (eps_c + w*(eps_c - eps_u)) — samples were noise while base
