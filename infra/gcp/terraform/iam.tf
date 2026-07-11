@@ -67,6 +67,15 @@ resource "google_service_account_iam_member" "wif_runtime" {
   member             = "principalSet://iam.googleapis.com/${replace(var.wif_provider, "//providers/.*$/", "")}/attribute.repository/${var.github_repo}"
 }
 
+# token_format: access_token in the workflow mints an OAuth token via
+# generateAccessToken — that needs TokenCreator on top of workloadIdentityUser.
+resource "google_service_account_iam_member" "wif_runtime_token" {
+  count              = var.wif_provider == "" ? 0 : 1
+  service_account_id = google_service_account.runtime.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "principalSet://iam.googleapis.com/${replace(var.wif_provider, "//providers/.*$/", "")}/attribute.repository/${var.github_repo}"
+}
+
 # CI pushes train images to GAR ml-images as the runtime SA.
 resource "google_project_iam_member" "runtime_ar_writer" {
   project = var.project_id
