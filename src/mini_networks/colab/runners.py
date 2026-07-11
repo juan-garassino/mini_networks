@@ -332,9 +332,22 @@ def _run_lora_lm(fast_demo, training_tier, data_root, device, checkpoint_root) -
     logger = _make_composition_logger("lora_lm", checkpoint_root)
     pipeline = LoRALM()
     pipeline.train(cfg, logger)
-    text = pipeline.generate(cfg, "Hello", max_new_tokens=16)
-    console.print(f"  Sample: [cyan]{text[:120]}[/cyan]")
-    return {"text": text, "config": cfg, "run_dir": str(logger.run_dir)}
+    # Base-vs-LoRA side by side: bypass the adapter (base head only) then
+    # generate with it — the delta IS the evidence LoRA changed anything.
+    lora_head = pipeline.model.lm_head
+    pipeline.model.lm_head = lora_head.base
+    text_base = pipeline.generate(cfg, "Hello", max_new_tokens=48)
+    pipeline.model.lm_head = lora_head
+    text_lora = pipeline.generate(cfg, "Hello", max_new_tokens=48)
+    try:
+        (logger.artifact_path("base_vs_lora.txt")).write_text(
+            f"base : {text_base}\nlora : {text_lora}\n")
+    except Exception:
+        pass
+    console.print(f"  base: [dim]{text_base[:80]}[/dim]")
+    console.print(f"  lora: [cyan]{text_lora[:80]}[/cyan]")
+    return {"text_base": text_base, "text_lora": text_lora, "config": cfg,
+            "run_dir": str(logger.run_dir)}
 
 
 def _run_segment_then_detect(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:

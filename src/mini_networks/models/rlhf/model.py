@@ -49,17 +49,33 @@ _ARCHAIC = {
 }
 
 
-def shakespearean_score(text: str) -> float:
-    """Heuristic quality score for Shakespearean text.
+_COMMON = {
+    "the", "and", "to", "of", "i", "a", "in", "that", "is", "my", "you",
+    "not", "with", "his", "he", "be", "your", "for", "have", "it", "we",
+    "what", "me", "this", "so", "but", "him", "her", "our", "shall", "will",
+    "good", "lord", "king", "love", "sir", "come", "let", "do", "no", "o",
+}
 
-    Counts archaic words as a fraction of total words.
-    Returns a float in roughly [0, 1].
+
+def shakespearean_score(text: str) -> float:
+    """DENSE heuristic quality score for Shakespearean text in [0, 1].
+
+    The original score counted only exact archaic words — a mini char-LM's
+    near-gibberish emits those with probability ~0, so every PPO rollout
+    scored 0.0 and the policy had no gradient at all (audit reward:0.0; the
+    same sparse-reward failure the maze had before shaping). Three graded
+    bands keep the signal dense at every capability level:
+      - real_frac:   emits actual English words (learnable from gibberish)
+      - suffix_frac: archaic morphology (-eth/-est/-'st/'d)
+      - archaic:     exact archaic-word hits (the true target, amplified)
     """
-    words = re.findall(r"[a-z]+", text.lower())
+    words = re.findall(r"[a-z']+", text.lower())
     if not words:
         return 0.0
-    hits = sum(1 for w in words if w in _ARCHAIC)
-    return hits / len(words)
+    real_frac = sum(1 for w in words if w in _COMMON or w in _ARCHAIC) / len(words)
+    suffix_frac = sum(1 for w in words if w.endswith(("eth", "est", "'st", "'d"))) / len(words)
+    archaic = sum(1 for w in words if w in _ARCHAIC) / len(words)
+    return min(1.0, 0.25 * real_frac + 0.25 * min(1.0, 4 * suffix_frac) + 0.5 * min(1.0, 5 * archaic))
 
 
 # ---------------------------------------------------------------------------
