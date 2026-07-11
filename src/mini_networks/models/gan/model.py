@@ -38,12 +38,12 @@ class Generator(nn.Module):
     def __init__(self, latent_dim: int = 100, image_size: int = 28, in_channels: int = 1):
         super().__init__()
         assert image_size == 28, "mini-DCGAN generator is wired for 28x28"
-        self.project = nn.Linear(latent_dim, 128 * 7 * 7)
+        self.project = nn.Linear(latent_dim, 256 * 7 * 7)
         self.net = nn.Sequential(
+            nn.BatchNorm2d(256), nn.ReLU(),
+            nn.ConvTranspose2d(256, 128, 4, stride=2, padding=1),  # 14x14
             nn.BatchNorm2d(128), nn.ReLU(),
-            nn.ConvTranspose2d(128, 64, 4, stride=2, padding=1),  # 14x14
-            nn.BatchNorm2d(64), nn.ReLU(),
-            nn.ConvTranspose2d(64, in_channels, 4, stride=2, padding=1),  # 28x28
+            nn.ConvTranspose2d(128, in_channels, 4, stride=2, padding=1),  # 28x28
             nn.Tanh(),
         )
         self.image_size = image_size
@@ -51,7 +51,7 @@ class Generator(nn.Module):
 
     def forward(self, z: torch.Tensor) -> torch.Tensor:
         """z: [B, latent_dim] → [B, C, H, W]."""
-        x = self.project(z).view(z.size(0), 128, 7, 7)
+        x = self.project(z).view(z.size(0), 256, 7, 7)
         return self.net(x)
 
 
@@ -63,10 +63,10 @@ class Discriminator(nn.Module):
         assert image_size == 28, "mini-DCGAN discriminator is wired for 28x28"
         self.net = nn.Sequential(
             nn.Conv2d(in_channels, 64, 4, stride=2, padding=1),   # 14x14
-            nn.LeakyReLU(0.2), nn.Dropout2d(dropout),
+            nn.LeakyReLU(0.2),
             nn.Conv2d(64, 128, 4, stride=2, padding=1),           # 7x7
             nn.BatchNorm2d(128),  # standard DCGAN: BN in D except the first block
-            nn.LeakyReLU(0.2), nn.Dropout2d(dropout),
+            nn.LeakyReLU(0.2),    # no Dropout2d: it fights BN and blurs D's signal
             nn.Flatten(),
             nn.Linear(128 * 7 * 7, 1), nn.Sigmoid(),
         )

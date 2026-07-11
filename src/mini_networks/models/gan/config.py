@@ -14,5 +14,5 @@ class GANConfig(BaseConfig):
     # checkpoint holds the EMA weights so eval sees the smoothed generator.
     # 0.999 ≈ a 1000-step window — wide enough to ride out oscillations at
     # the M budget (5k steps); 0.995 still tracked the collapse (m-full-2).
-    g_ema_decay: float = 0.999
+    g_ema_decay: float = 0.995  # tighter window: averaging a mode-hopping G across ~1k steps overlays modes into speckle
     dataset: str = "mnist"
