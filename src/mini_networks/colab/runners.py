@@ -38,8 +38,13 @@ def run_model(
     resume: bool = True,
     validate_inference: bool = False,
     run_name: str | None = None,
+    **config_overrides,
 ) -> "Logger":  # noqa: F821
-    """Train a single model and return the Logger instance."""
+    """Train a single model and return the Logger instance.
+
+    Extra kwargs become config-field overrides (flavor axis: dataset=,
+    num_classes=, …) — validated by the model's Config class.
+    """
     from mini_networks.core.registry import get_model_registry
     from mini_networks.core.checkpoints import find_resumable_run
     from mini_networks.core.logging.logger import Logger
@@ -58,6 +63,7 @@ def run_model(
         device=device,
         checkpoint_root=checkpoint_root,
         resume=resume,
+        **config_overrides,
     )
     model_root = _run_base(checkpoint_root, model)
     resumable_run = find_resumable_run(model_root) if resume else None

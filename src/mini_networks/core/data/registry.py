@@ -547,9 +547,29 @@ def get_dataset(
     train = split == "train"
     os.makedirs(data_root, exist_ok=True)
 
-    if name in ("mnist", "fashion_mnist"):
-        cls = torchvision.datasets.MNIST if name == "mnist" else torchvision.datasets.FashionMNIST
-        dataset_name = "MNIST" if name == "mnist" else "FashionMNIST"
+    # Flavor axis: same 28x28 grayscale API across MNIST (digits),
+    # FashionMNIST (clothes), KMNIST (Kuzushiji characters — the
+    # torchvision-native CJK flavor; true "Chinese MNIST" is Kaggle-gated).
+    _MNIST_FAMILY = {
+        "mnist": (torchvision.datasets.MNIST, "MNIST"),
+        "fashion_mnist": (torchvision.datasets.FashionMNIST, "FashionMNIST"),
+        "kmnist": (torchvision.datasets.KMNIST, "KMNIST"),
+    }
+    if name == "tri_mnist":
+        # All-in-one network flavor: the three datasets concatenated with
+        # label offsets (digits 0-9, fashion 10-19, kuzushiji 20-29).
+        if task != "classification":
+            raise ValueError("tri_mnist supports task='classification' only")
+        parts = []
+        for offset, key in ((0, "mnist"), (10, "fashion_mnist"), (20, "kmnist")):
+            cls_i, name_i = _MNIST_FAMILY[key]
+            base = _load_torchvision_dataset(
+                cls_i, data_root=data_root, train=train, transform=T.ToTensor(), name=name_i)
+            parts.append(_LabelOffset(base, offset))
+        ds = torch.utils.data.ConcatDataset(parts)
+        return _Subset(ds, 256) if fast_demo else ds
+    if name in _MNIST_FAMILY:
+        cls, dataset_name = _MNIST_FAMILY[name]
         if task == "classification":
             ds = _load_torchvision_dataset(
                 cls,
@@ -771,6 +791,21 @@ def _ensure_iris(data_root: str, require_downloads: bool = True):
         raise RuntimeError("Iris download failed or dataset is empty.")
     _mark_dataset_ready("Iris", data_root)
     return X, y
+
+
+class _LabelOffset(Dataset):
+    """Shift labels by a constant — lets ConcatDataset flavors share one head."""
+
+    def __init__(self, dataset: Dataset, offset: int):
+        self._dataset = dataset
+        self._offset = offset
+
+    def __len__(self) -> int:
+        return len(self._dataset)
+
+    def __getitem__(self, idx: int):
+        x, y = self._dataset[idx]
+        return x, int(y) + self._offset
 
 
 class _Subset(Dataset):

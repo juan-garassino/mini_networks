@@ -74,6 +74,10 @@ def cmd_train(args: argparse.Namespace) -> None:
         extra["batch_size"] = args.batch_size
     if args.device:
         extra["device"] = args.device
+    if getattr(args, "dataset", None):
+        extra["dataset"] = args.dataset
+    if getattr(args, "num_classes", None):
+        extra["num_classes"] = args.num_classes
     if args.data_root:
         extra["data_root"] = args.data_root
     if args.checkpoint_root:
@@ -377,6 +381,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_train.add_argument("--epochs", type=int, default=None)
     p_train.add_argument("--batch_size", type=int, default=None)
     p_train.add_argument("--device", default=None)
+    p_train.add_argument("--dataset", default=None,
+                         help="Dataset flavor override (e.g. fashion_mnist, kmnist, tri_mnist)")
+    p_train.add_argument("--num_classes", type=int, default=None,
+                         help="Class-count override (tri_mnist needs 30)")
     p_train.add_argument("--data_root", default=None)
     p_train.add_argument("--checkpoint_root", default=os.path.join(os.getcwd(), "runs"))
     p_train.add_argument("--training_tier", choices=["S", "M", "L"], default="M")
