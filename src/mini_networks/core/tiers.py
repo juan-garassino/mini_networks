@@ -50,7 +50,10 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     "text_seq2seq": {"M": {"epochs": 15}},
     "rlhf": {"M": {"epochs": 15}},
     "dpo": {"M": {"epochs": 15}},
-    "image_captioning": {"M": {"epochs": 15}},
+    # 30, not 15: at 15 the captioner produced grammatical captions with the
+    # WRONG digit ("the number 8" for a 5) — the cross-attention content
+    # signal trails the language model (m-full-4 vision audit).
+    "image_captioning": {"M": {"epochs": 30}},
     # pixelcnn samples were stroke fragments at 5 epochs (judge 0.6-0.77);
     # AR likelihood models keep improving with budget.
     "pixelcnn": {"M": {"epochs": 15}},

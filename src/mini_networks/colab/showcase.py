@@ -27,7 +27,7 @@ _IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif"}
 VISION_CLS = {"classifier", "resnet", "vit", "mobilenet", "convnext", "lora"}
 EMBEDDERS = {"simclr", "dino", "vision_embed", "clip"}
 SAMPLERS = {"diffusion", "gan", "pixelcnn", "vae", "tabular_diffusion"}
-TEXT_LMS = {"transformer", "mamba", "rnn", "rlhf"}
+TEXT_LMS = {"transformer", "moe", "mamba", "rnn", "rlhf", "grpo", "dpo"}
 
 
 def _save_grid(tensor, path: Path) -> bool:

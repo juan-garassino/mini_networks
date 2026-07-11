@@ -622,6 +622,25 @@ def _run_image_captioning(fast_demo, training_tier, data_root, device, checkpoin
     with torch.no_grad():
         gen = pipeline.model.generate(images.to(cfg.device), max_len=cfg.text_seq_len)
     caption = "".join(chr(int(i)) for i in gen[0] if 0 < int(i) < 128).strip()
+
+    # Content accuracy over a small batch: does the caption NAME the right
+    # digit? Grammar without content is not captioning (m-full-4 audit).
+    from mini_networks.core.data.registry import DIGIT_CAPTIONS  # noqa: F401
+    digit_words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+    dl_eval = get_dataloader(name=cfg.dataset, data_root=cfg.data_root, split="train",
+                             task="classification", batch_size=8,
+                             fast_demo=cfg.effective_fast_demo,
+                             sample_limit=cfg.dataset_sample_limit)
+    xs, ys = next(iter(dl_eval))
+    with torch.no_grad():
+        gens = pipeline.model.generate(xs.to(cfg.device), max_len=cfg.text_seq_len)
+    hits = 0
+    for row, y in zip(gens, ys):
+        txt = "".join(chr(int(i)) for i in row if 0 < int(i) < 128).lower()
+        if digit_words[int(y)] in txt or str(int(y)) in txt:
+            hits += 1
+    logger.log_metrics(cfg.effective_epochs, {"caption_accuracy": hits / len(ys)})
+    console.print(f"  Caption accuracy: [cyan]{hits}/{len(ys)}[/cyan]")
     # Evidence artifact: the input image + its generated caption vs truth.
     try:
         from torchvision.utils import save_image
