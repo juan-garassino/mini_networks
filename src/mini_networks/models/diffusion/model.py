@@ -211,11 +211,13 @@ class ConditionedUNet(nn.Module):
         n_feat: int = 64,
         n_classes: int = 10,
         drop_prob: float = 0.1,
+        timesteps: int = 1000,
     ):
         super().__init__()
         self.n_feat = n_feat
         self.n_classes = n_classes
         self.drop_prob = drop_prob
+        self.timesteps = timesteps
 
         # Encoder
         self.init_conv = nn.Sequential(
@@ -265,7 +267,13 @@ class ConditionedUNet(nn.Module):
             context_mask: bool/long [B] — 1 = drop this label (force unconditional)
         """
         B = x.shape[0]
-        t_scaled = (t.float() / t.float().max().clamp(min=1)).view(B, 1)
+        # Normalize by the CHAIN LENGTH, never the batch max: sampling calls
+        # this with a constant-t batch, so batch-max normalization pinned
+        # t_scaled to 1.0 ("max noise") at every denoising step — the chain
+        # never denoised and every ConditionedUNet composition sampled pure
+        # noise (m-vision-3 triage). Training batches (t ~ randint(0,T)) were
+        # only mildly affected, which is why the loss looked healthy.
+        t_scaled = (t.float() / float(self.timesteps)).clamp(0, 1).view(B, 1)
 
         # One-hot class labels; zero out masked (unconditional) examples
         if c is not None:

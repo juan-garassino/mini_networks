@@ -133,6 +133,7 @@ class TransformerCLIPDiffusion:
             n_feat=config.n_feat,
             n_classes=config.n_classes,
             drop_prob=config.drop_prob,
+            timesteps=config.effective_timesteps,  # time-embedding normalizer must match the chain
         ).to(config.device)
 
     def _build_scheduler(self, config: TransformerCLIPDiffusionConfig) -> NoiseScheduler:
