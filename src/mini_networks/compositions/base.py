@@ -125,7 +125,7 @@ class ContrastiveCompositionBase(CompositionBase):
         bright diagonal."""
         from torchvision.utils import save_image
 
-        embs_a, embs_b = [], []
+        embs_a, embs_b, ys = [], [], []
         for primary, labels in dl:
             primary = primary.to(config.device)
             tokens = self._prepare_tokens(labels, config).to(config.device)
@@ -134,15 +134,27 @@ class ContrastiveCompositionBase(CompositionBase):
                 return  # single-embedding compositions: no pairwise retrieval
             embs_a.append(out[0].detach())
             embs_b.append(out[1].detach())
+            ys.append(torch.as_tensor(labels).flatten())
             if sum(e.size(0) for e in embs_a) >= max_samples:
                 break
-        a = F.normalize(torch.cat(embs_a)[:max_samples], dim=-1)
-        b = F.normalize(torch.cat(embs_b)[:max_samples], dim=-1)
+        # Sort by label: captions are label-derived (all "seven" texts are
+        # identical), so instance-level retrieval is impossible by
+        # construction — the honest metric is LABEL match@1 (chance = 1/n
+        # classes) and a label-sorted heatmap makes alignment visible as a
+        # block diagonal.
+        y = torch.cat(ys)[:max_samples]
+        order = y.argsort()
+        y = y[order].to(config.device)
+        a = F.normalize(torch.cat(embs_a)[:max_samples][order], dim=-1)
+        b = F.normalize(torch.cat(embs_b)[:max_samples][order], dim=-1)
         sim = a @ b.T
-        r_at_1 = (sim.argmax(dim=1) == torch.arange(sim.size(0), device=sim.device)).float().mean().item()
+        idx = torch.arange(sim.size(0), device=sim.device)
+        label_match = (y[sim.argmax(dim=1)] == y).float().mean().item()
+        r_at_1 = (sim.argmax(dim=1) == idx).float().mean().item()
         logger.log_metrics(config.effective_epochs, {
+            "label_match_at_1": label_match,
+            "label_match_chance": 1.0 / max(1, len(torch.unique(y))),
             "retrieval_at_1": r_at_1,
-            "retrieval_chance": 1.0 / sim.size(0),
         })
         heat = (sim - sim.min()) / (sim.max() - sim.min() + 1e-6)
         heat = torch.nn.functional.interpolate(

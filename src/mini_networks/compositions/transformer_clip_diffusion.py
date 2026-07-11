@@ -267,7 +267,10 @@ class TransformerCLIPDiffusion:
         )
 
         T = config.effective_timesteps
-        epochs = config.tier_epochs(config.diff_epochs, medium_cap=2)
+        # effective_epochs (honors the composition's tier override), not
+        # tier_epochs(medium_cap=2): the hardcoded 2-epoch cap left this CFG
+        # UNet saturated while its siblings trained 10 epochs (m-vision-4).
+        epochs = config.effective_epochs
         for epoch in range(epochs):
             unet.train()
             total = 0.0
