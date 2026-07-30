@@ -1,6 +1,6 @@
 # CLAUDE.md — mini_networks
 
-Educational ML lab: 34 models and 19 cross-model compositions sharing one
+Educational ML lab: 37 models and 19 cross-model compositions sharing one
 runtime contract, one data registry, one logging format, and one quality gate.
 Owner-facing reference lab with a graphical **playground** (Observatory).
 Nano S-tier runs locally (CPU) for the gate/dev; **M/L training runs on GCP
@@ -33,6 +33,8 @@ core/
                      metric (MN_MLFLOW_REGISTER=1; never fails a run)
   diffusion/sampling.py  shared DDPM sample_loop (guidance + callbacks)
 models/<name>/       config.py + model.py + trainer.py per model
+                     (kimi + deepseek are mini frontier LMs — arXiv 2607.24653 /
+                     2606.19348 — on the transformer text lineage; see docs/06)
 compositions/        multi-model pipelines (each exposes train/sample or compare)
 web/                 read-layer: metrics.py (pivot) + sources.py (Local/MLflow/
                      Composite RunSource) + model_catalog.py — reader of the contract
@@ -64,7 +66,9 @@ colab/
 api/                 FastAPI: routers/{training,inference,compositions,web}, in-memory
                      jobs; main.py mounts /web read-layer + the SPA at /
 main.py (repo root)  argparse CLI: serve|train|evaluate|compose|sweep|
-                     sweep-task|sweep-report|menu|list
+                     sweep-task|sweep-report|sweep-samples|pull-champions|
+                     showcase|menu|list. train takes --dataset (fashion_mnist|
+                     kmnist|tri_mnist) + --num_classes for flavor runs.
 ```
 
 Read-layer principle: the playground is a pure **reader of the run contract**.
