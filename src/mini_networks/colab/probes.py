@@ -98,6 +98,8 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
         output = trainer.infer(config, {"prompt": "To be", "max_new_tokens": 8})
     elif model == "rag":
         output = trainer.infer(config, {"query": "To be", "max_new_tokens": 8})
+    elif model == "grokking":
+        output = trainer.infer(config, {"a": 12, "b": 5})
     elif model in {"rl_maze", "reinforce"}:
         output = trainer.infer(config, {})
     elif model == "lora":

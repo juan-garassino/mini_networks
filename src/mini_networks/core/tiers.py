@@ -47,6 +47,9 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     "mamba": {"M": {"epochs": 15}},
     "kimi": {"M": {"epochs": 15}},
     "deepseek": {"M": {"epochs": 15}},
+    # grokking is step-based (limit_steps in its trainer); it needs the full
+    # ~9.3k-pair dataset and near-full batches for the phase transition
+    "grokking": {"M": {"sample_limit": None, "batch_cap": 512}},
     "rnn": {"M": {"epochs": 15}},
     "rag": {"M": {"epochs": 15}},
     "text_seq2seq": {"M": {"epochs": 15}},
