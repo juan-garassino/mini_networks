@@ -45,6 +45,8 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     "transformer": {"M": {"epochs": 15}},
     "moe": {"M": {"epochs": 15}},
     "mamba": {"M": {"epochs": 15}},
+    "kimi": {"M": {"epochs": 15}},
+    "deepseek": {"M": {"epochs": 15}},
     "rnn": {"M": {"epochs": 15}},
     "rag": {"M": {"epochs": 15}},
     "text_seq2seq": {"M": {"epochs": 15}},

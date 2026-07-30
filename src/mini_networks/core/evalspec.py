@@ -80,6 +80,12 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # bar — top-1 routing splits capacity and the balance aux slows CE early.
     "moe":                   _loss(2.8, 2.2),
     "mamba":                 _loss(2.8, 2.2),
+    # Frontier-architecture twins of transformer on the same corpus; bars
+    # mirror moe/mamba (sparse/hybrid capacity trades early CE for scaling
+    # properties the M budget can't show). PROVISIONAL until the first
+    # M cloud sweep sets honest bands.
+    "kimi":                  _loss(2.8, 2.2),
+    "deepseek":              _loss(2.8, 2.2),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),

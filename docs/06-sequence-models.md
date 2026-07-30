@@ -69,6 +69,57 @@ All three families expose the **same interface** so trainers are drop-in compati
   `seq_len` window each step, like `TransformerLM.generate()` (the educational fast-path
   of carrying state lives in the RNN chapter above).
 
+### Mini Kimi K3 — `src/mini_networks/models/kimi/` (registry: `kimi`)
+
+A miniature of the Kimi K3 frontier architecture (arXiv 2607.24653) on the same
+char-level corpus, so its `eval_loss` lands in the same column as `transformer`
+/ `moe` / `mamba`. Four ideas, each ablatable from `KimiConfig`:
+
+- **KDA (Kimi Delta Attention)**: linear-time delta-rule recurrence
+  `S_t = (I − β k kᵀ) Diag(α) S_{t−1} + β k vᵀ` with a **bounded** per-channel
+  decay `α = exp(g_min · σ(e^A z))` — K3's fix for the overflow that unbounded
+  decays cause in chunked kernels. Hybridized **3 KDA : 1 gated full attention**
+  per block, plus a final always-global layer. Fully **NoPE**: no positional
+  embeddings anywhere; the KDA short-convs + decay carry position.
+- **Block Attention Residuals**: instead of one accumulated residual stream,
+  each layer softmax-attends (per-layer learnable pseudo-query) over
+  [embedding, previous block sums, running partial sum] — attention over
+  *depth*, mirroring what attention did for *time*.
+- **Stable LatentMoE**: routed experts live in a small latent space
+  (`W_down → experts → RMSNorm → W_up`), 2 full-width shared experts, and
+  **SiTU-GLU** — SwiGLU with both factors softcapped (`β₁=4`, `β₂=25`), so
+  coincident large activations can't blow up. Aux-loss-free balancing: a
+  non-learned per-expert bias nudged by a sign rule (K3's Quantile Balancing
+  is the distributed-scale version of this idea). First layer's FFN is dense
+  (paper Table 1: 1 dense layer). One **MTP** layer predicts token t+2 through
+  the aux-loss channel.
+
+### Mini DeepSeek V4 — `src/mini_networks/models/deepseek/` (registry: `deepseek`)
+
+The contrasting answer (arXiv 2606.19348): where K3 makes attention *linear*,
+V4 keeps attention but **compresses the KV cache along the sequence**:
+
+- **CSA (Compressed Sparse Attention)**: pool every `m=4` tokens into one KV
+  entry (softmax-weighted with learned position biases), score entries with a
+  ReLU **lightning indexer**, keep top-k, then shared-KV MQA where each entry
+  is both key and value. **HCA (Heavily Compressed Attention)**: same pooling
+  at `m'=16`, dense attention, no indexer. Interleaved 3 CSA : 1 HCA. Both add
+  a **sliding-window branch** (raw KV for the last `n_win` tokens — also covers
+  the query's own block, preserving causality) and a learnable **attention
+  sink** per head. No absolute positions: **partial RoPE** on the last dims of
+  queries/entries, inverse RoPE on outputs so only relative position survives.
+- **mHC (Manifold-Constrained Hyper-Connections)**: the residual stream is
+  widened to `n_hc×d` and mixed per **sublayer** by dynamic A/B/C maps where B
+  is projected **doubly stochastic** via Sinkhorn — non-expansive mixing, so
+  deep stacks stay stable (`X_{l+1} = B X_l + C F(A X_l)`).
+- **DeepSeekMoE**: fine-grained routed + shared experts, `sqrt(softplus)`
+  affinity, aux-loss-free bias balancing plus a slight sequence-wise balance
+  loss; the **first block's FFN is hash-routed** by token id. One **MTP** layer
+  predicts t+2, like the real V4.
+
+The pair is the curriculum payload: two frontier labs, three shared problems
+(attention cost, residual bottleneck, sparse FFN), two different answers each.
+
 ## Comparing the three
 
 | | RNN/LSTM/GRU | TransformerLM | NanoMamba |
@@ -88,11 +139,13 @@ threshold on char-level text: transformer ≤ 2.6 (M) / 2.0 (L); rnn and mamba �
 uv run python main.py train --model transformer --fast_demo
 uv run python main.py train --model rnn --fast_demo
 uv run python main.py train --model mamba --fast_demo
+uv run python main.py train --model kimi --fast_demo
+uv run python main.py train --model deepseek --fast_demo
 ```
 
 ## Latest results
 
-<!-- results:start items=rnn,transformer,mamba -->
+<!-- results:start items=rnn,transformer,mamba,kimi,deepseek -->
 
 _Latest sweep: tier S on cpu_
 

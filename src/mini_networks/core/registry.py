@@ -23,6 +23,8 @@ MODEL_NAMES: list[str] = [
     "transformer",
     "moe",
     "mamba",
+    "kimi",
+    "deepseek",
     "gan",
     "rnn",
     "lora",
@@ -77,6 +79,10 @@ def get_model_registry() -> dict:
     from mini_networks.models.grpo.config import GRPOConfig
     from mini_networks.models.grpo.trainer import GRPOTrainer, make_grpo_dataloader
     from mini_networks.models.moe.config import MoEConfig
+    from mini_networks.models.kimi.config import KimiConfig
+    from mini_networks.models.kimi.trainer import KimiTrainer
+    from mini_networks.models.deepseek.config import DeepseekConfig
+    from mini_networks.models.deepseek.trainer import DeepseekTrainer
     from mini_networks.models.dpo.config import DPOConfig
     from mini_networks.models.dpo.trainer import DPOTrainer, make_dpo_dataloader
     from mini_networks.models.vae.config import VAEConfig
@@ -149,6 +155,8 @@ def get_model_registry() -> dict:
         "transformer": (TransformerConfig, TransformerTrainer, make_transformer_dataloader),
         "moe": (MoEConfig, TransformerTrainer, make_transformer_dataloader),
         "mamba": (MambaConfig, MambaTrainer, make_mamba_dataloader),
+        "kimi": (KimiConfig, KimiTrainer, make_transformer_dataloader),
+        "deepseek": (DeepseekConfig, DeepseekTrainer, make_transformer_dataloader),
         "gan": (GANConfig, GANTrainer, make_gan_dataloader),
         "rnn": (RNNConfig, RNNTrainer, make_rnn_dataloader),
         "lora": (LoRAConfig, LoRATrainer, make_lora_dataloader),
