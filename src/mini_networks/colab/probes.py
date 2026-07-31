@@ -102,6 +102,8 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
         output = trainer.infer(config, {"query": "To be", "max_new_tokens": 8})
     elif model == "sam":
         output = trainer.infer(config, {"images": batch[0][:1], "points": [[28, 28]], "labels": [1]})
+    elif model == "nerf":
+        output = trainer.infer(config, {"azimuth": 30})
     elif model == "gnn":
         output = trainer.infer(config, {"node_id": 0})
     elif model == "grokking":

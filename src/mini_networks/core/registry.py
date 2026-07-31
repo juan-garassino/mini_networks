@@ -30,6 +30,7 @@ MODEL_NAMES: list[str] = [
     "rpp_classifier",
     "gnn",
     "sam",
+    "nerf",
     "gan",
     "rnn",
     "lora",
@@ -94,6 +95,9 @@ def get_model_registry() -> dict:
     from mini_networks.models.gnn.trainer import GNNTrainer, make_gnn_dataloader
     from mini_networks.models.sam.config import SAMConfig
     from mini_networks.models.sam.trainer import SAMTrainer, make_sam_dataloader
+    from mini_networks.models.nerf.config import NerfConfig
+    from mini_networks.models.nerf.trainer import NerfTrainer
+    from mini_networks.models.nerf.scene import make_nerf_dataloader
     from mini_networks.models.kimi.config import KimiConfig
     from mini_networks.models.kimi.trainer import KimiTrainer
     from mini_networks.models.deepseek.config import DeepseekConfig
@@ -177,6 +181,7 @@ def get_model_registry() -> dict:
         "rpp_classifier": (RPPClassifierConfig, RPPClassifierTrainer, make_rpp_classifier_dataloader),
         "gnn": (GNNConfig, GNNTrainer, make_gnn_dataloader),
         "sam": (SAMConfig, SAMTrainer, make_sam_dataloader),
+        "nerf": (NerfConfig, NerfTrainer, make_nerf_dataloader),
         "gan": (GANConfig, GANTrainer, make_gan_dataloader),
         "rnn": (RNNConfig, RNNTrainer, make_rnn_dataloader),
         "lora": (LoRAConfig, LoRATrainer, make_lora_dataloader),
