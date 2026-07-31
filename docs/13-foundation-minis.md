@@ -37,7 +37,28 @@ Four ideas that define the modern era, each reduced to its irreducible core:
 uv run python main.py train --model gnn --fast_demo
 ```
 
+### Mini SAM — `src/mini_networks/models/sam/` (registry: `sam`)
+
+- Task: **two MNIST digits** on a 56x56 canvas (`TwoDigitSamDataset`) — the
+  image alone is ambiguous, so the mask depends on the prompt. A click (or
+  box) selects the target digit; a negative click can exclude the other one.
+- Model: conv encoder → 14x14 tokens, Fourier-feature prompt encoder, 2
+  rounds of **two-way attention**, then **3 candidate masks + an IoU head**;
+  training backprops only the best head per sample (min-loss), inference
+  returns the self-rated best — SAM's ambiguity machinery intact at nano
+  scale.
+- Honesty evidence: `evaluate()` reports `eval_iou` (clicked digit — the gate
+  metric) AND `wrong_prompt_iou` (the same mask scored against the other
+  digit). If the model ignored prompts, the two would match; the gap proves
+  promptability.
+- Showcase: `prompt_variations.png` — same composite, click digit A vs digit
+  B, two different masks.
+
+```bash
+uv run python main.py train --model sam --fast_demo
+```
+
 ## Latest results
 
-<!-- results:start items=gnn -->
+<!-- results:start items=gnn,sam -->
 <!-- results:end -->

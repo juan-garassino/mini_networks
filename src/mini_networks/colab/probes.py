@@ -72,6 +72,7 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
         "mobilenet",
         "convnext",
         "rpp_classifier",
+        "sam",
         "vision_embed",
         "text_seq2seq",
         "text_token_classifier",
@@ -99,6 +100,8 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
         output = trainer.infer(config, {"prompt": "To be", "max_new_tokens": 8})
     elif model == "rag":
         output = trainer.infer(config, {"query": "To be", "max_new_tokens": 8})
+    elif model == "sam":
+        output = trainer.infer(config, {"images": batch[0][:1], "points": [[28, 28]], "labels": [1]})
     elif model == "gnn":
         output = trainer.infer(config, {"node_id": 0})
     elif model == "grokking":
