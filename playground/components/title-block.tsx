@@ -3,6 +3,9 @@
 // The blueprint's title block — every real drawing has one. Doubles as the
 // sheet navigation: CHART / REACTIONS / OBSERVATORY plus the live status cell.
 export type SheetId = "chart" | "reactions" | "observatory";
+export type EditionId = "blueprint" | "wallchart" | "terminal" | "metro" | "atlas";
+
+const EDITIONS: EditionId[] = ["blueprint", "wallchart", "terminal", "metro", "atlas"];
 
 const SHEETS: { id: SheetId; no: string; label: string }[] = [
   { id: "chart", no: "01", label: "Chart" },
@@ -11,12 +14,14 @@ const SHEETS: { id: SheetId; no: string; label: string }[] = [
 ];
 
 export function TitleBlock({
-  sheet, setSheet, ok, runCount,
+  sheet, setSheet, ok, runCount, edition, setEdition,
 }: {
   sheet: SheetId;
   setSheet: (s: SheetId) => void;
   ok: boolean;
   runCount: number;
+  edition: EditionId;
+  setEdition: (e: EditionId) => void;
 }) {
   return (
     <footer className="grid grid-cols-[1fr_auto] items-stretch border-t-[1.5px] border-line bg-paper-deep/80 text-[10px] sm:grid-cols-[auto_1fr_auto]">
@@ -43,6 +48,13 @@ export function TitleBlock({
       </nav>
 
       <div className="flex items-center gap-4 px-4 py-2 text-ink-dim">
+        <button
+          onClick={() => setEdition(EDITIONS[(EDITIONS.indexOf(edition) + 1) % EDITIONS.length])}
+          className="bp-stamp px-2 py-0.5 text-[9px] transition-transform hover:scale-105"
+          title="cycle edition"
+        >
+          ed. {edition}
+        </button>
         <span>
           runs <span className="text-ink">{runCount}</span>
         </span>
