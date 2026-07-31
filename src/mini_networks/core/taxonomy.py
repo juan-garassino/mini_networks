@@ -178,6 +178,7 @@ COMPOSITION_TAXONOMY: dict[str, tuple[str, ...]] = {
     "latent_diffusion":             ("vae", "diffusion"),
     "mode_connect":                 ("classifier",),
     "double_descent":               ("classifier",),
+    "vlm":                          ("vit", "transformer"),
 }
 
 

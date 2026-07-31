@@ -113,3 +113,9 @@ single model + a barycentric loss-surface heatmap. See chapter 12.
 Width sweep on label-noised MNIST reproducing the double-descent hump
 (test error falls, rises at interpolation, falls again). Deliverable is the
 curve artifact; see chapter 12.
+
+### vlm
+
+Mini multimodal LM: VisionPatchEncoder prefix tokens + causal char-LM answer
+templated MNIST questions in words; blind (image-zeroed) accuracy logged as the
+degenerate anchor. See chapter 14 (atoms & molecules).

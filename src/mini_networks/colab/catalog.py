@@ -29,6 +29,7 @@ COMPOSITIONS = [
     "latent_diffusion",
     "mode_connect",
     "double_descent",
+    "vlm",
 ]
 
 DESCRIPTIONS = {
@@ -97,6 +98,7 @@ DESCRIPTIONS = {
     "latent_diffusion":              "Latent diffusion (VAE + UNet)",
     "mode_connect":                  "Loss-surface simplex between two classifiers + cheap simplex ensemble",
     "double_descent":                "Width sweep on label-noised MNIST: test error falls, rises, falls again",
+    "vlm":                           "Mini VLM: vision patch prefix + causal LM — templated MNIST QA in words",
 }
 
 CATEGORY = {name: "Vision / Multimodal" for name in [
