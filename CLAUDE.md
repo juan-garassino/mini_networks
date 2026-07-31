@@ -47,9 +47,11 @@ cloud/               publisher.py: JobSpec + Pub/Sub publisher (cloud train disp
                      champions.py: pull Production mini-<model> checkpoints to
                      runs/champions/<model>/artifacts (POST /infer falls back
                      to these when no run/checkpoint is named)
-playground/ (repo root)  Next.js 16 + React 19 + TS + Tailwind v4 + shadcn/ui +
-                     Recharts + Motion + Lucide. Toy/storybook "enchanted grove"
-                     UI (4 views: Watch/Play/Lab/Quest). Static-exported
+playground/ (repo root)  Next.js 16 + React 19 + TS + Tailwind v4 + Recharts +
+                     Motion. "Periodic Table of Neural Networks" cyanotype-
+                     blueprint UI (sheets: Chart/Reactions/Observatory +
+                     element spec-sheet drawer; taxonomy-driven via
+                     /web/taxonomy). Static-exported
                      (output:'export' → playground/out) and served by FastAPI
                      StaticFiles at /. Pure client of /web,/train,/infer. Source
                      committed; out/ + node_modules gitignored (build with

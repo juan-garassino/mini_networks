@@ -66,6 +66,40 @@ async def models():
     return list_model_infos()
 
 
+@router.get("/taxonomy")
+async def taxonomy():
+    """Atoms/molecules DAG + compositions for the playground's chart view."""
+    from mini_networks.colab.catalog import COMPOSITIONS, DESCRIPTIONS
+    from mini_networks.core.taxonomy import (
+        COMPOSITION_TAXONOMY,
+        MECHANISMS,
+        MODEL_TAXONOMY,
+    )
+    return {
+        "mechanisms": {k: {"description": m.description, "home": m.home}
+                       for k, m in MECHANISMS.items()},
+        "models": [
+            {
+                "name": name,
+                "level": t.level,
+                "introduces": list(t.introduces),
+                "builds_on": list(t.builds_on),
+                "note": t.note,
+                "description": DESCRIPTIONS.get(name, ""),
+            }
+            for name, t in MODEL_TAXONOMY.items()
+        ],
+        "compositions": [
+            {
+                "name": name,
+                "composes": list(COMPOSITION_TAXONOMY.get(name, ())),
+                "description": DESCRIPTIONS.get(name, ""),
+            }
+            for name in COMPOSITIONS
+        ],
+    }
+
+
 @router.get("/lessons")
 async def lessons():
     return list_lessons()
