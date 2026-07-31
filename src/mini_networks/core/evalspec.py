@@ -101,6 +101,12 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # it so the gate provably measures message passing). Finalize both numbers
     # from the first M sweep.
     "gnn":                   _acc(0.75, 0.90),
+    # PROVISIONAL: harder than plain segmentation (0.55) — the composite
+    # two-digit task makes the click causally necessary. evaluate() also logs
+    # wrong_prompt_iou (same mask scored vs the OTHER digit); the gap is the
+    # promptability evidence. Finalize both from the first M sweep.
+    "sam":                   EvalSpec(metric="eval_iou", thresholds={"M": 0.45, "L": 0.70},
+                                      higher_is_better=True),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),

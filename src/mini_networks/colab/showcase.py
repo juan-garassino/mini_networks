@@ -358,6 +358,27 @@ def save_model_showcase(name: str, trainer, config, dataloader_fn, dest: str | P
                     lines.append("spectrograms.png: the 8 input spectrograms (order matches pred/true)")
             else:  # raw waveforms — render our own log-STFT
                 _spectrogram_grid(batch[0], dest, lines)
+        elif name == "sam" and batch is not None:
+            import torch
+            from mini_networks.models.sam.trainer import interior_click
+            img, mask_a, mask_b = batch[0][:1], batch[1][:1], batch[2][:1]
+            clicks = {
+                "click_digit_a": (interior_click(mask_a[0]) * img.shape[-1]).tolist(),
+                "click_digit_b": (interior_click(mask_b[0]) * img.shape[-1]).tolist(),
+            }
+            panels = [img[0].expand(3, -1, -1).clone()]
+            for tag, pt in clicks.items():
+                out = trainer.infer(config, {"images": img, "points": [pt], "labels": [1]})
+                best = int(torch.tensor(out["iou_pred"][0]).argmax())
+                mask = (out["masks"][0, best] > 0.5).float()
+                panel = img[0].expand(3, -1, -1).clone() * 0.5
+                panel[1] = torch.maximum(panel[1], mask)  # green overlay
+                y, x = int(pt[0]), int(pt[1])
+                panel[0, max(0, y - 1):y + 2, max(0, x - 1):x + 2] = 1.0  # red click dot
+                panels.append(panel)
+                lines.append(f"{tag}: click at {pt}, best head {best}")
+            if _save_grid(torch.stack(panels), dest / "prompt_variations.png"):
+                lines.append("prompt_variations.png: [input | click A mask | click B mask]")
         elif name == "gnn":
             import torch
             from mini_networks.models.gnn.trainer import _graph_dataset
