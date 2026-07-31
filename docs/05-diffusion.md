@@ -105,3 +105,6 @@ _Latest sweep: tier S on cpu_
 | pixelcnn | pass | judge_score | 0.0111 | n/a |
 
 <!-- results:end -->
+
+> Diffusion is not images-only: `text_diffusion` (chapter 06) applies the same
+> corrupt-and-denoise idea to language via token masking (LLaDA, arXiv 2502.09992).
