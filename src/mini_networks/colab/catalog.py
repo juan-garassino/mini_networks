@@ -42,6 +42,7 @@ DESCRIPTIONS = {
     "mamba":                         "NanoMamba state-space sequence model",
     "kimi":                          "Mini Kimi K3: KDA linear-attention hybrid + AttnRes + LatentMoE (SiTU-GLU)",
     "deepseek":                      "Mini DeepSeek V4: CSA/HCA compressed attention + mHC + DeepSeekMoE + MTP",
+    "grokking":                      "Grokking study: delayed generalization on modular division (a/b mod 97)",
     "gan":                           "Generator + Discriminator trained on MNIST",
     "rnn":                           "RNN / LSTM / GRU recurrent language model",
     "lora":                          "Low-rank fine-tuning: MNIST → FashionMNIST",
@@ -88,7 +89,7 @@ CATEGORY = {name: "Vision / Multimodal" for name in [
     "clip", "diffusion", "segmentation", "detection", "gan",
     "classifier", "resnet", "vit", "vae", "unet_ae", "simclr", "dino",
 ]}
-CATEGORY.update({name: "Language" for name in ["transformer", "moe", "mamba", "kimi", "deepseek", "rnn", "lora", "rag", "rlhf", "grpo", "dpo"]})
+CATEGORY.update({name: "Language" for name in ["transformer", "moe", "mamba", "kimi", "deepseek", "grokking", "rnn", "lora", "rag", "rlhf", "grpo", "dpo"]})
 CATEGORY["rl_maze"] = "Reinforcement Learning"
 CATEGORY["reinforce"] = "Reinforcement Learning"
 CATEGORY["audio_classifier"] = "Audio"

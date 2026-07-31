@@ -86,6 +86,10 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # M cloud sweep sets honest bands.
     "kimi":                  _loss(2.8, 2.2),
     "deepseek":              _loss(2.8, 2.2),
+    # PROVISIONAL: the val-accuracy jump may or may not land inside the M step
+    # budget (20k steps); at L (100k) the paper's setup reaches ~1.0. Finalize
+    # from the first M sweep. Train loss drops fast, so the S trend check holds.
+    "grokking":              _acc(0.50, 0.95),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),

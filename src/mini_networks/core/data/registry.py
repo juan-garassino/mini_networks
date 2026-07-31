@@ -292,6 +292,45 @@ class SyntheticTabular(Dataset):
         return self._data[idx], int(self._labels[idx])
 
 
+class ModularArithmeticDataset(Dataset):
+    """All pairs a / b (mod p) as 4-token sequences — the grokking task.
+
+    Division mod a prime (b * b^-1 via Fermat's little theorem) over every
+    valid (a, b) pair; a deterministic pair-level shuffle splits train/val
+    disjointly, so validation pairs are NEVER seen in training — the whole
+    point of the grokking study is what happens on those held-out pairs.
+    Tokens: 0..p-1 are residues, p is the op token, p+1 is "=".
+    Returns (tokens [a, op, b, eq], answer).
+    """
+
+    def __init__(
+        self,
+        p: int = 97,
+        train_frac: float = 0.5,
+        fast_demo: bool = False,
+        seed: int = 5,
+        split: str = "train",
+    ):
+        self.p = p
+        pairs = [(a, b) for a in range(p) for b in range(1, p)]
+        g = torch.Generator().manual_seed(seed)
+        order = torch.randperm(len(pairs), generator=g)
+        n_train = int(len(pairs) * train_frac)
+        idx = order[:n_train] if split == "train" else order[n_train:]
+        if fast_demo:
+            idx = idx[:256]
+        self._pairs = [pairs[i] for i in idx.tolist()]
+
+    def __len__(self) -> int:
+        return len(self._pairs)
+
+    def __getitem__(self, idx: int):
+        a, b = self._pairs[idx]
+        answer = (a * pow(b, self.p - 2, self.p)) % self.p  # a / b mod p
+        tokens = torch.tensor([a, self.p, b, self.p + 1], dtype=torch.long)
+        return tokens, answer
+
+
 class SpeechDigitsDataset(Dataset):
     """Free Spoken Digit Dataset (FSDD): 0-9 spoken digits (wav)."""
 
@@ -664,6 +703,14 @@ def get_dataset(
             fast_demo=fast_demo,
             sample_len=kwargs.get("sample_len", 4000),
             require_downloads=kwargs.get("require_downloads", True),
+            split=split,
+        )
+    elif name == "modular_arithmetic":
+        return ModularArithmeticDataset(
+            p=kwargs.get("p", 97),
+            train_frac=kwargs.get("train_frac", 0.5),
+            fast_demo=fast_demo,
+            seed=kwargs.get("seed", 5),
             split=split,
         )
     elif name == "iris":

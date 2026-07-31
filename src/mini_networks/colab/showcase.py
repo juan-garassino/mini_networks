@@ -358,6 +358,14 @@ def save_model_showcase(name: str, trainer, config, dataloader_fn, dest: str | P
                     lines.append("spectrograms.png: the 8 input spectrograms (order matches pred/true)")
             else:  # raw waveforms — render our own log-STFT
                 _spectrogram_grid(batch[0], dest, lines)
+        elif name == "grokking":
+            for a, b in [(12, 5), (34, 7), (81, 80), (3, 96), (50, 49)]:
+                o = trainer.infer(config, {"a": a, "b": b})
+                ok = "OK" if o["prediction"] == o["expected"] else "MISS"
+                lines.append(
+                    f"{o['a']} / {o['b']} mod {config.p} -> pred {o['prediction']} "
+                    f"(true {o['expected']}) {ok}"
+                )
         elif name in {"rl_maze", "reinforce"}:
             out = trainer.infer(config, {})
             _dump_generic(out, dest, lines)
