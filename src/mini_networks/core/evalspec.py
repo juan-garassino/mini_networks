@@ -159,6 +159,12 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "image_captioning":             _composition(),
     "multimodal_fusion_baseline":   _composition(),
     "latent_diffusion":             _composition(loss_keys=("vae_loss", "latent_loss", "loss")),
+    # PROVISIONAL: the simplex ensemble must beat the single-classifier bar
+    # (0.85 M) for the composition to prove its point; finalize from the
+    # first M sweep. Three descending loss series feed the S trend check.
+    "mode_connect":                 _composition(metric="ensemble_accuracy",
+                                                 thresholds={"M": 0.88, "L": 0.95},
+                                                 loss_keys=("clf_a_loss", "clf_b_loss", "simplex_loss")),
 }
 
 

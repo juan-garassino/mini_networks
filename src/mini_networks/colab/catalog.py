@@ -23,6 +23,7 @@ COMPOSITIONS = [
     "image_captioning",
     "multimodal_fusion_baseline",
     "latent_diffusion",
+    "mode_connect",
 ]
 
 DESCRIPTIONS = {
@@ -85,6 +86,7 @@ DESCRIPTIONS = {
     "image_captioning":              "Image captioning (MNIST)",
     "multimodal_fusion_baseline":    "Image+text fusion classifier",
     "latent_diffusion":              "Latent diffusion (VAE + UNet)",
+    "mode_connect":                  "Loss-surface simplex between two classifiers + cheap simplex ensemble",
 }
 
 CATEGORY = {name: "Vision / Multimodal" for name in [

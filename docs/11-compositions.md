@@ -101,3 +101,9 @@ _Latest sweep: tier S on cpu_
 | latent_diffusion | pass | n/a | n/a | n/a |
 
 <!-- results:end -->
+
+### mode_connect
+
+Loss-surface simplex (arXiv 2102.13042): two independently trained classifiers
++ one learned vertex spanning a low-loss 2-simplex; simplex-ensemble accuracy vs
+single model + a barycentric loss-surface heatmap. See chapter 12.
