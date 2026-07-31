@@ -731,6 +731,23 @@ def _run_mode_connect(fast_demo, training_tier, data_root, device, checkpoint_ro
     return result
 
 
+def _run_double_descent(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
+    from mini_networks.compositions.double_descent import DoubleDescent, DoubleDescentConfig
+    cfg = DoubleDescentConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("double_descent", checkpoint_root)
+    result = DoubleDescent().train_all(cfg, logger)
+    pairs = ", ".join(
+        f"{w}:{e:.3f}" for w, e in zip(result["widths"], result["test_errors"])
+    )
+    console.print(f"  test error by width: [cyan]{pairs}[/cyan]")
+    return result
+
+
 # name → runner; COMPOSITIONS (catalog) and this dict are kept in sync by a unit test
 COMPOSITION_RUNNERS = {
     "clip_guided_diffusion": _run_clip_guided_diffusion,
@@ -753,4 +770,5 @@ COMPOSITION_RUNNERS = {
     "multimodal_fusion_baseline": _run_multimodal_fusion_baseline,
     "latent_diffusion": _run_latent_diffusion,
     "mode_connect": _run_mode_connect,
+    "double_descent": _run_double_descent,
 }

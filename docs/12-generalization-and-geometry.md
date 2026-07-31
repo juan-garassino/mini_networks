@@ -65,7 +65,23 @@ uv run python main.py train --model grokking --fast_demo   # S smoke
   samples — must beat the single vertex) and `artifacts/loss_surface.png`,
   the barycentric val-loss heatmap (bright = low loss filling the triangle).
 
+### Double descent — `src/mini_networks/compositions/double_descent.py` (composition: `double_descent`)
+
+- Sweeps MLP width (2 → 512) on a small (1k), 15%-label-noised MNIST split:
+  test error falls, RISES near the interpolation threshold (just enough
+  capacity to memorize the noise — the worst place to be), then falls again
+  as overparametrized models interpolate the noise smoothly.
+- Deliverable: `artifacts/double_descent.png` (test-error vs log-width) +
+  per-width train/test accuracy in metrics.jsonl. The gate only checks the
+  sweep ran sanely — the curve is the lesson (Wilson, arXiv 2503.02113:
+  the same hump appears in classical model families; soft inductive biases,
+  not deep-learning magic).
+
+This closes the chapter's arc: grokking (generalization arrives late),
+RPP (bias should be soft), mode connectivity (solutions live in connected
+volumes), double descent (capacity helps again past interpolation).
+
 ## Latest results
 
-<!-- results:start items=grokking,rpp_classifier,mode_connect -->
+<!-- results:start items=grokking,rpp_classifier,mode_connect,double_descent -->
 <!-- results:end -->
