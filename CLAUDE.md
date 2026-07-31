@@ -1,6 +1,6 @@
 # CLAUDE.md — mini_networks
 
-Educational ML lab: 39 models and 19 cross-model compositions sharing one
+Educational ML lab: 40 models and 19 cross-model compositions sharing one
 runtime contract, one data registry, one logging format, and one quality gate.
 Owner-facing reference lab with a graphical **playground** (Observatory).
 Nano S-tier runs locally (CPU) for the gate/dev; **M/L training runs on GCP
