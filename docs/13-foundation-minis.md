@@ -77,7 +77,31 @@ uv run python main.py train --model sam --fast_demo
 uv run python main.py train --model nerf --fast_demo
 ```
 
+### Mini AlphaZero — `src/mini_networks/models/alphazero/` (registry: `alphazero`)
+
+- The closed loop: MCTS (PUCT + Dirichlet root noise) produces move
+  distributions **stronger than the raw network**; the network distills them
+  (CE vs visit counts) and predicts self-play outcomes (value targets
+  **sign-flipped to each position's player-to-move** — the classic AZ bug,
+  unit-tested); the next search round leans on the better net.
+- The gate evaluates the **raw policy, no search**, vs a seeded random
+  opponent — because search with terminal backups beats random even with an
+  untrained net (measured: raw 0.375 vs search 0.94 at init).
+  `search_success_rate` is logged as the reference; the gap is the learning
+  evidence. Runs on CPU by design (single-position forwards are
+  GPU-launch-latency-bound).
+- Showcase: a full annotated game transcript vs random, board states
+  rendered per move.
+
+```bash
+uv run python main.py train --model alphazero --fast_demo
+```
+
+This closes the chapter: structure (graphs), intent (prompts),
+representation (fields), and planning (search) — four pillars of the
+foundation-model era, each small enough to read in one sitting.
+
 ## Latest results
 
-<!-- results:start items=gnn,sam,nerf -->
+<!-- results:start items=gnn,sam,nerf,alphazero -->
 <!-- results:end -->

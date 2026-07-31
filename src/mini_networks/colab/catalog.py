@@ -50,6 +50,7 @@ DESCRIPTIONS = {
     "gnn":                           "Graph convolutional network: transductive node classification on an SBM",
     "sam":                           "Mini SAM: promptable segmentation — clicks choose which digit to mask",
     "nerf":                          "Mini NeRF: a voxel-digit scene as a continuous field, novel-view PSNR",
+    "alphazero":                     "Mini AlphaZero: MCTS self-play on tic-tac-toe distilled into a policy net",
     "gan":                           "Generator + Discriminator trained on MNIST",
     "rnn":                           "RNN / LSTM / GRU recurrent language model",
     "lora":                          "Low-rank fine-tuning: MNIST → FashionMNIST",
@@ -113,6 +114,7 @@ CATEGORY["rpp_classifier"] = "Vision / Multimodal"
 CATEGORY["gnn"] = "Graphs"
 CATEGORY["sam"] = "Vision / Multimodal"
 CATEGORY["nerf"] = "Vision / Multimodal"
+CATEGORY["alphazero"] = "RL / Alignment"
 CATEGORY["vision_embed"] = "Vision / Multimodal"
 CATEGORY["text_seq2seq"] = "Language"
 CATEGORY["text_token_classifier"] = "Language"
