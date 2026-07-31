@@ -28,6 +28,7 @@ MODEL_NAMES: list[str] = [
     "grokking",
     "text_diffusion",
     "rpp_classifier",
+    "gnn",
     "gan",
     "rnn",
     "lora",
@@ -88,6 +89,8 @@ def get_model_registry() -> dict:
     from mini_networks.models.text_diffusion.trainer import TextDiffusionTrainer
     from mini_networks.models.rpp_classifier.config import RPPClassifierConfig
     from mini_networks.models.rpp_classifier.trainer import RPPClassifierTrainer, make_rpp_classifier_dataloader
+    from mini_networks.models.gnn.config import GNNConfig
+    from mini_networks.models.gnn.trainer import GNNTrainer, make_gnn_dataloader
     from mini_networks.models.kimi.config import KimiConfig
     from mini_networks.models.kimi.trainer import KimiTrainer
     from mini_networks.models.deepseek.config import DeepseekConfig
@@ -169,6 +172,7 @@ def get_model_registry() -> dict:
         "grokking": (GrokkingConfig, GrokkingTrainer, make_grokking_dataloader),
         "text_diffusion": (TextDiffusionConfig, TextDiffusionTrainer, make_transformer_dataloader),
         "rpp_classifier": (RPPClassifierConfig, RPPClassifierTrainer, make_rpp_classifier_dataloader),
+        "gnn": (GNNConfig, GNNTrainer, make_gnn_dataloader),
         "gan": (GANConfig, GANTrainer, make_gan_dataloader),
         "rnn": (RNNConfig, RNNTrainer, make_rnn_dataloader),
         "lora": (LoRAConfig, LoRATrainer, make_lora_dataloader),

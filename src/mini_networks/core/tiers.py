@@ -48,6 +48,10 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     "kimi": {"M": {"epochs": 15}},
     "deepseek": {"M": {"epochs": 15}},
     "text_diffusion": {"M": {"epochs": 15}},
+    # gnn: one epoch == ONE full-batch step on the length-1 graph dataset (the
+    # M default of 5 epochs would be 5 gradient steps); each step is a sub-ms
+    # 200x200 dense matmul, so 200 steps cost nothing
+    "gnn": {"M": {"epochs": 200}},
     # grokking is step-based (limit_steps in its trainer); it needs the full
     # ~9.3k-pair dataset and near-full batches for the phase transition
     "grokking": {"M": {"sample_limit": None, "batch_cap": 512}},
