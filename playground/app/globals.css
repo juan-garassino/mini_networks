@@ -84,3 +84,56 @@ body::after {
 
 @keyframes bp-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 .bp-live { animation: bp-blink 1.6s ease-in-out infinite; }
+
+/* ————— EDITIONS: token overrides per design ————— */
+
+/* 1 · vintage wall chart: parchment + oxblood ink */
+[data-edition="wallchart"] {
+  --paper: #efe3c8; --paper-deep: #e4d4b0;
+  --ink: #2b1d12; --ink-dim: #7a5c3e;
+  --line: #5b2320; --line-faint: #c9b58e;
+  --redline: #8a1f1c;
+}
+[data-edition="wallchart"] body, body[data-edition="wallchart"] {
+  background-image:
+    radial-gradient(ellipse at 50% 30%, rgba(255, 250, 230, 0.6), rgba(190, 165, 120, 0.5)),
+    repeating-linear-gradient(0deg, transparent 0 30px, rgba(120, 90, 50, 0.05) 30px 31px);
+}
+[data-edition="wallchart"] { --font-display: var(--font-instrument); }
+
+/* 2 · brutalist terminal: phosphor on black */
+[data-edition="terminal"] {
+  --paper: #050805; --paper-deep: #020302;
+  --ink: #7dff9a; --ink-dim: #2e7a44;
+  --line: #4ddc72; --line-faint: #123920;
+  --redline: #ffe14d;
+}
+[data-edition="terminal"] body, body[data-edition="terminal"] {
+  background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 4px);
+}
+[data-edition="terminal"] { --font-display: var(--font-vt); --font-draft: var(--font-vt); }
+[data-edition="terminal"] .bp-title { letter-spacing: 0.05em; }
+
+/* 3 · metro map: signage on warm off-white */
+[data-edition="metro"] {
+  --paper: #f4f1ea; --paper-deep: #e9e4d8;
+  --ink: #191919; --ink-dim: #6e6a60;
+  --line: #191919; --line-faint: #d4cec0;
+  --redline: #e0301e;
+}
+[data-edition="metro"] body, body[data-edition="metro"] { background-image: none; }
+[data-edition="metro"] { --font-display: var(--font-jost); --font-draft: var(--font-jost); }
+[data-edition="metro"] body::after { opacity: 0.03; }
+
+/* 4 · botanical atlas: sage + garamond */
+[data-edition="atlas"] {
+  --paper: #f2efe2; --paper-deep: #e7e3d0;
+  --ink: #23301f; --ink-dim: #6d7a5e;
+  --line: #3c5232; --line-faint: #cfd0b8;
+  --redline: #a4552a;
+}
+[data-edition="atlas"] body, body[data-edition="atlas"] {
+  background-image: radial-gradient(ellipse at 50% 20%, rgba(255, 255, 245, 0.7), rgba(205, 205, 175, 0.45));
+}
+[data-edition="atlas"] { --font-display: var(--font-cormorant); }
+[data-edition="atlas"] .bp-title { letter-spacing: 0.05em; text-transform: none; }
