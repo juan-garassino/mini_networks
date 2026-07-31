@@ -358,6 +358,21 @@ def save_model_showcase(name: str, trainer, config, dataloader_fn, dest: str | P
                     lines.append("spectrograms.png: the 8 input spectrograms (order matches pred/true)")
             else:  # raw waveforms — render our own log-STFT
                 _spectrogram_grid(batch[0], dest, lines)
+        elif name == "gnn":
+            import torch
+            from mini_networks.models.gnn.trainer import _graph_dataset
+            ds = _graph_dataset(config)
+            order = torch.argsort(ds._y * 10_000 + ds.adjacency.sum(1).long())
+            adj_sorted = ds.adjacency[order][:, order]
+            if _save_grid(adj_sorted.unsqueeze(0).unsqueeze(0), dest / "adjacency.png"):
+                lines.append("adjacency.png: community-sorted adjacency (block structure)")
+            for node in (0, 1, 2, 50, 150):
+                o = trainer.infer(config, {"node_id": node})
+                ok = "OK" if o["predicted"] == o["true"] else "MISS"
+                lines.append(
+                    f"node {o['node_id']:3d}: pred {o['predicted']} true {o['true']} "
+                    f"({o['n_neighbors']} neighbors) {ok}"
+                )
         elif name == "grokking":
             for a, b in [(12, 5), (34, 7), (81, 80), (3, 96), (50, 49)]:
                 o = trainer.infer(config, {"a": a, "b": b})
