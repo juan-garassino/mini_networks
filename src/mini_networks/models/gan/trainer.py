@@ -12,7 +12,7 @@ from mini_networks.core.config import BaseConfig
 from mini_networks.core.data.registry import get_dataloader
 from mini_networks.core.logging.logger import Logger
 from mini_networks.core.runtime import BaseTrainer
-from mini_networks.models.diffusion.trainer import EMA
+from mini_networks.core.blocks.ema import EMA
 from mini_networks.models.gan.config import GANConfig
 from mini_networks.models.gan.model import Discriminator, Generator, gan_d_loss, gan_g_loss
 
