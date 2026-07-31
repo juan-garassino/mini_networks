@@ -714,6 +714,23 @@ def _run_latent_diffusion(fast_demo, training_tier, data_root, device, checkpoin
     return {"images": images, "config": cfg, "run_dir": str(logger.run_dir)}
 
 
+def _run_mode_connect(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
+    from mini_networks.compositions.mode_connect import ModeConnect, ModeConnectConfig
+    cfg = ModeConnectConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("mode_connect", checkpoint_root)
+    result = ModeConnect().train_all(cfg, logger)
+    console.print(
+        f"  single acc [cyan]{result['single_accuracy']:.3f}[/cyan]  "
+        f"simplex-ensemble acc [cyan]{result['ensemble_accuracy']:.3f}[/cyan]"
+    )
+    return result
+
+
 # name → runner; COMPOSITIONS (catalog) and this dict are kept in sync by a unit test
 COMPOSITION_RUNNERS = {
     "clip_guided_diffusion": _run_clip_guided_diffusion,
@@ -735,4 +752,5 @@ COMPOSITION_RUNNERS = {
     "image_captioning": _run_image_captioning,
     "multimodal_fusion_baseline": _run_multimodal_fusion_baseline,
     "latent_diffusion": _run_latent_diffusion,
+    "mode_connect": _run_mode_connect,
 }

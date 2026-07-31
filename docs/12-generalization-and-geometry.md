@@ -54,7 +54,18 @@ uv run python main.py train --model grokking --fast_demo   # S smoke
   `--dataset kmnist` / `--dataset tri_mnist` — where the symmetry assumptions
   bend, the free path earns its keep.
 
+### Mode connectivity — `src/mini_networks/compositions/mode_connect.py` (composition: `mode_connect`)
+
+- Two SmallCNNs trained from different seeds are two "modes"; a third vertex
+  (initialized at their midpoint) is trained so that **every Dirichlet-sampled
+  convex combination** of the three weight sets has low loss — a whole
+  2-simplex of working networks (`torch.func.functional_call` merges weights
+  without a mutable model).
+- Deliverables: `ensemble_accuracy` (average softmax over simplex-interior
+  samples — must beat the single vertex) and `artifacts/loss_surface.png`,
+  the barycentric val-loss heatmap (bright = low loss filling the triangle).
+
 ## Latest results
 
-<!-- results:start items=grokking,rpp_classifier -->
+<!-- results:start items=grokking,rpp_classifier,mode_connect -->
 <!-- results:end -->
