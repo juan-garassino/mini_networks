@@ -90,6 +90,9 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # budget (20k steps); at L (100k) the paper's setup reaches ~1.0. Finalize
     # from the first M sweep. Train loss drops fast, so the S trend check holds.
     "grokking":              _acc(0.50, 0.95),
+    # PROVISIONAL: masked CE at t=0.5 over half the positions — its own unit,
+    # NOT comparable to autoregressive eval_loss. Set from the first M sweep.
+    "text_diffusion":        _loss(3.2, 2.6),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),

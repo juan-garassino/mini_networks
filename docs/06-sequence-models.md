@@ -120,6 +120,18 @@ V4 keeps attention but **compresses the KV cache along the sequence**:
 The pair is the curriculum payload: two frontier labs, three shared problems
 (attention cost, residual bottleneck, sparse FFN), two different answers each.
 
+### Text Diffusion (LLaDA-mini) — `src/mini_networks/models/text_diffusion/` (registry: `text_diffusion`)
+
+The anti-autoregressive counterpoint (LLaDA, arXiv 2502.09992): the SAME nano
+transformer shape as `transformer`, with the causal mask **removed**. Training
+masks each token with probability `t ~ U(0.05, 1)` and predicts the masked
+positions (CE weighted 1/t — a likelihood bound); generation starts from
+all-MASK and iteratively unmasks the highest-confidence positions over K
+tier-capped rounds (`effective_timesteps`, like image diffusion), refining the
+whole sequence in parallel instead of committing left-to-right. One architecture,
+two generation orders — and its `eval_loss` (masked CE at t=0.5) is deliberately
+its own band, not comparable to AR cross-entropy.
+
 ## Comparing the three
 
 | | RNN/LSTM/GRU | TransformerLM | NanoMamba |
@@ -141,11 +153,12 @@ uv run python main.py train --model rnn --fast_demo
 uv run python main.py train --model mamba --fast_demo
 uv run python main.py train --model kimi --fast_demo
 uv run python main.py train --model deepseek --fast_demo
+uv run python main.py train --model text_diffusion --fast_demo
 ```
 
 ## Latest results
 
-<!-- results:start items=rnn,transformer,mamba,kimi,deepseek -->
+<!-- results:start items=rnn,transformer,mamba,kimi,deepseek,text_diffusion -->
 
 _Latest sweep: tier S on cpu_
 
