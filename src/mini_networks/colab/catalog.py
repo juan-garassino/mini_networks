@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 from mini_networks.core.registry import MODEL_NAMES as MODELS  # noqa: F401
+from mini_networks.core.taxonomy import (  # noqa: F401 — re-exported
+    COMPOSITION_TAXONOMY,
+    MODEL_TAXONOMY,
+)
 
 COMPOSITIONS = [
     "clip_guided_diffusion",

@@ -22,6 +22,9 @@ core/
   runtime.py         BaseTrainer ABC: train/evaluate/infer/load_checkpoint
                      + SupervisedTrainer / ContrastiveTrainer / reconstruction bases
   evalspec.py        EvalSpec + EVAL_SPECS — quality-gate thresholds, 1 entry per item
+  taxonomy.py        atoms/molecules DAG: MODEL_TAXONOMY (level/introduces/
+                     builds_on), MECHANISMS, COMPOSITION_TAXONOMY; drives
+                     `main.py list` + /web/models taxonomy fields (docs/14)
   sweep_report.py    CheckResult + report.{md,json} writers (stdlib-only)
   checkpoints.py     latest_run_dir / find_resumable_run
   data/registry.py   get_dataset/get_dataloader — MNIST task modes, text, audio, tabular
