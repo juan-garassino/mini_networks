@@ -748,6 +748,23 @@ def _run_double_descent(fast_demo, training_tier, data_root, device, checkpoint_
     return result
 
 
+def _run_vlm(fast_demo, training_tier, data_root, device, checkpoint_root) -> dict:
+    from mini_networks.compositions.vlm import VLM, VLMConfig
+    cfg = VLMConfig(
+        fast_demo=fast_demo,
+        training_tier=training_tier,
+        data_root=data_root,
+        device=device,
+    )
+    logger = _make_composition_logger("vlm", checkpoint_root)
+    result = VLM().train_all(cfg, logger)
+    console.print(
+        f"  answer acc [cyan]{result['answer_accuracy']:.3f}[/cyan]  "
+        f"blind (image zeroed) [cyan]{result['blind_accuracy']:.3f}[/cyan]"
+    )
+    return result
+
+
 # name → runner; COMPOSITIONS (catalog) and this dict are kept in sync by a unit test
 COMPOSITION_RUNNERS = {
     "clip_guided_diffusion": _run_clip_guided_diffusion,
@@ -771,4 +788,5 @@ COMPOSITION_RUNNERS = {
     "latent_diffusion": _run_latent_diffusion,
     "mode_connect": _run_mode_connect,
     "double_descent": _run_double_descent,
+    "vlm": _run_vlm,
 }

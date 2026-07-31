@@ -194,6 +194,13 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # WIDTHS (one point per swept width), so a downward trend is meaningless
     # -> finite-only S-check. metric=None by design.
     "double_descent":               _composition(loss_keys=("loss",), s_mode="finite"),
+    # PROVISIONAL: exact-match word answers on held-out MNIST. blind_accuracy
+    # (image zeroed) is logged as the degenerate anchor — the language prior
+    # alone gets ~1/2 on even/odd, ~1/10 on digit naming; the gap proves the
+    # image prefix carries the answer. Finalize on an owner-approved M sweep.
+    "vlm":                          _composition(metric="answer_accuracy",
+                                                 thresholds={"M": 0.6, "L": 0.9},
+                                                 loss_keys=("loss",)),
 }
 
 

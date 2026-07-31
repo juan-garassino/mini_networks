@@ -152,6 +152,13 @@ flowchart TD
 - **Frontier LMs** (`kimi`, `deepseek`): molecules of transformer + moe
   (+ mamba's recurrence idea for kimi), each adding its own mechanisms
   (KDA, CSA/HCA, mHC, MTP) — the taxonomy records exactly which.
+- **Mini VLM** (`vlm`, composition): the chapter's flagship — patch-encode
+  the image (the vit atom's mechanism), project the patch tokens into the
+  LM's embedding space, prepend them as a prefix, and let ordinary causal
+  attention (the transformer atom) do the rest. Templated MNIST QA answered
+  in words; `blind_accuracy` (image zeroed) is logged so the gap proves the
+  answers flow through the image prefix. This is LLaVA's recipe at nano
+  scale — multimodality as pure composition.
 - **Alignment trio** (`rlhf` → `grpo`, `dpo`): one parent molecule, two
   one-mechanism children — the cleanest subtree in the zoo.
 
