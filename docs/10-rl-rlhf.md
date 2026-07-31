@@ -90,3 +90,6 @@ _Latest sweep: tier S on cpu_
 | rlhf | pass | eval_loss | 3.9089 | n/a |
 
 <!-- results:end -->
+
+> The missing pillar here — PLANNING — lives in chapter 13: `alphazero`
+> closes the search-guided self-play loop (MCTS distilled into a policy net).

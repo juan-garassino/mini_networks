@@ -112,6 +112,15 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # over held-out views. Finalize from the first M sweep.
     "nerf":                  EvalSpec(metric="psnr", thresholds={"M": 20.0, "L": 26.0},
                                       higher_is_better=True),
+    # PROVISIONAL: gates the RAW policy vs random — search-assisted play wins
+    # even untrained (measured at S: raw 0.375 vs search 0.94 with a fresh
+    # net), so gating search would measure the planner, not the learning.
+    # L capped at 0.95: perfect play vs random-both-sides measures ~0.95-0.99
+    # over finite games. s_mode=finite: MCTS targets are nonstationary.
+    "alphazero":             EvalSpec(metric="success_rate",
+                                      thresholds={"M": 0.75, "L": 0.95},
+                                      loss_keys=("policy_loss", "value_loss", "loss"),
+                                      s_mode="finite"),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),

@@ -31,6 +31,7 @@ MODEL_NAMES: list[str] = [
     "gnn",
     "sam",
     "nerf",
+    "alphazero",
     "gan",
     "rnn",
     "lora",
@@ -98,6 +99,8 @@ def get_model_registry() -> dict:
     from mini_networks.models.nerf.config import NerfConfig
     from mini_networks.models.nerf.trainer import NerfTrainer
     from mini_networks.models.nerf.scene import make_nerf_dataloader
+    from mini_networks.models.alphazero.config import AlphaZeroConfig
+    from mini_networks.models.alphazero.trainer import AlphaZeroTrainer, make_alphazero_dataloader
     from mini_networks.models.kimi.config import KimiConfig
     from mini_networks.models.kimi.trainer import KimiTrainer
     from mini_networks.models.deepseek.config import DeepseekConfig
@@ -182,6 +185,7 @@ def get_model_registry() -> dict:
         "gnn": (GNNConfig, GNNTrainer, make_gnn_dataloader),
         "sam": (SAMConfig, SAMTrainer, make_sam_dataloader),
         "nerf": (NerfConfig, NerfTrainer, make_nerf_dataloader),
+        "alphazero": (AlphaZeroConfig, AlphaZeroTrainer, make_alphazero_dataloader),
         "gan": (GANConfig, GANTrainer, make_gan_dataloader),
         "rnn": (RNNConfig, RNNTrainer, make_rnn_dataloader),
         "lora": (LoRAConfig, LoRATrainer, make_lora_dataloader),

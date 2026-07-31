@@ -379,6 +379,30 @@ def save_model_showcase(name: str, trainer, config, dataloader_fn, dest: str | P
                 lines.append(f"{tag}: click at {pt}, best head {best}")
             if _save_grid(torch.stack(panels), dest / "prompt_variations.png"):
                 lines.append("prompt_variations.png: [input | click A mask | click B mask]")
+        elif name == "alphazero":
+            import torch
+            from mini_networks.models.alphazero.game import (
+                apply_move, legal_moves, winner,
+            )
+            g = torch.Generator().manual_seed(7)
+            board, player = (0,) * 9, 1
+            lines.append("game vs random (model plays X):")
+            while winner(board) is None:
+                if player == 1:
+                    out = trainer.infer(config, {"board": list(board)})
+                    move = out["move"]
+                    lines.append(f"  X -> {move}  value {out['value']:+.2f}")
+                else:
+                    legal = legal_moves(board)
+                    move = legal[int(torch.randint(0, len(legal), (1,), generator=g))]
+                    lines.append(f"  O -> {move} (random)")
+                board = apply_move(board, move, player)
+                player = -player
+                sym = {0: ".", 1: "X", -1: "O"}
+                for r in range(3):
+                    lines.append("    " + " ".join(sym[board[3 * r + c]] for c in range(3)))
+            w = winner(board)
+            lines.append({1: "X (model) wins", -1: "O (random) wins", 0: "draw"}[w])
         elif name == "nerf":
             import torch
             from mini_networks.models.nerf.scene import NerfViewDataset
