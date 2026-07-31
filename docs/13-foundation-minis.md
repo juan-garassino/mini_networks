@@ -58,7 +58,26 @@ uv run python main.py train --model gnn --fast_demo
 uv run python main.py train --model sam --fast_demo
 ```
 
+### Mini NeRF — `src/mini_networks/models/nerf/` (registry: `nerf`)
+
+- Scene: a seeded MNIST digit extruded into a 28x28x8 voxel slab, colored by
+  depth. Ground truth is rendered **exactly** (fixed 256 samples — never
+  tier-capped, so S/M/L chase the same target). 40 orbit cameras at 35°
+  elevation; every 4th azimuth is **held out** (interleaved — novel-view
+  interpolation, the honest NeRF test).
+- Model: positional encoding (L=6) + 5-layer MLP(128) → (σ, rgb); volume
+  rendering with `effective_timesteps` samples per ray (S 25 / M 200 — the
+  diffusion budget reused as chain length), stratified in training, bin
+  midpoints at eval so PSNR is deterministic.
+- Gate: mean PSNR on held-out azimuths (`psnr_min` also reported). An
+  untrained field scores ~7-10 dB; the 20 dB M bar is real learning.
+- Showcase: `turntable.png` (8 novel views) + `gt_vs_pred.png`.
+
+```bash
+uv run python main.py train --model nerf --fast_demo
+```
+
 ## Latest results
 
-<!-- results:start items=gnn,sam -->
+<!-- results:start items=gnn,sam,nerf -->
 <!-- results:end -->
