@@ -96,6 +96,11 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # PROVISIONAL: mirrors the mobilenet/convnext band — the dual-pathway sum
     # should not cost accuracy on clean MNIST. Finalize from the first M sweep.
     "rpp_classifier":        _acc(0.80, 0.93),
+    # PROVISIONAL: features are deliberately weak (feature-only MLP baseline is
+    # logged as mlp_baseline_accuracy every eval — the bar must sit well above
+    # it so the gate provably measures message passing). Finalize both numbers
+    # from the first M sweep.
+    "gnn":                   _acc(0.75, 0.90),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),

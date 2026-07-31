@@ -331,6 +331,71 @@ class ModularArithmeticDataset(Dataset):
         return tokens, answer
 
 
+class SyntheticSBMGraph(Dataset):
+    """Stochastic block model for transductive node classification (one item).
+
+    n nodes in k communities; intra-community edge prob p_in >> inter p_out,
+    so community structure lives in the ADJACENCY. Node features are a
+    deliberately weak noisy community signal — weak enough that a feature-only
+    classifier scores far below the gate bar, so the graph must carry the
+    metric (the GNN trainer logs that baseline as evidence). Yields a single
+    item: (X [n,F], A_norm [n,n], y [n], train_mask, test_mask), where
+    A_norm = D^-1/2 (A + I) D^-1/2 (self-loops keep every node's own feature
+    and guard against isolated-node 0/0). Train mask is stratified: exactly
+    train_per_class seeded nodes per community. `split` is accepted and
+    ignored — the masks are internal, so gate split fallbacks are harmless.
+    """
+
+    def __init__(
+        self,
+        n_nodes: int = 200,
+        n_communities: int = 4,
+        p_in: float = 0.15,
+        p_out: float = 0.02,
+        n_features: int = 8,
+        feat_signal: float = 0.3,
+        train_per_class: int = 5,
+        seed: int = 11,
+        fast_demo: bool = False,
+        split: str = "train",
+    ):
+        del split, fast_demo  # single fixed graph; masks are internal
+        g = torch.Generator().manual_seed(seed)
+        k = n_communities
+        y = torch.arange(n_nodes) % k  # balanced communities
+        prob = torch.where(
+            y.unsqueeze(0) == y.unsqueeze(1),
+            torch.full((n_nodes, n_nodes), p_in),
+            torch.full((n_nodes, n_nodes), p_out),
+        )
+        upper = torch.triu(torch.rand(n_nodes, n_nodes, generator=g) < prob, diagonal=1)
+        adj = (upper | upper.T).float()
+        adj_hat = adj + torch.eye(n_nodes)
+        deg = adj_hat.sum(dim=1)
+        d_inv_sqrt = deg.pow(-0.5)
+        self._a_norm = d_inv_sqrt.unsqueeze(1) * adj_hat * d_inv_sqrt.unsqueeze(0)
+
+        x = torch.randn(n_nodes, n_features, generator=g)
+        x[torch.arange(n_nodes), y] += feat_signal  # weak signal in the first k dims
+        self._x = x
+        self._y = y
+
+        train_mask = torch.zeros(n_nodes, dtype=torch.bool)
+        for c in range(k):
+            members = (y == c).nonzero(as_tuple=True)[0]
+            pick = members[torch.randperm(len(members), generator=g)[:train_per_class]]
+            train_mask[pick] = True
+        self._train_mask = train_mask
+        self._test_mask = ~train_mask
+        self.adjacency = adj  # raw A, for showcases
+
+    def __len__(self) -> int:
+        return 1
+
+    def __getitem__(self, idx: int):
+        return self._x, self._a_norm, self._y, self._train_mask, self._test_mask
+
+
 class SpeechDigitsDataset(Dataset):
     """Free Spoken Digit Dataset (FSDD): 0-9 spoken digits (wav)."""
 
@@ -711,6 +776,19 @@ def get_dataset(
             train_frac=kwargs.get("train_frac", 0.5),
             fast_demo=fast_demo,
             seed=kwargs.get("seed", 5),
+            split=split,
+        )
+    elif name == "synthetic_graph":
+        return SyntheticSBMGraph(
+            n_nodes=kwargs.get("n_nodes", 200),
+            n_communities=kwargs.get("n_communities", 4),
+            p_in=kwargs.get("p_in", 0.15),
+            p_out=kwargs.get("p_out", 0.02),
+            n_features=kwargs.get("n_features", 8),
+            feat_signal=kwargs.get("feat_signal", 0.3),
+            train_per_class=kwargs.get("train_per_class", 5),
+            seed=kwargs.get("seed", 11),
+            fast_demo=fast_demo,
             split=split,
         )
     elif name == "iris":
