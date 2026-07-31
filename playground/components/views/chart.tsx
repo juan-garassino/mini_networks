@@ -6,6 +6,7 @@ import {
   ATOMS, FAMILY_BLOCKS, PLACEMENT, TABLE_COLS, TABLE_ROWS,
   atomicNumbers, symbolFor,
 } from "@/lib/blueprint";
+import { iconFor } from "@/lib/icons";
 
 export function Chart({
   taxonomy, onSelect,
@@ -63,9 +64,10 @@ export function Chart({
             gridTemplateRows: `repeat(${TABLE_ROWS}, minmax(4.6rem, auto))`,
           }}
         >
-          {Object.entries(PLACEMENT).map(([name, pos], i) => {
+          {Object.entries(PLACEMENT).map(([name, pos]) => {
             const atom = ATOMS[name];
             const taxon = byName[name];
+            const Icon = iconFor(name);
             return (
               <motion.button
                 key={name}
@@ -83,6 +85,13 @@ export function Chart({
                 title={`${name} — ${taxon?.introduces.join(", ") || taxon?.note || ""}`}
               >
                 <span className="absolute left-1 top-0.5 text-[8px] text-ink-dim">{z[name]}</span>
+                {Icon && (
+                  <Icon
+                    size={13}
+                    strokeWidth={1.5}
+                    className="absolute right-1 top-1 text-ink-dim transition-colors group-hover:text-redline"
+                  />
+                )}
                 <span
                   className={`bp-title block pt-4 text-center font-extrabold group-hover:text-redline ${
                     atom ? "text-[26px] text-ink" : "text-[20px] text-ink-dim"
@@ -117,6 +126,10 @@ export function Chart({
                 title={`${c.name} = ${c.composes.join(" + ")}`}
               >
                 <span className="absolute left-1 top-0.5 text-[7px] text-redline/80">✻{i + 1}</span>
+                {(() => { const RIcon = iconFor(c.name); return RIcon ? (
+                  <RIcon size={11} strokeWidth={1.5}
+                    className="absolute right-1 top-1 text-ink-dim transition-colors group-hover:text-redline" />
+                ) : null; })()}
                 <span className="bp-title block pt-3 text-center text-[15px] font-bold text-ink-dim group-hover:text-redline">
                   {symbolFor(c.name)}
                 </span>

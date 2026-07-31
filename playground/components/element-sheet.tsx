@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { infer } from "@/lib/api";
 import type { RunSummary, TaxonomyResponse } from "@/lib/types";
 import { ATOMS, STATUS_INK, symbolFor } from "@/lib/blueprint";
+import { iconFor } from "@/lib/icons";
 
 export function ElementSheet({
   name, taxonomy, runs, onSelect, onClose,
@@ -61,6 +62,9 @@ export function ElementSheet({
                 <div className="flex items-baseline gap-3">
                   <span className="bp-title text-6xl font-extrabold text-redline">{symbolFor(name)}</span>
                   <h2 className="bp-title text-2xl font-bold text-ink">{name}</h2>
+                  {(() => { const Icon = iconFor(name); return Icon ? (
+                    <Icon size={30} strokeWidth={1.25} className="self-center text-line" />
+                  ) : null; })()}
                 </div>
               </div>
               <button onClick={onClose} className="bp-title text-xs text-ink-dim hover:text-redline">
