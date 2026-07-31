@@ -107,6 +107,11 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # promptability evidence. Finalize both from the first M sweep.
     "sam":                   EvalSpec(metric="eval_iou", thresholds={"M": 0.45, "L": 0.70},
                                       higher_is_better=True),
+    # PROVISIONAL: an untrained field scores ~7-10 dB on the dark background
+    # (measured at S), so 20 is a real bar. evaluate() also reports psnr_min
+    # over held-out views. Finalize from the first M sweep.
+    "nerf":                  EvalSpec(metric="psnr", thresholds={"M": 20.0, "L": 26.0},
+                                      higher_is_better=True),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),

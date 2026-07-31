@@ -379,6 +379,21 @@ def save_model_showcase(name: str, trainer, config, dataloader_fn, dest: str | P
                 lines.append(f"{tag}: click at {pt}, best head {best}")
             if _save_grid(torch.stack(panels), dest / "prompt_variations.png"):
                 lines.append("prompt_variations.png: [input | click A mask | click B mask]")
+        elif name == "nerf":
+            import torch
+            from mini_networks.models.nerf.scene import NerfViewDataset
+            frames = [trainer.infer(config, {"azimuth": a})["image"]
+                      for a in range(0, 360, 45)]
+            if _save_grid(torch.stack(frames), dest / "turntable.png"):
+                lines.append("turntable.png: 8 novel views, 45-degree steps")
+            test_ds = NerfViewDataset(config, split="test")
+            if len(test_ds):
+                _, _, gt = test_ds[0]
+                sz = config.image_size
+                gt_img = gt.T.reshape(3, sz, sz)
+                pred = trainer.infer(config, {"azimuth": test_ds.azimuths[0]})["image"]
+                if _save_grid(torch.stack([gt_img, pred]), dest / "gt_vs_pred.png"):
+                    lines.append(f"gt_vs_pred.png: held-out azimuth {test_ds.azimuths[0]:.0f}")
         elif name == "gnn":
             import torch
             from mini_networks.models.gnn.trainer import _graph_dataset

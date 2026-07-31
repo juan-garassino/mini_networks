@@ -52,6 +52,10 @@ MODEL_OVERRIDES: dict[str, dict[str, dict[str, int | None]]] = {
     # M default of 5 epochs would be 5 gradient steps); each step is a sub-ms
     # 200x200 dense matmul, so 200 steps cost nothing
     "gnn": {"M": {"epochs": 200}},
+    # nerf: M default (5 epochs x 100 batches x 64-ray cap) is ~2 passes over
+    # the ~30k-ray pool; 30 epochs x 1024-ray batches ~= 3M ray evals, minutes
+    # on the L4 (rays_per_batch is a NerfConfig field, not batch_size)
+    "nerf": {"M": {"epochs": 30}},
     # grokking is step-based (limit_steps in its trainer); it needs the full
     # ~9.3k-pair dataset and near-full batches for the phase transition
     "grokking": {"M": {"sample_limit": None, "batch_cap": 512}},
