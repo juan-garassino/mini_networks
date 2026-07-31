@@ -152,10 +152,47 @@ def cmd_menu(args: argparse.Namespace) -> None:
 
 
 def cmd_list(args: argparse.Namespace) -> None:
-    """List all available models and compositions."""
-    from mini_networks.colab.menu import list_models, list_compositions
-    list_models()
-    list_compositions()
+    """List models and compositions, grouped by taxonomy level (atoms first)."""
+    from rich.console import Console
+    from rich.table import Table
+
+    from mini_networks.colab.catalog import COMPOSITIONS, DESCRIPTIONS
+    from mini_networks.core.taxonomy import (
+        COMPOSITION_TAXONOMY,
+        MODEL_TAXONOMY,
+        atoms,
+        molecules,
+    )
+
+    console = Console()
+
+    t = Table(title=f"Elementary atoms ({len(atoms())})", show_lines=False)
+    t.add_column("Model", style="cyan")
+    t.add_column("Introduces", style="green")
+    t.add_column("Description", style="dim")
+    for name in atoms():
+        t.add_row(name, ", ".join(MODEL_TAXONOMY[name].introduces),
+                  DESCRIPTIONS.get(name, ""))
+    console.print(t)
+
+    t = Table(title=f"Derived molecules ({len(molecules())})", show_lines=False)
+    t.add_column("Model", style="cyan")
+    t.add_column("Builds on", style="magenta")
+    t.add_column("Adds", style="green")
+    for name in molecules():
+        taxon = MODEL_TAXONOMY[name]
+        t.add_row(name, " + ".join(taxon.builds_on),
+                  ", ".join(taxon.introduces) or taxon.note)
+    console.print(t)
+
+    t = Table(title=f"Compositions ({len(COMPOSITIONS)})", show_lines=False)
+    t.add_column("Composition", style="cyan")
+    t.add_column("Composes", style="magenta")
+    t.add_column("Description", style="dim")
+    for name in COMPOSITIONS:
+        t.add_row(name, " + ".join(COMPOSITION_TAXONOMY.get(name, ())),
+                  DESCRIPTIONS.get(name, ""))
+    console.print(t)
 
 
 def _parse_targets(raw: str, available: list[str]) -> list[str]:
