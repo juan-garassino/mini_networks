@@ -40,7 +40,21 @@ uv run python main.py train --model grokking --fast_demo   # S smoke
 # the real curve needs the M/L step budget (cloud sweep)
 ```
 
+### Residual Pathway Priors — `src/mini_networks/models/rpp_classifier/` (registry: `rpp_classifier`)
+
+- Each block sums a **constrained** pathway (3x3 conv — translation
+  equivariant) and a **free** pathway (dense linear over the flattened feature
+  map, which strictly contains the conv as a special case). The preference for
+  structure lives in the PRIOR, not the architecture: a weak L2 penalty on the
+  conv path, a strong one on the free path — a MAP estimate under Gaussian
+  priors of different widths (`RPPClassifierTrainer._loss`).
+- `pathway_norms()` reports which pathway carried the solution; on clean MNIST
+  the conv path should dominate (the showcase prints both norms).
+- Probe the soft-vs-hard bias story with the dataset flavors:
+  `--dataset kmnist` / `--dataset tri_mnist` — where the symmetry assumptions
+  bend, the free path earns its keep.
+
 ## Latest results
 
-<!-- results:start items=grokking -->
+<!-- results:start items=grokking,rpp_classifier -->
 <!-- results:end -->

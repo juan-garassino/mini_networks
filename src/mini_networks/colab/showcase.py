@@ -24,7 +24,7 @@ _GRID_MAX = 16
 _TEXT_PROMPT = "To be, or not to be"
 _IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif"}
 
-VISION_CLS = {"classifier", "resnet", "vit", "mobilenet", "convnext", "lora"}
+VISION_CLS = {"classifier", "resnet", "vit", "mobilenet", "convnext", "lora", "rpp_classifier"}
 EMBEDDERS = {"simclr", "dino", "vision_embed", "clip"}
 SAMPLERS = {"diffusion", "gan", "pixelcnn", "vae", "tabular_diffusion"}
 TEXT_LMS = {"transformer", "moe", "mamba", "kimi", "deepseek", "text_diffusion", "rnn", "rlhf", "grpo", "dpo"}

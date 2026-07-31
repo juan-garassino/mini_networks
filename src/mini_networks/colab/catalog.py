@@ -44,6 +44,7 @@ DESCRIPTIONS = {
     "deepseek":                      "Mini DeepSeek V4: CSA/HCA compressed attention + mHC + DeepSeekMoE + MTP",
     "grokking":                      "Grokking study: delayed generalization on modular division (a/b mod 97)",
     "text_diffusion":                "LLaDA-mini: masked-diffusion char-LM, generation by iterative unmasking",
+    "rpp_classifier":                "Residual Pathway Priors: conv + free pathways, equivariance as a soft prior",
     "gan":                           "Generator + Discriminator trained on MNIST",
     "rnn":                           "RNN / LSTM / GRU recurrent language model",
     "lora":                          "Low-rank fine-tuning: MNIST → FashionMNIST",
@@ -101,6 +102,7 @@ CATEGORY["tabular_classifier"] = "Tabular"
 CATEGORY["tabular_diffusion"] = "Tabular"
 CATEGORY["mobilenet"] = "Vision / Multimodal"
 CATEGORY["convnext"] = "Vision / Multimodal"
+CATEGORY["rpp_classifier"] = "Vision / Multimodal"
 CATEGORY["vision_embed"] = "Vision / Multimodal"
 CATEGORY["text_seq2seq"] = "Language"
 CATEGORY["text_token_classifier"] = "Language"

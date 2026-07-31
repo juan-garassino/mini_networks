@@ -93,3 +93,6 @@ _Latest sweep: tier S on cpu_
 | convnext | pass | accuracy | 0.0625 | n/a |
 
 <!-- results:end -->
+
+> Related: `rpp_classifier` (chapter 12) revisits the conv inductive bias as a
+> SOFT prior — conv + dense pathways with different L2 strengths (arXiv 2112.01388).

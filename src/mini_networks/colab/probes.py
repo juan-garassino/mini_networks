@@ -71,6 +71,7 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
         "tabular_classifier",
         "mobilenet",
         "convnext",
+        "rpp_classifier",
         "vision_embed",
         "text_seq2seq",
         "text_token_classifier",
@@ -78,7 +79,7 @@ def _run_model_inference_probe(model: str, trainer: Any, config: Any, dataloader
     if model in batch_models:
         batch = next(iter(dataloader))
 
-    if model in {"classifier", "resnet", "vit", "mobilenet", "convnext"}:
+    if model in {"classifier", "resnet", "vit", "mobilenet", "convnext", "rpp_classifier"}:
         output = trainer.infer(config, batch[0][:1])
     elif model == "clip":
         output = trainer.infer(config, {"images": batch[0][:1]})

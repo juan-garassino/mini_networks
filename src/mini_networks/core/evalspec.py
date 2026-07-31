@@ -93,6 +93,9 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     # PROVISIONAL: masked CE at t=0.5 over half the positions — its own unit,
     # NOT comparable to autoregressive eval_loss. Set from the first M sweep.
     "text_diffusion":        _loss(3.2, 2.6),
+    # PROVISIONAL: mirrors the mobilenet/convnext band — the dual-pathway sum
+    # should not cost accuracy on clean MNIST. Finalize from the first M sweep.
+    "rpp_classifier":        _acc(0.80, 0.93),
     "rnn":                   _loss(2.8, 2.2),
     "rag":                   _loss(2.8, 2.2),
     "rlhf":                  _loss(3.0, 2.4, loss_keys=("pretrain_loss", "ppo_loss")),
