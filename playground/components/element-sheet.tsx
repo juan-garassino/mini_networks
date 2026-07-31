@@ -20,6 +20,7 @@ export function ElementSheet({
   const [busy, setBusy] = useState(false);
 
   const model = taxonomy?.models.find((m) => m.name === name);
+  const composition = taxonomy?.compositions.find((c) => c.name === name);
   const children = taxonomy?.models.filter((m) => name && m.builds_on.includes(name)) ?? [];
   const reactions = taxonomy?.compositions.filter((c) => name && c.composes.includes(name)) ?? [];
   const modelRuns = runs.filter((r) => r.model === name).slice(0, 6);
@@ -40,7 +41,7 @@ export function ElementSheet({
 
   return (
     <AnimatePresence>
-      {name && model && (
+      {name && (model || composition) && (
         <>
           <motion.div
             className="absolute inset-0 z-20 bg-paper-deep/70"
@@ -68,13 +69,17 @@ export function ElementSheet({
             </div>
 
             <div className="bp-stamp mt-3 inline-block px-2 py-0.5 text-[9px]">
-              {model.level === "elementary" ? "elementary · atom" : "derived · compound"}
+              {composition
+                ? "reaction · composition"
+                : model?.level === "elementary" ? "elementary · atom" : "derived · compound"}
             </div>
 
-            <p className="mt-4 text-[12px] leading-relaxed text-ink">{model.description}</p>
-            {model.note && <p className="mt-1 text-[11px] italic text-ink-dim">“{model.note}”</p>}
+            <p className="mt-4 text-[12px] leading-relaxed text-ink">
+              {model?.description ?? composition?.description}
+            </p>
+            {model?.note && <p className="mt-1 text-[11px] italic text-ink-dim">“{model.note}”</p>}
 
-            {model.introduces.length > 0 && (
+            {model && model.introduces.length > 0 && (
               <Section title="Introduces">
                 {model.introduces.map((mech) => (
                   <div key={mech} className="border-b border-dashed border-line-faint py-1.5 text-[11px]">
@@ -85,9 +90,14 @@ export function ElementSheet({
               </Section>
             )}
 
-            {model.builds_on.length > 0 && (
+            {model && model.builds_on.length > 0 && (
               <Section title="Built from">
                 <Chips names={model.builds_on} onSelect={onSelect} />
+              </Section>
+            )}
+            {composition && composition.composes.length > 0 && (
+              <Section title="Reagents — models composed">
+                <Chips names={composition.composes} onSelect={onSelect} />
               </Section>
             )}
             {children.length > 0 && (
@@ -120,6 +130,7 @@ export function ElementSheet({
               ))}
             </Section>
 
+            {model && (
             <Section title="Field test — POST /infer">
               <textarea
                 value={inferBody}
@@ -141,6 +152,7 @@ export function ElementSheet({
                 </pre>
               )}
             </Section>
+            )}
           </motion.aside>
         </>
       )}
