@@ -165,6 +165,10 @@ EVAL_SPECS: dict[str, EvalSpec] = {
     "mode_connect":                 _composition(metric="ensemble_accuracy",
                                                  thresholds={"M": 0.88, "L": 0.95},
                                                  loss_keys=("clf_a_loss", "clf_b_loss", "simplex_loss")),
+    # The deliverable is the curve, not a threshold: the "loss" series indexes
+    # WIDTHS (one point per swept width), so a downward trend is meaningless
+    # -> finite-only S-check. metric=None by design.
+    "double_descent":               _composition(loss_keys=("loss",), s_mode="finite"),
 }
 
 

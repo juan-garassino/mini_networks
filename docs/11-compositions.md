@@ -107,3 +107,9 @@ _Latest sweep: tier S on cpu_
 Loss-surface simplex (arXiv 2102.13042): two independently trained classifiers
 + one learned vertex spanning a low-loss 2-simplex; simplex-ensemble accuracy vs
 single model + a barycentric loss-surface heatmap. See chapter 12.
+
+### double_descent
+
+Width sweep on label-noised MNIST reproducing the double-descent hump
+(test error falls, rises at interpolation, falls again). Deliverable is the
+curve artifact; see chapter 12.

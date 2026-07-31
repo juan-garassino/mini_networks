@@ -24,6 +24,7 @@ COMPOSITIONS = [
     "multimodal_fusion_baseline",
     "latent_diffusion",
     "mode_connect",
+    "double_descent",
 ]
 
 DESCRIPTIONS = {
@@ -87,6 +88,7 @@ DESCRIPTIONS = {
     "multimodal_fusion_baseline":    "Image+text fusion classifier",
     "latent_diffusion":              "Latent diffusion (VAE + UNet)",
     "mode_connect":                  "Loss-surface simplex between two classifiers + cheap simplex ensemble",
+    "double_descent":                "Width sweep on label-noised MNIST: test error falls, rises, falls again",
 }
 
 CATEGORY = {name: "Vision / Multimodal" for name in [
