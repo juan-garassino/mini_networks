@@ -21,9 +21,27 @@ export interface SummaryResponse { run_id: string; summary: Record<string, unkno
 export interface ModelInfo {
   name: string;
   family?: string | null;
+  level?: "elementary" | "derived" | null;
+  introduces?: string[];
+  builds_on?: string[];
   config_schema: Record<string, unknown>;
   defaults: Record<string, unknown>;
 }
-export interface Lesson { id: string; num: string; title: string; }
 export interface TrainResponse { job_id: string; status: string; output_dir: string; }
 export interface InferResponse { model: string; outputs: Record<string, unknown>; }
+
+// /web/taxonomy — the atoms & molecules DAG (core/taxonomy.py)
+export interface TaxonModel {
+  name: string;
+  level: "elementary" | "derived";
+  introduces: string[];
+  builds_on: string[];
+  note: string;
+  description: string;
+}
+export interface TaxonComposition { name: string; composes: string[]; description: string; }
+export interface TaxonomyResponse {
+  mechanisms: Record<string, { description: string; home: string }>;
+  models: TaxonModel[];
+  compositions: TaxonComposition[];
+}

@@ -1,36 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { TopBar, type ViewId } from "@/components/topbar";
-import { StatusBar } from "@/components/statusbar";
-import { Observatory } from "@/components/views/observatory";
-import { Sandbox } from "@/components/views/sandbox";
-import { Lab } from "@/components/views/lab";
-import { Quest } from "@/components/views/quest";
+import { getTaxonomy } from "@/lib/api";
+import type { TaxonomyResponse } from "@/lib/types";
 import { useRuns } from "@/hooks/use-runs";
+import { TitleBlock, type SheetId } from "@/components/title-block";
+import { ElementSheet } from "@/components/element-sheet";
+import { Chart } from "@/components/views/chart";
+import { Reactions } from "@/components/views/reactions";
+import { Observatory } from "@/components/views/observatory";
 
 export default function Page() {
-  const [view, setView] = useState<ViewId>("observatory");
+  const [sheet, setSheet] = useState<SheetId>("chart");
+  const [selected, setSelected] = useState<string | null>(null);
+  const [taxonomy, setTaxonomy] = useState<TaxonomyResponse | null>(null);
   const { runs, ok } = useRuns();
-  const src = runs[0]?.source ?? "local";
+
+  useEffect(() => {
+    getTaxonomy().then(setTaxonomy).catch(() => setTaxonomy(null));
+  }, []);
 
   return (
     <>
-      <TopBar view={view} setView={setView} src={src} ok={ok} />
       <main className="relative min-h-0">
         <AnimatePresence mode="wait">
-          <motion.div key={view} className="absolute inset-0"
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.26 }}>
-            {view === "observatory" && <Observatory runs={runs} />}
-            {view === "sandbox" && <Sandbox runs={runs} />}
-            {view === "lab" && <Lab runs={runs} />}
-            {view === "quest" && <Quest />}
+          <motion.div
+            key={sheet}
+            className="absolute inset-0"
+            initial={{ opacity: 0, x: 24 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -24 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
+          >
+            {sheet === "chart" && <Chart taxonomy={taxonomy} onSelect={setSelected} />}
+            {sheet === "reactions" && (
+              <Reactions taxonomy={taxonomy} runs={runs} onSelect={setSelected} />
+            )}
+            {sheet === "observatory" && (
+              <Observatory runs={runs} onSelectModel={setSelected} />
+            )}
           </motion.div>
         </AnimatePresence>
+
+        <ElementSheet
+          name={selected}
+          taxonomy={taxonomy}
+          runs={runs}
+          onSelect={setSelected}
+          onClose={() => setSelected(null)}
+        />
       </main>
-      <StatusBar count={runs.length} src={src} ok={ok} />
-      <div id="sparkles" className="sparkles" />
+      <TitleBlock sheet={sheet} setSheet={setSheet} ok={ok} runCount={runs.length} />
     </>
   );
 }
