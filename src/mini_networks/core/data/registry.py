@@ -331,6 +331,54 @@ class ModularArithmeticDataset(Dataset):
         return tokens, answer
 
 
+class TwoDigitSamDataset(Dataset):
+    """Two MNIST digits on a 56x56 canvas — promptable-segmentation data.
+
+    The composite image alone is AMBIGUOUS: "the mask" depends on which digit
+    you mean. Yields (image [1,56,56], mask_a [56,56], mask_b [56,56]) where
+    the masks may overlap; the prompt (a click or box, sampled by the SAM
+    trainer) selects the target. Placement is seeded PER INDEX so items are
+    deterministic; split follows the real MNIST train/test split.
+    """
+
+    CANVAS = 56
+
+    def __init__(self, data_root: str, split: str = "train",
+                 fast_demo: bool = False, seed: int = 3):
+        self._ds = _load_torchvision_dataset(
+            torchvision.datasets.MNIST,
+            data_root=data_root,
+            train=split == "train",
+            transform=T.ToTensor(),
+            name="MNIST",
+        )
+        self._limit = 256 if fast_demo else min(len(self._ds), 8192)
+        self._seed = seed + (100_000 if split != "train" else 0)
+
+    def __len__(self) -> int:
+        return self._limit
+
+    def _place(self, img: torch.Tensor, g: torch.Generator) -> torch.Tensor:
+        c = self.CANVAS
+        row = int(torch.randint(0, c - 28 + 1, (1,), generator=g))
+        col = int(torch.randint(0, c - 28 + 1, (1,), generator=g))
+        canvas = torch.zeros(1, c, c, dtype=img.dtype)
+        canvas[:, row:row + 28, col:col + 28] = img
+        return canvas
+
+    def __getitem__(self, idx: int):
+        g = torch.Generator().manual_seed(self._seed * 1_000_003 + idx)
+        img_a, _ = self._ds[idx % len(self._ds)]
+        j = int(torch.randint(0, len(self._ds), (1,), generator=g))
+        img_b, _ = self._ds[j]
+        canvas_a = self._place(img_a, g)
+        canvas_b = self._place(img_b, g)
+        composite = make_composite_image(canvas_a, canvas_b)
+        mask_a = (canvas_a.squeeze(0) > 0).float()
+        mask_b = (canvas_b.squeeze(0) > 0).float()
+        return composite, mask_a, mask_b
+
+
 class SpeechDigitsDataset(Dataset):
     """Free Spoken Digit Dataset (FSDD): 0-9 spoken digits (wav)."""
 
@@ -712,6 +760,13 @@ def get_dataset(
             fast_demo=fast_demo,
             seed=kwargs.get("seed", 5),
             split=split,
+        )
+    elif name == "sam_two_digit":
+        return TwoDigitSamDataset(
+            data_root=data_root,
+            split=split,
+            fast_demo=fast_demo,
+            seed=kwargs.get("seed", 3),
         )
     elif name == "iris":
         return IrisDataset(
