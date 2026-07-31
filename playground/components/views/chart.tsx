@@ -2,7 +2,10 @@
 
 import { motion } from "motion/react";
 import type { TaxonomyResponse } from "@/lib/types";
-import { ATOMS, FAMILIES, FAMILY_LABELS, symbolFor } from "@/lib/blueprint";
+import {
+  ATOMS, FAMILY_BLOCKS, PLACEMENT, TABLE_COLS, TABLE_ROWS,
+  atomicNumbers, symbolFor,
+} from "@/lib/blueprint";
 
 export function Chart({
   taxonomy, onSelect,
@@ -18,14 +21,14 @@ export function Chart({
     );
   }
   const byName = Object.fromEntries(taxonomy.models.map((m) => [m.name, m]));
-  const derived = taxonomy.models.filter((m) => m.level === "derived");
+  const z = atomicNumbers();
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-6 sm:px-10">
+    <div className="h-full overflow-auto px-5 py-6 sm:px-10">
       {/* masthead */}
       <motion.header
         initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b-[1.5px] border-line pb-4"
+        className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b-[1.5px] border-line pb-4"
       >
         <div>
           <div className="text-[10px] tracking-[0.35em] text-ink-dim">DWG Nº MN-0044 · SHEET 01</div>
@@ -34,77 +37,111 @@ export function Chart({
           </h1>
         </div>
         <div className="bp-stamp px-3 py-1 text-[10px]">
-          16 elementary · {derived.length} compounds
+          44 species · 16 elementary · 22 reactions
         </div>
       </motion.header>
 
-      {/* atoms by family shelf */}
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {FAMILIES.map((family, fi) => {
-          const members = Object.entries(ATOMS).filter(([, a]) => a.family === family);
-          return (
-            <section key={family}>
-              <h2 className="bp-title mb-2 border-b border-dashed border-line-faint pb-1 text-[11px] text-ink-dim">
-                {FAMILY_LABELS[family]}
-              </h2>
-              <div className="flex flex-wrap gap-3">
-                {members.map(([name, atom], i) => (
-                  <motion.button
-                    key={name}
-                    onClick={() => onSelect(name)}
-                    initial={{ opacity: 0, scale: 0.92 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.15 + fi * 0.08 + i * 0.05, duration: 0.35 }}
-                    whileHover={{ y: -4 }}
-                    className="group relative h-28 w-24 border-[1.5px] border-line bg-paper-deep/70 text-left transition-colors hover:border-redline"
-                  >
-                    <span className="absolute left-1.5 top-1 text-[9px] text-ink-dim">{atom.z}</span>
-                    <span className="bp-title absolute right-1.5 top-1 text-[8px] text-ink-dim opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-redline">
-                      open →
-                    </span>
-                    <span className="bp-title block pt-6 text-center text-4xl font-extrabold text-ink group-hover:text-redline">
-                      {atom.symbol}
-                    </span>
-                    <span className="absolute inset-x-1 bottom-4 truncate text-center text-[9px] text-ink">
-                      {name}
-                    </span>
-                    <span className="absolute inset-x-1 bottom-1 truncate text-center text-[7.5px] text-ink-dim">
-                      {byName[name]?.introduces[0] ?? ""}
-                    </span>
-                  </motion.button>
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-
-      {/* compounds schedule */}
-      <section className="mt-10">
-        <h2 className="bp-title mb-3 text-sm tracking-[0.3em] text-ink">
-          Schedule of Compounds <span className="text-ink-dim">— derived species</span>
-        </h2>
-        <div className="grid gap-x-8 gap-y-1 border-t border-line-faint pt-2 lg:grid-cols-2">
-          {derived.map((m) => (
-            <button
-              key={m.name}
-              onClick={() => onSelect(m.name)}
-              className="group grid grid-cols-[2.6rem_9rem_1fr] items-baseline gap-2 border-b border-dashed border-line-faint py-1.5 text-left text-[11px]"
+      <div className="min-w-[1080px]">
+        {/* family group labels */}
+        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${TABLE_COLS}, minmax(0, 1fr))` }}>
+          {FAMILY_BLOCKS.map((b) => (
+            <div
+              key={b.family}
+              className="bp-title border-b border-dashed border-line-faint pb-1 text-[9px] tracking-[0.2em] text-ink-dim"
+              style={{ gridColumn: `${b.cols[0]} / ${b.cols[1] + 1}` }}
             >
-              <span className="bp-title text-sm font-bold text-line group-hover:text-redline">
-                {symbolFor(m.name)}
-              </span>
-              <span className="truncate text-ink group-hover:text-redline">{m.name}</span>
-              <span className="truncate text-ink-dim">
-                = {m.builds_on.map((p) => symbolFor(p)).join(" + ")}
-                {m.introduces.length > 0 && (
-                  <span className="text-line"> + {m.introduces.join(", ")}</span>
-                )}
-              </span>
-            </button>
+              {b.label}
+            </div>
           ))}
         </div>
-      </section>
+
+        {/* the main table */}
+        <div
+          className="mt-1 grid gap-1"
+          style={{
+            gridTemplateColumns: `repeat(${TABLE_COLS}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${TABLE_ROWS}, minmax(4.6rem, auto))`,
+          }}
+        >
+          {Object.entries(PLACEMENT).map(([name, pos], i) => {
+            const atom = ATOMS[name];
+            const taxon = byName[name];
+            return (
+              <motion.button
+                key={name}
+                onClick={() => onSelect(name)}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 + (pos.row - 1) * 0.07 + pos.col * 0.015, duration: 0.3 }}
+                whileHover={{ y: -3 }}
+                style={{ gridColumn: pos.col, gridRow: pos.row }}
+                className={`group relative text-left transition-colors ${
+                  atom
+                    ? "border-[1.5px] border-line bg-paper-deep/80 hover:border-redline"
+                    : "border border-line-faint bg-paper-deep/40 hover:border-redline"
+                }`}
+                title={`${name} — ${taxon?.introduces.join(", ") || taxon?.note || ""}`}
+              >
+                <span className="absolute left-1 top-0.5 text-[8px] text-ink-dim">{z[name]}</span>
+                <span
+                  className={`bp-title block pt-4 text-center font-extrabold group-hover:text-redline ${
+                    atom ? "text-[26px] text-ink" : "text-[20px] text-ink-dim"
+                  }`}
+                >
+                  {symbolFor(name)}
+                </span>
+                <span className="absolute inset-x-0.5 bottom-0.5 truncate text-center text-[7.5px] text-ink-dim group-hover:text-ink">
+                  {name}
+                </span>
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* f-block: reactions (the lanthanides of the zoo) */}
+        <div className="mt-5">
+          <div className="bp-title mb-1 text-[9px] tracking-[0.25em] text-ink-dim">
+            ✻ · Reactions <span className="normal-case tracking-normal">(whole models wired into pipelines — see SHT 02)</span>
+          </div>
+          <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${TABLE_COLS}, minmax(0, 1fr))` }}>
+            {taxonomy.compositions.map((c, i) => (
+              <motion.button
+                key={c.name}
+                onClick={() => onSelect(c.name)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.55 + i * 0.02, duration: 0.3 }}
+                whileHover={{ y: -3 }}
+                style={{ gridColumn: 3 + (i % 11), gridRow: Math.floor(i / 11) + 1 }}
+                className="group relative h-[3.4rem] border border-dashed border-line-faint bg-paper-deep/30 text-left transition-colors hover:border-redline"
+                title={`${c.name} = ${c.composes.join(" + ")}`}
+              >
+                <span className="absolute left-1 top-0.5 text-[7px] text-redline/80">✻{i + 1}</span>
+                <span className="bp-title block pt-3 text-center text-[15px] font-bold text-ink-dim group-hover:text-redline">
+                  {symbolFor(c.name)}
+                </span>
+                <span className="absolute inset-x-0.5 bottom-0.5 truncate text-center text-[6.5px] text-ink-dim">
+                  {c.name}
+                </span>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
+        {/* legend */}
+        <div className="mt-5 flex flex-wrap gap-5 text-[9px] text-ink-dim">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 border-[1.5px] border-line bg-paper-deep/80" /> elementary atom
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 border border-line-faint bg-paper-deep/40" /> derived compound
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-3 border border-dashed border-line-faint bg-paper-deep/30" /> reaction ✻
+          </span>
+          <span>periods ≈ generations: each row builds on the rows above it</span>
+        </div>
+      </div>
     </div>
   );
 }
