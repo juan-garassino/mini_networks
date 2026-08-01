@@ -6,6 +6,8 @@ import { infer } from "@/lib/api";
 import type { RunSummary, TaxonomyResponse } from "@/lib/types";
 import { ATOMS, STATUS_INK, symbolFor } from "@/lib/blueprint";
 import { iconFor } from "@/lib/icons";
+import { NetworkFlow } from "@/components/network-flow";
+import { schematicFor } from "@/lib/schematics";
 
 export function ElementSheet({
   name, taxonomy, runs, onSelect, onClose,
@@ -76,6 +78,13 @@ export function ElementSheet({
               {composition
                 ? "reaction · composition"
                 : model?.level === "elementary" ? "elementary · atom" : "derived · compound"}
+            </div>
+
+            <div className="mt-4 border-[1.5px] border-line-faint bg-paper-deep/40 p-2">
+              <div className="bp-title mb-1 text-[9px] tracking-[0.3em] text-ink-dim">
+                Anatomy — one forward pass
+              </div>
+              <NetworkFlow stages={schematicFor(name, composition?.composes)} />
             </div>
 
             <p className="mt-4 text-[12px] leading-relaxed text-ink">

@@ -137,3 +137,9 @@ body::after {
 }
 [data-edition="atlas"] { --font-display: var(--font-cormorant); }
 [data-edition="atlas"] .bp-title { letter-spacing: 0.05em; text-transform: none; }
+
+/* ————— network anatomy flow ————— */
+@keyframes flowdash { to { stroke-dashoffset: -20; } }
+.flow-edge { stroke-dasharray: 3 7; animation: flowdash 1.1s linear infinite; }
+@keyframes nodepulse { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
+.flow-node { animation: nodepulse 2.2s ease-in-out infinite; }
